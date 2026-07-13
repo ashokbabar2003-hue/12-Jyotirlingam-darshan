@@ -42,7 +42,10 @@ export function DarshanTile({
         : "none";
 
   useEffect(() => {
-    onStatusChange?.(status);
+    const handle = setTimeout(() => {
+      onStatusChange?.(status);
+    }, 0);
+    return () => clearTimeout(handle);
   }, [status, onStatusChange]);
 
   const withJsApi = (url: string | null) => {

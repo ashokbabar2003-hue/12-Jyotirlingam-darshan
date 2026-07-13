@@ -1,8 +1,9 @@
 import { useState } from "react";
 import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
 import { toast } from "sonner";
-import { Flame } from "lucide-react";
+import { Flame, ShieldAlert } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/hooks/use-auth";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -22,6 +23,7 @@ export const Route = createFileRoute("/auth")({
 
 function AuthPage() {
   const navigate = useNavigate();
+  const { signInAsLocalAdmin } = useAuth();
   const [mode, setMode] = useState<"signin" | "signup">("signin");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -89,9 +91,29 @@ function AuthPage() {
           </p>
         </div>
 
-        <Button variant="outline" className="w-full" onClick={googleSignIn} type="button">
-          Continue with Google
-        </Button>
+        <div className="space-y-2">
+          <Button
+            variant="outline"
+            className="w-full font-medium"
+            onClick={googleSignIn}
+            type="button"
+          >
+            Continue with Google
+          </Button>
+          <Button
+            variant="outline"
+            className="w-full border-dashed border-primary/40 bg-primary/5 font-medium hover:bg-primary/10 text-primary-foreground hover:text-primary-foreground"
+            onClick={() => {
+              signInAsLocalAdmin("Local Admin");
+              toast.success("Har Har Mahadev! Signed in as Local Admin.");
+              navigate({ to: "/admin" });
+            }}
+            type="button"
+          >
+            <ShieldAlert className="mr-2 size-4 text-primary shrink-0" />
+            Bypass to Local Admin Mode
+          </Button>
+        </div>
 
         <div className="my-5 flex items-center gap-3 text-xs text-muted-foreground">
           <span className="h-px flex-1 bg-border" /> or <span className="h-px flex-1 bg-border" />

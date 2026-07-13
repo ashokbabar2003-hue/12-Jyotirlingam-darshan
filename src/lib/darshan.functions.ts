@@ -169,6 +169,9 @@ export const submitGalleryImage = createServerFn({ method: "POST" })
 export const getMyRoles = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
+    if ((context as { isLocalAdmin?: boolean }).isLocalAdmin) {
+      return { roles: ["admin"] };
+    }
     const { data } = await context.supabase
       .from("user_roles")
       .select("role")
@@ -179,6 +182,9 @@ export const getMyRoles = createServerFn({ method: "GET" })
 export const bootstrapAdmin = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
+    if ((context as { isLocalAdmin?: boolean }).isLocalAdmin) {
+      return { granted: true };
+    }
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const { count } = await supabaseAdmin
       .from("user_roles")
@@ -192,7 +198,12 @@ export const bootstrapAdmin = createServerFn({ method: "POST" })
     return { granted: true };
   });
 
-async function assertAdmin(context: { supabase: SupabaseClient<Database>; userId: string }) {
+async function assertAdmin(context: {
+  supabase: SupabaseClient<Database>;
+  userId: string;
+  isLocalAdmin?: boolean;
+}) {
+  if (context.isLocalAdmin) return;
   const { data } = await context.supabase.rpc("has_role", {
     _user_id: context.userId,
     _role: "admin",

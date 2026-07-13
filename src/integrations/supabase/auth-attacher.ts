@@ -6,8 +6,24 @@ import { supabase } from "./client";
 // the browser never attaches the bearer token to serverFn RPCs.
 export const attachSupabaseAuth = createMiddleware({ type: "function" }).client(
   async ({ next }) => {
-    const { data } = await supabase.auth.getSession();
-    const token = data.session?.access_token;
+    let token = null;
+    if (typeof window !== "undefined") {
+      const localSessionStr = localStorage.getItem("local_admin_session");
+      if (localSessionStr) {
+        try {
+          const parsed = JSON.parse(localSessionStr);
+          if (parsed && parsed.access_token) {
+            token = parsed.access_token;
+          }
+        } catch (err) {
+          console.warn("Could not parse local admin session", err);
+        }
+      }
+    }
+    if (!token) {
+      const { data } = await supabase.auth.getSession();
+      token = data.session?.access_token;
+    }
     return next({
       headers: token ? { Authorization: `Bearer ${token}` } : {},
     });

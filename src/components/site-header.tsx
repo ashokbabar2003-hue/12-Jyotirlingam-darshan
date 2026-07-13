@@ -1,3 +1,4 @@
+import { useState, useEffect } from "react";
 import { Link, useNavigate } from "@tanstack/react-router";
 import {
   Flame,
@@ -65,29 +66,35 @@ const CHANT_STATUS: Record<Lang, { playing: string; paused: string; loading: str
 };
 
 export function SiteHeader() {
-  const { user } = useAuth();
+  const { user, signOut: authSignOut } = useAuth();
   const { lang, setLang, fontClass } = useLanguage();
   const { season, mode: seasonMode, setMode: setSeasonMode } = useSeason();
   const { playing, loading, volume, setVolume, toggle } = useAudioChant();
   const navigate = useNavigate();
 
+  const [isMounted, setIsMounted] = useState(false);
+
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
+
   const current = LANGUAGES.find((l) => l.code === lang) ?? LANGUAGES[0];
   const currentSeason = SEASONS.find((s) => s.code === season) ?? SEASONS[0];
 
   async function signOut() {
-    await supabase.auth.signOut();
+    await authSignOut();
     navigate({ to: "/", replace: true });
   }
 
   return (
     <header className="sticky top-0 z-50 border-b border-border/60 bg-background/80 backdrop-blur-md">
       <div className="mx-auto grid h-16 max-w-6xl grid-cols-[minmax(0,1fr)_auto] items-center gap-2 px-3 sm:px-4">
-        <Link to="/" className="flex min-w-0 items-center gap-2">
+        <a href="/" className="flex min-w-0 items-center gap-2">
           <Flame className="size-6 shrink-0 text-primary diya-flicker" />
           <span className="truncate font-display text-base font-semibold text-gradient-gold sm:text-lg">
             12 Jyotirlinga Darshan
           </span>
-        </Link>
+        </a>
         <nav className="flex shrink-0 items-center gap-1.5 sm:gap-2">
           <Link
             to="/dashboard"
@@ -266,7 +273,11 @@ export function SiteHeader() {
             </DropdownMenuContent>
           </DropdownMenu>
 
-          {user ? (
+          {!isMounted ? (
+            <Button asChild variant="hero" size="sm">
+              <a href="/auth">Sign in</a>
+            </Button>
+          ) : user ? (
             <>
               <Link
                 to="/admin"
