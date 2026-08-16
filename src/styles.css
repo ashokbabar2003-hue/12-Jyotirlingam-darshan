@@ -1,0 +1,289 @@
+@import "tailwindcss" source(none);
+@import "tw-animate-css";
+@import url("https://fonts.googleapis.com/css2?family=Cinzel:wght@400;500;600;700&family=Yatra+One&family=Noto+Serif+Devanagari:wght@400;500;600;700&family=Mukta:wght@300;400;500;600;700;800&family=Tiro+Devanagari+Marathi&family=Hind+Vadodara:wght@300;400;500;600;700&family=Hind+Guntur:wght@300;400;500;600;700&family=Hind+Madurai:wght@300;400;500;600;700&family=Noto+Sans+Gujarati:wght@300;400;500;600;700&family=Noto+Sans+Telugu:wght@300;400;500;600;700&family=Noto+Sans+Tamil:wght@300;400;500;600;700&display=swap");
+@source "../src";
+
+@custom-variant dark (&:is(.dark *));
+
+/*
+ * Deep Indigo Night Aarti design system.
+ * Dark devotional theme: midnight indigo surfaces, sacred gold light.
+ * All colors use oklch. Use semantic tokens only — never hardcode colors.
+ */
+
+@theme inline {
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+  --radius-2xl: calc(var(--radius) + 8px);
+  --radius-3xl: calc(var(--radius) + 12px);
+
+  --font-display: "Cinzel", serif;
+  --font-sans: "Mukta", ui-sans-serif, system-ui, sans-serif;
+  --font-marathi: "Yatra One", "Tiro Devanagari Marathi", "Mukta", serif;
+  --font-devanagari: "Yatra One", "Noto Serif Devanagari", "Mukta", serif;
+  --font-gujarati: "Hind Vadodara", "Noto Sans Gujarati", sans-serif;
+  --font-telugu: "Hind Guntur", "Noto Sans Telugu", sans-serif;
+  --font-tamil: "Hind Madurai", "Noto Sans Tamil", sans-serif;
+
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-ring-offset-background: var(--background);
+  --color-gold: var(--gold);
+  --color-gold-glow: var(--gold-glow);
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-ring: var(--sidebar-ring);
+}
+
+:root {
+  --radius: 0.75rem;
+
+  --background: oklch(0.16 0.05 290);
+  --foreground: oklch(0.93 0.025 90);
+
+  --card: oklch(0.22 0.07 289);
+  --card-foreground: oklch(0.95 0.02 90);
+
+  --popover: oklch(0.2 0.065 289);
+  --popover-foreground: oklch(0.95 0.02 90);
+
+  --primary: oklch(0.78 0.14 84);
+  --primary-foreground: oklch(0.17 0.05 290);
+
+  --secondary: oklch(0.3 0.08 290);
+  --secondary-foreground: oklch(0.95 0.02 90);
+
+  --muted: oklch(0.27 0.06 290);
+  --muted-foreground: oklch(0.74 0.04 88);
+
+  --accent: oklch(0.86 0.1 82);
+  --accent-foreground: oklch(0.18 0.05 290);
+
+  --destructive: oklch(0.6 0.22 25);
+  --destructive-foreground: oklch(0.96 0.02 90);
+
+  --border: oklch(0.34 0.07 289);
+  --input: oklch(0.3 0.06 290);
+  --ring: oklch(0.78 0.14 84);
+
+  --gold: oklch(0.78 0.14 84);
+  --gold-glow: oklch(0.86 0.1 82);
+
+  --gradient-aarti: linear-gradient(135deg, oklch(0.78 0.14 84), oklch(0.86 0.1 82));
+  --gradient-night: linear-gradient(180deg, oklch(0.2 0.07 290), oklch(0.13 0.045 290));
+  --shadow-glow: 0 0 40px -8px oklch(0.78 0.14 84 / 0.4);
+  --shadow-elegant: 0 24px 60px -24px oklch(0.05 0.03 290 / 0.85);
+
+  --sidebar: oklch(0.2 0.065 289);
+  --sidebar-foreground: oklch(0.93 0.025 90);
+  --sidebar-primary: oklch(0.78 0.14 84);
+  --sidebar-primary-foreground: oklch(0.17 0.05 290);
+  --sidebar-accent: oklch(0.3 0.08 290);
+  --sidebar-accent-foreground: oklch(0.95 0.02 90);
+  --sidebar-border: oklch(0.34 0.07 289);
+  --sidebar-ring: oklch(0.78 0.14 84);
+}
+
+/* ==========================================================================
+ * Prakruti / Ritu (Season) Mode — palette shifts driven by data-season on <html>.
+ * We override a small set of tokens (primary, accent, gradients, background aura)
+ * so every semantic component reflects the season without touching JSX.
+ * ========================================================================== */
+
+/* Vasanta — Spring: blossom pink & saffron */
+:root[data-season="vasanta"] {
+  --primary: oklch(0.8 0.16 45);
+  --accent: oklch(0.82 0.14 15);
+  --gold: oklch(0.8 0.16 45);
+  --gold-glow: oklch(0.86 0.13 25);
+  --ring: oklch(0.8 0.16 45);
+  --gradient-aarti: linear-gradient(135deg, oklch(0.82 0.15 40), oklch(0.84 0.13 10));
+  --season-aura-1: oklch(0.35 0.11 20 / 0.55);
+  --season-aura-2: oklch(0.4 0.13 45 / 0.35);
+}
+
+/* Grishma — Summer: warm amber & sun-gold (default-ish, but hotter) */
+:root[data-season="grishma"] {
+  --primary: oklch(0.78 0.16 65);
+  --accent: oklch(0.83 0.14 55);
+  --gold: oklch(0.78 0.16 65);
+  --gold-glow: oklch(0.86 0.14 60);
+  --ring: oklch(0.78 0.16 65);
+  --gradient-aarti: linear-gradient(135deg, oklch(0.75 0.18 55), oklch(0.85 0.15 75));
+  --season-aura-1: oklch(0.34 0.14 55 / 0.6);
+  --season-aura-2: oklch(0.3 0.13 40 / 0.35);
+}
+
+/* Varsha — Monsoon: cool teal & rain-blue */
+:root[data-season="varsha"] {
+  --background: oklch(0.16 0.045 230);
+  --card: oklch(0.22 0.06 230);
+  --popover: oklch(0.2 0.055 230);
+  --secondary: oklch(0.3 0.07 230);
+  --muted: oklch(0.27 0.055 230);
+  --border: oklch(0.34 0.06 230);
+  --input: oklch(0.3 0.055 230);
+  --primary: oklch(0.78 0.13 200);
+  --primary-foreground: oklch(0.16 0.045 230);
+  --accent: oklch(0.82 0.11 195);
+  --gold: oklch(0.78 0.13 200);
+  --gold-glow: oklch(0.86 0.1 195);
+  --ring: oklch(0.78 0.13 200);
+  --gradient-aarti: linear-gradient(135deg, oklch(0.72 0.14 210), oklch(0.84 0.1 190));
+  --season-aura-1: oklch(0.35 0.09 220 / 0.65);
+  --season-aura-2: oklch(0.3 0.08 200 / 0.4);
+}
+
+/* Sharad — Autumn: harvest copper & moonlight */
+:root[data-season="sharad"] {
+  --primary: oklch(0.75 0.15 45);
+  --accent: oklch(0.85 0.09 90);
+  --gold: oklch(0.75 0.15 45);
+  --gold-glow: oklch(0.88 0.11 85);
+  --ring: oklch(0.75 0.15 45);
+  --gradient-aarti: linear-gradient(135deg, oklch(0.72 0.16 40), oklch(0.9 0.08 90));
+  --season-aura-1: oklch(0.32 0.1 60 / 0.55);
+  --season-aura-2: oklch(0.3 0.08 90 / 0.3);
+}
+
+/* Hemanta — Pre-winter: deep violet & ember */
+:root[data-season="hemanta"] {
+  --background: oklch(0.15 0.06 300);
+  --card: oklch(0.22 0.08 300);
+  --secondary: oklch(0.3 0.09 300);
+  --muted: oklch(0.27 0.07 300);
+  --border: oklch(0.34 0.08 300);
+  --primary: oklch(0.72 0.17 30);
+  --accent: oklch(0.78 0.14 20);
+  --gold: oklch(0.72 0.17 30);
+  --gold-glow: oklch(0.82 0.14 25);
+  --ring: oklch(0.72 0.17 30);
+  --gradient-aarti: linear-gradient(135deg, oklch(0.7 0.18 25), oklch(0.6 0.18 320));
+  --season-aura-1: oklch(0.3 0.12 310 / 0.65);
+  --season-aura-2: oklch(0.32 0.14 30 / 0.35);
+}
+
+/* Shishira — Winter: cold indigo & frost */
+:root[data-season="shishira"] {
+  --background: oklch(0.14 0.05 260);
+  --card: oklch(0.2 0.06 260);
+  --secondary: oklch(0.28 0.07 260);
+  --muted: oklch(0.25 0.06 260);
+  --border: oklch(0.32 0.07 260);
+  --primary: oklch(0.85 0.08 240);
+  --primary-foreground: oklch(0.15 0.05 260);
+  --accent: oklch(0.88 0.06 220);
+  --gold: oklch(0.85 0.08 240);
+  --gold-glow: oklch(0.92 0.05 230);
+  --ring: oklch(0.85 0.08 240);
+  --gradient-aarti: linear-gradient(135deg, oklch(0.82 0.09 250), oklch(0.9 0.06 220));
+  --season-aura-1: oklch(0.3 0.08 250 / 0.65);
+  --season-aura-2: oklch(0.28 0.06 220 / 0.4);
+}
+
+@layer base {
+  * {
+    border-color: var(--color-border);
+  }
+
+  body {
+    background-color: var(--color-background);
+    color: var(--color-foreground);
+    font-family: var(--font-sans);
+    background-image:
+      radial-gradient(
+        ellipse 80% 50% at 50% -10%,
+        var(--season-aura-1, oklch(0.3 0.09 290 / 0.6)),
+        transparent
+      ),
+      radial-gradient(
+        ellipse 60% 40% at 80% 110%,
+        var(--season-aura-2, oklch(0.28 0.08 70 / 0.25)),
+        transparent
+      );
+    background-attachment: fixed;
+    transition: background-color 600ms ease;
+  }
+
+  h1,
+  h2,
+  h3,
+  h4,
+  .font-display {
+    font-family: var(--font-display);
+    letter-spacing: 0.01em;
+  }
+}
+
+@layer utilities {
+  .text-gradient-gold {
+    background-image: var(--gradient-aarti);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+  }
+  .bg-gradient-aarti {
+    background-image: var(--gradient-aarti);
+  }
+  .shadow-glow {
+    box-shadow: var(--shadow-glow);
+  }
+  .shadow-elegant {
+    box-shadow: var(--shadow-elegant);
+  }
+  .diya-flicker {
+    animation: diya-flicker 3s ease-in-out infinite;
+  }
+  .font-marathi {
+    font-family: var(--font-marathi);
+    letter-spacing: 0.005em;
+  }
+  .font-devanagari {
+    font-family: var(--font-devanagari);
+  }
+  .font-gujarati {
+    font-family: var(--font-gujarati);
+  }
+  .font-telugu {
+    font-family: var(--font-telugu);
+  }
+  .font-tamil {
+    font-family: var(--font-tamil);
+  }
+}
+
+@keyframes diya-flicker {
+  0%,
+  100% {
+    opacity: 1;
+    filter: drop-shadow(0 0 6px var(--gold-glow));
+  }
+  50% {
+    opacity: 0.82;
+    filter: drop-shadow(0 0 14px var(--gold-glow));
+  }
+}
