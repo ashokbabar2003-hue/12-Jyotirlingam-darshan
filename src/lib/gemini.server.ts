@@ -113,7 +113,7 @@ export function getGeminiApiKey(): string | undefined {
     configured: Boolean(trimmedKey),
     keyLength: trimmedKey ? trimmedKey.length : 0,
     runtime: "server",
-    cwd: process.cwd(),
+    cwd: typeof process !== "undefined" ? process.cwd() : "unknown",
     source: detectedKeySource,
   });
 
@@ -126,7 +126,22 @@ export function getGeminiApiKey(): string | undefined {
 export function getGeminiClient(): GoogleGenAI {
   const apiKey = getGeminiApiKey();
   if (!apiKey) {
-    throw new Error("GEMINI_API_KEY environment variable is not configured.");
+    const processDefined = typeof process !== "undefined";
+    const envDefined = processDefined && Boolean(process.env);
+    const envKeys = envDefined
+      ? Object.keys(process.env).filter(
+          (k) =>
+            k.includes("KEY") ||
+            k.includes("API") ||
+            k.includes("GEMINI") ||
+            k.includes("GOOGLE") ||
+            k.includes("PORT"),
+        )
+      : [];
+    const cwd = processDefined ? process.cwd() : "unknown";
+    throw new Error(
+      `GEMINI_API_KEY environment variable is not configured. (Diagnostics: process=${processDefined}, env=${envDefined}, keys=[${envKeys.join(",")}], cwd=${cwd}, source=${detectedKeySource})`,
+    );
   }
 
   return new GoogleGenAI({

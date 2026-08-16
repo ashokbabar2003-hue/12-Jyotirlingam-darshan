@@ -52,6 +52,7 @@ import {
   regenerateSocialPostImage,
   setSocialPostImage,
 } from "@/lib/social.functions";
+import { getGeminiDebugStatus } from "@/lib/gemini-debug.functions";
 
 export const Route = createFileRoute("/_authenticated/admin")({
   head: () => ({ meta: [{ title: "Manage submissions — 12 Jyotirlinga Darshan" }] }),
@@ -64,7 +65,36 @@ function AdminPage() {
   const moderateFn = useServerFn(moderate);
   const bootstrapFn = useServerFn(bootstrapAdmin);
   const getPostsFn = useServerFn(getSocialPosts);
+  const debugStatusFn = useServerFn(getGeminiDebugStatus);
   const qc = useQueryClient();
+
+  const [isDebugRunning, setIsDebugRunning] = useState(false);
+
+  async function runGeminiDiagnostics() {
+    setIsDebugRunning(true);
+    try {
+      const report = await debugStatusFn();
+      console.log("[GEMINI BROWSER DEBUG REPORT]:", report);
+      if (report.available) {
+        toast.success(
+          `Gemini API Key Verified! Length: ${report.length} chars. Source: ${report.source}. Detected ${report.envKeys.length} config keys.`,
+          { duration: 10000 },
+        );
+      } else {
+        toast.error(
+          `Gemini API Key is NOT configured on the server. Available keys list: [${report.envKeys.join(", ")}].`,
+          { duration: 10000 },
+        );
+      }
+    } catch (err) {
+      toast.error(
+        `Diagnostics failed to invoke: ${err instanceof Error ? err.message : String(err)}`,
+        { duration: 10000 },
+      );
+    } finally {
+      setIsDebugRunning(false);
+    }
+  }
 
   const roles = useQuery({ queryKey: ["my-roles"], queryFn: () => rolesFn() });
   const isAdmin = roles.data?.roles.includes("admin");
@@ -157,9 +187,20 @@ function AdminPage() {
             Manage live darshan streams and approve devotee submissions.
           </p>
         </div>
-        <Link to="/" className="text-sm text-muted-foreground hover:text-foreground">
-          ← View site
-        </Link>
+        <div className="flex items-center gap-4">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={runGeminiDiagnostics}
+            disabled={isDebugRunning}
+            className="text-xs text-muted-foreground hover:text-foreground border-dashed h-8 px-3"
+          >
+            {isDebugRunning ? "Verifying..." : "Verify Gemini Key"}
+          </Button>
+          <Link to="/" className="text-sm text-muted-foreground hover:text-foreground">
+            ← View site
+          </Link>
+        </div>
       </div>
 
       <Tabs defaultValue="overview" className="mt-8 flex flex-col md:flex-row gap-8 items-start">

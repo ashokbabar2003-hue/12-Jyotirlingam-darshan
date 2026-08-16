@@ -23,8 +23,8 @@ import {
 // Using a custom client to avoid strictly requiring generated types for the new table yet
 function adminClient() {
   ensureServerEnv();
-  const url = process.env.SUPABASE_URL || getServerEnv("SUPABASE_URL");
-  const key = process.env.SUPABASE_SERVICE_ROLE_KEY || getServerEnv("SUPABASE_SERVICE_ROLE_KEY");
+  const url = process.env.SUPABASE_URL;
+  const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
   return createClient(url!, key!, {
     auth: { persistSession: false, autoRefreshToken: false },
   });
