@@ -1099,10 +1099,13 @@ function SocialMediaManager() {
   }
 
   async function onRegenerateImage(post: SocialPost) {
+    console.log("[REGEN DEBUG 1] Button clicked (admin inline)");
+    console.log("[REGEN DEBUG 2] Prompt received", { prompt: post.image_prompt, postId: post.id });
     try {
       setRegeneratingId(post.id);
       toast.info("Generating new image for draft...");
       const updated = await regenerateImageFn({ data: { id: post.id } });
+      console.log("[REGEN DEBUG 9] Candidate returned to client", { imageUrl: updated?.image_url });
       // If we had an original image, track candidate images
       if (post.image_url && updated.image_url && post.image_url !== updated.image_url) {
         setCandidateImages((prev) => ({
@@ -1112,6 +1115,7 @@ function SocialMediaManager() {
             generated: updated.image_url!,
           },
         }));
+        console.log("[REGEN DEBUG 10] generatedMedia React state updated", { postId: post.id });
       }
       setFailedImageDrafts((prev) => {
         const copy = { ...prev };
@@ -1286,6 +1290,7 @@ function SocialMediaManager() {
             onChange={(e) => setSelectedSlug(e.target.value)}
             className="rounded-md border border-border/60 bg-card p-1 text-sm text-foreground"
           >
+            <option value="random">✨ Random Shrine + New Concept</option>
             {jyotirlingas.map((j) => (
               <option key={j.slug} value={j.slug}>
                 {j.name}
@@ -1628,17 +1633,34 @@ function SocialMediaManager() {
                         </div>
                       </div>
                     ) : (
-                      post.image_url && (
+                      post.image_url ? (
                         <div className="mt-3">
-                          <p className="text-sm font-semibold text-muted-foreground">
-                            Image Preview:
+                          
+                          <p className="text-sm font-semibold text-muted-foreground flex items-center justify-between">
+                            <span>Image Preview:</span>
+                            {post.image_url.includes("gen-") ? (
+                              <span className="rounded bg-emerald-500/10 px-2 py-0.5 text-[10px] font-bold text-emerald-600 border border-emerald-500/20">AI Generated</span>
+                            ) : post.image_url.includes("uploads/") ? (
+                              <span className="rounded bg-blue-500/10 px-2 py-0.5 text-[10px] font-bold text-blue-600 border border-blue-500/20">User Upload</span>
+                            ) : (
+                              <span className="rounded bg-slate-500/10 px-2 py-0.5 text-[10px] font-bold text-slate-600 border border-slate-500/20">Canonical</span>
+                            )}
                           </p>
+
                           <img
                             src={post.image_url}
                             alt={`${post.jyotirlinga_slug} preview`}
                             className="mt-1 max-h-48 rounded-md object-cover border border-border/40"
                             referrerPolicy="no-referrer"
                           />
+                        </div>
+                      ) : (
+                        <div className="mt-3 rounded-md bg-destructive/10 p-3 text-sm text-destructive border border-destructive/20 flex items-start gap-2">
+                          <AlertCircle className="size-4 mt-0.5 shrink-0" />
+                          <div>
+                            <p className="font-bold">AI IMAGE UNAVAILABLE</p>
+                            <p>Gemini image-generation quota is currently 0.</p>
+                          </div>
                         </div>
                       )
                     )}
@@ -1666,22 +1688,15 @@ function SocialMediaManager() {
                           <Check className="mr-1.5 size-4" /> Approve for Publishing
                         </Button>
 
-                        {/* If manual post with media, edit using CreateInstagramPostDialog */}
-                        {post.post_type || (post.media && post.media.length > 0) ? (
-                          <CreateInstagramPostDialog
-                            postToEdit={post}
-                            onSuccess={() => qc.invalidateQueries({ queryKey: ["social-posts"] })}
-                            trigger={
-                              <Button size="sm" variant="outline">
-                                <Edit3 className="mr-1.5 size-4" /> Edit Post
-                              </Button>
-                            }
-                          />
-                        ) : (
-                          <Button size="sm" variant="outline" onClick={() => onStartEdit(post)}>
-                            <Edit3 className="mr-1.5 size-4" /> Edit Draft
-                          </Button>
-                        )}
+                        <CreateInstagramPostDialog
+                          postToEdit={post}
+                          onSuccess={() => qc.invalidateQueries({ queryKey: ["social-posts"] })}
+                          trigger={
+                            <Button size="sm" variant="outline">
+                              <Edit3 className="mr-1.5 size-4" /> Edit Post
+                            </Button>
+                          }
+                        />
 
                         {!post.post_type && (
                           <Button
@@ -1718,21 +1733,15 @@ function SocialMediaManager() {
                             )}
                             {publishingId === post.id ? "Publishing..." : "Publish to Instagram"}
                           </Button>
-                          {post.post_type || (post.media && post.media.length > 0) ? (
-                            <CreateInstagramPostDialog
-                              postToEdit={post}
-                              onSuccess={() => qc.invalidateQueries({ queryKey: ["social-posts"] })}
-                              trigger={
-                                <Button size="sm" variant="outline">
-                                  <Edit3 className="mr-1.5 size-4" /> Edit Post
-                                </Button>
-                              }
-                            />
-                          ) : (
-                            <Button size="sm" variant="outline" onClick={() => onStartEdit(post)}>
-                              <Edit3 className="mr-1.5 size-4" /> Edit Draft
-                            </Button>
-                          )}
+                          <CreateInstagramPostDialog
+                            postToEdit={post}
+                            onSuccess={() => qc.invalidateQueries({ queryKey: ["social-posts"] })}
+                            trigger={
+                              <Button size="sm" variant="outline">
+                                <Edit3 className="mr-1.5 size-4" /> Edit Post
+                              </Button>
+                            }
+                          />
 
                           {!post.post_type && (
                             <Button

@@ -121,24 +121,60 @@ export const draftSocialPost = createServerFn({ method: "POST" })
     return String(d || "");
   })
   .handler(async ({ data: rawSlug }) => {
-    const slug = typeof rawSlug === "string" ? rawSlug.trim() : "";
-    console.log("[DRAFT DEBUG 3] Server function entered for slug:", slug);
+    const requestedSlug =
+      typeof rawSlug === "string"
+        ? rawSlug.trim()
+        : rawSlug && typeof rawSlug === "object" && "slug" in (rawSlug as Record<string, unknown>)
+          ? String((rawSlug as Record<string, unknown>).slug).trim()
+          : "";
 
-    if (!slug) {
+    if (!requestedSlug) {
       throw new Error("Invalid Jyotirlinga slug.");
     }
 
-    console.log("[DRAFT DEBUG 4] Authentication passed");
-
-    const jyotirlinga = getJyotirlinga(slug);
-    if (!jyotirlinga) {
-      throw new Error(`Jyotirlinga with slug '${slug}' not found.`);
-    }
-    console.log("[DRAFT DEBUG 5] Jyotirlinga resolved:", jyotirlinga.name);
-
     ensureServerEnv();
-
     const supabase = adminClient();
+
+    let targetSlug = requestedSlug;
+    
+    // Determine random shrine if requested
+    if (requestedSlug === "random") {
+      const { data: allPosts } = await supabase
+        .from("social_posts")
+        .select("jyotirlinga_slug, created_at")
+        .order("created_at", { ascending: false })
+        .limit(100);
+        
+      const counts: Record<string, number> = {};
+      const allShrines = ["somnath", "mallikarjuna", "mahakaleshwar", "omkareshwar", "kedarnath", "bhimashankar", "kashi", "trimbakeshwar", "baidyanath", "nageshwar", "rameshwaram", "grishneshwar"];
+      allShrines.forEach(s => counts[s] = 0);
+      
+      if (allPosts) {
+        for (const p of allPosts) {
+          if (p.jyotirlinga_slug && counts[p.jyotirlinga_slug] !== undefined) {
+            counts[p.jyotirlinga_slug]++;
+          }
+        }
+      }
+      
+      let minCount = Infinity;
+      let underused: string[] = [];
+      for (const s of allShrines) {
+        if (counts[s] < minCount) {
+          minCount = counts[s];
+          underused = [s];
+        } else if (counts[s] === minCount) {
+          underused.push(s);
+        }
+      }
+      
+      targetSlug = underused[Math.floor(Math.random() * underused.length)];
+    }
+
+    const jyotirlinga = getJyotirlinga(targetSlug);
+    if (!jyotirlinga) {
+      throw new Error(`Jyotirlinga with slug '${targetSlug}' not found.`);
+    }
 
     // 1. Retrieve bounded history of recent posts for this Jyotirlinga to ensure concept diversity
     let recentPostsContext = "";
@@ -147,7 +183,7 @@ export const draftSocialPost = createServerFn({ method: "POST" })
       const { data: recentPosts } = await supabase
         .from("social_posts")
         .select("caption, image_prompt, created_at")
-        .eq("jyotirlinga_slug", slug)
+        .eq("jyotirlinga_slug", targetSlug)
         .order("created_at", { ascending: false })
         .limit(10);
 
@@ -168,24 +204,32 @@ ${summaries.join("\n")}
     }
 
     const archetypes = [
-      "Puranic mythology and ancient legends (Soma/Chandra cosmic boon, Jyotir-linga light manifestation)",
-      "Sacred geography & natural atmosphere (shoreline waves, mountain mist, holy river confluence, dense forests)",
-      "Dawn darshan (Brahma Muhurta, golden sunrise illumination, morning temple bells, waking sanctum)",
-      "Evening Sandhya aarti (Deeparadhana, twilight sanctum, rhythmic chants, glowing brass lamps)",
-      "Ancient temple architecture & stone carvings (Nagara/Dravidian shikhara, sanctum pillared mandapams, timeless masonry)",
-      "Jyotirlinga metaphysical symbolism (infinite cosmic pillar of light, transcendence of ego, stillness of consciousness)",
-      "Devotee inner journey & emotional surrender (tears of devotion, peaceful silence after pilgrimage, profound grace)",
-      "Sacred Vedic rituals & offerings (Bilva leaves, holy ash/Bhasma, Panchamrit abhisheka, continuous chanting)",
-      "Historical resilience & eternal sanctity (unbroken spiritual heartbeat through millennia)",
-      "Sanctum perspective & sacred symbols (divine Nandi facing lingam, Trishul, Damru, sacred serpent)",
-      "Festival atmosphere & celebrations (Maha Shivaratri night vigil, Shravan Maas devotion, joyous pilgrim processions)",
-      "Night illumination & celestial stars over the sacred temple shikhara",
+      "Temple architecture",
+      "Sacred landscape",
+      "River / water symbolism",
+      "Sunrise / sunset",
+      "Night divine illumination",
+      "Pilgrimage journey",
+      "Temple corridor",
+      "Sanctum atmosphere",
+      "Ancient stone details",
+      "Nature surrounding the shrine",
+      "Sacred objects / symbols",
+      "Festival / seasonal atmosphere",
+      "Monsoon atmosphere",
+      "Himalayan / coastal / forest environment where geographically appropriate",
+      "Historical / heritage context",
+      "Devotee-perspective composition without requiring identifiable people",
+      "Cinematic environmental storytelling",
+      "Abstract spiritual light / cosmic symbolism"
     ];
+    
+    // Pick an archetype deterministically based on past count to cycle through them
     const suggestedTheme = archetypes[pastThemesCount % archetypes.length];
 
     console.log("[DRAFT DEBUG 6] Gemini request started");
 
-    const { caption, imagePrompt } = await generateDraftContent(
+    const draftData = await generateDraftContent(
       jyotirlinga.name,
       jyotirlinga.location,
       suggestedTheme,
@@ -195,21 +239,20 @@ ${summaries.join("\n")}
     console.log("[DRAFT DEBUG 8] JSON extracted successfully");
 
     // 2. Image generation / resolution
-    let publicImageUrl = "";
+    let publicImageUrl = null;
     console.log("[DRAFT DEBUG 9] Resolving / generating image asset");
 
     try {
       // Attempt active image generation with Gemini image models
-      publicImageUrl = await generateImageForPrompt(imagePrompt, slug);
+      publicImageUrl = await generateImageForPrompt(draftData.imagePrompt, targetSlug);
       console.log("[DRAFT DEBUG 9a] Generated new AI image asset:", publicImageUrl);
     } catch (imgGenErr) {
       console.warn(
-        "Direct AI image generation failed during draft creation (falling back to canonical shrine image):",
+        "Direct AI image generation failed during draft creation:",
         imgGenErr instanceof Error ? imgGenErr.message : imgGenErr,
       );
-      // Fallback to canonical shrine asset so the draft is NEVER lost and ALWAYS has a working image preview
-      publicImageUrl = resolveCanonicalImageUrl(jyotirlinga.image || slug);
-      console.log("[DRAFT DEBUG 9b] Using canonical shrine image asset fallback:", publicImageUrl);
+      // DO NOT fallback to canonical shrine asset here! If quota is exhausted, leave it null.
+      publicImageUrl = null;
     }
 
     // 3. Database Insertion
@@ -217,22 +260,19 @@ ${summaries.join("\n")}
     const { data, error } = await supabase
       .from("social_posts")
       .insert({
-        jyotirlinga_slug: slug,
+        jyotirlinga_slug: targetSlug,
         status: "pending_approval",
-        caption: caption,
-        image_prompt: imagePrompt,
-        image_url: publicImageUrl || null,
+        caption: draftData.caption,
+        image_prompt: draftData.imagePrompt,
+        image_url: publicImageUrl,
       })
       .select()
       .single();
 
     if (error || !data) {
-      console.error("[DRAFT DEBUG 10 ERROR] Failed to save social post draft to Supabase:", error);
+      console.error("Failed to save social post draft to Supabase:", error);
       throw new Error("Failed to save draft to database: " + (error?.message || "unknown error"));
     }
-
-    console.log("[DRAFT DEBUG 11] Supabase insert succeeded. New Draft ID:", data.id);
-    console.log("[DRAFT DEBUG 12] Draft returned to client");
 
     return data as SocialPost;
   });
@@ -644,12 +684,31 @@ export const createUploadedSocialPost = createServerFn({ method: "POST" })
     } as SocialPost;
   });
 
+export const generateDirectImageForPrompt = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: { prompt: string; slug?: string }) => d)
+  .handler(async ({ data: payload }) => {
+    ensureServerEnv();
+    console.log("[REGEN DEBUG 3] Server function invoked", {
+      promptLength: payload.prompt ? payload.prompt.length : 0,
+      slug: payload.slug || "jyotirlinga",
+      functionName: "generateDirectImageForPrompt",
+    });
+    if (!payload.prompt || !payload.prompt.trim()) {
+      throw new Error("Image prompt cannot be empty.");
+    }
+    const slug = payload.slug || "jyotirlinga";
+    const imageUrl = await generateImageForPrompt(payload.prompt.trim(), slug);
+    return { imageUrl };
+  });
+
 export const updateUploadedSocialPost = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator(
     (d: {
       id: string;
       caption: string;
+      image_prompt?: string | null;
       media: Array<{
         id?: string;
         storage_path: string;
@@ -682,6 +741,8 @@ export const updateUploadedSocialPost = createServerFn({ method: "POST" })
       .update({
         caption: payload.caption.trim(),
         image_url: firstMediaUrl,
+        image_prompt:
+          payload.image_prompt !== undefined ? payload.image_prompt : existingPost.image_prompt,
         status: "pending_approval",
         updated_at: new Date().toISOString(),
       })

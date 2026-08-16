@@ -293,7 +293,15 @@ export async function generateDraftContent(
   shrineLocation: string,
   suggestedTheme: string,
   recentPostsContext?: string,
-): Promise<{ caption: string; imagePrompt: string }> {
+): Promise<{ 
+  shrineSlug: string; 
+  shrineName: string; 
+  location: string; 
+  contentArchetype: string; 
+  concept: string; 
+  caption: string; 
+  imagePrompt: string 
+}> {
   const systemInstruction = `
 You are an expert Hindu spiritual social media manager and creative director for the sacred 12 Jyotirlingas.
 Your task is to write a fresh, unique, and deeply devotional Instagram caption and image prompt for ${shrineName} Jyotirlinga in ${shrineLocation}.
@@ -309,6 +317,7 @@ CREATIVE DIVERSITY GUIDELINES:
 3. Write with spiritual warmth, reverence, and philosophical depth.
 4. Conclude with a prayer invocation and 8-10 relevant hashtags.
 5. Image prompt must describe a photorealistic, hyper-detailed, spiritual scene depicting ${shrineName} in ${shrineLocation}.
+6. The image prompt MUST NOT be a generic temple description. It MUST include geographically and architecturally accurate features for ${shrineName}.
   `;
 
   const prompt = `Generate a distinct devotional Instagram post for ${shrineName} Jyotirlinga exploring theme: ${suggestedTheme}.`;
@@ -316,28 +325,39 @@ CREATIVE DIVERSITY GUIDELINES:
   const schema = {
     type: Type.OBJECT,
     properties: {
+      shrineSlug: { type: Type.STRING },
+      shrineName: { type: Type.STRING },
+      location: { type: Type.STRING },
+      contentArchetype: { type: Type.STRING },
+      concept: { type: Type.STRING },
       caption: {
         type: Type.STRING,
         description: "Full formatted Instagram caption with hashtags",
       },
       imagePrompt: {
         type: Type.STRING,
-        description: "Detailed photographic and spiritual image prompt",
+        description: "Detailed photographic and spiritual image prompt with geographically and architecturally accurate features",
       },
     },
-    required: ["caption", "imagePrompt"],
+    required: ["shrineSlug", "shrineName", "location", "contentArchetype", "concept", "caption", "imagePrompt"],
   };
 
-  return generateStructuredOutput<{ caption: string; imagePrompt: string }>(
+  return generateStructuredOutput<{ 
+    shrineSlug: string; 
+    shrineName: string; 
+    location: string; 
+    contentArchetype: string; 
+    concept: string; 
+    caption: string; 
+    imagePrompt: string 
+  }>(
     prompt,
     schema,
     systemInstruction,
+    "gemini-3.1-pro",
   );
 }
 
-/**
- * Generates caption assistance (suggest, improve, or hashtags).
- */
 export async function generateCaptionAssistance(
   action: "suggest" | "improve" | "hashtags",
   caption?: string,

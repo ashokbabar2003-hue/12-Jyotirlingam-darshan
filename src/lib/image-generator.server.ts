@@ -1,7 +1,20 @@
 import fs from "fs";
 import path from "path";
+import { createClient } from "@supabase/supabase-js";
 import { resolveCanonicalImageUrl } from "./instagram.server";
 import { ensureServerEnv, generateImageBuffer, getGeminiApiKey } from "./gemini.server";
+
+function getSupabaseAdmin() {
+  ensureServerEnv();
+  const url = process.env.SUPABASE_URL;
+  const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  if (!url || !key) {
+    throw new Error("Supabase credentials missing in server environment");
+  }
+  return createClient(url, key, {
+    auth: { persistSession: false, autoRefreshToken: false },
+  });
+}
 
 export interface ImageGenerationResult {
   imageUrl: string;
@@ -11,7 +24,7 @@ export interface ImageGenerationResult {
 
 /**
  * Validates that an image URL meets all production constraints:
- * - Uses canonical APP_URL / production domain
+ * - Uses canonical APP_URL / production domain or Supabase storage domain
  * - Is HTTPS
  * - Does not point to localhost, ais-dev-, or ais-pre-
  */
@@ -37,7 +50,7 @@ export function validateProductionImageUrl(url: string): { valid: boolean; reaso
 
 /**
  * Generates a new image from a creative image prompt using Google Gemini.
- * Saves the resulting image binary to the public directory and resolves its canonical public URL.
+ * Uploads the resulting binary to Supabase Storage and resolves a public HTTPS URL.
  * Throws a clean, descriptive error if generation fails, ensuring previous images are preserved.
  */
 export async function generateImageForPrompt(prompt: string, slug: string): Promise<string> {
@@ -51,40 +64,79 @@ export async function generateImageForPrompt(prompt: string, slug: string): Prom
   let imageExtension = "jpg";
 
   try {
-    const res = await generateImageBuffer(prompt);
+    const res = await generateImageBuffer(prompt, slug);
     imageBuffer = res.buffer;
     imageExtension = res.extension;
   } catch (err: unknown) {
     const msg = err instanceof Error ? err.message : String(err);
-    throw new Error(`Image regeneration failed: ${msg}. Your previous image has been preserved.`);
+    console.error("[REGEN DEBUG 5 ERROR] Image generation API call failed:", msg);
+    if (msg.includes("quota is exhausted") || msg.includes("currently unavailable")) {
+      throw new Error(msg);
+    }
+    throw new Error(`${msg}. Your previous image has been preserved.`);
   }
 
-  // 2. Persist image binary to public storage
+  if (!imageBuffer || imageBuffer.length === 0) {
+    throw new Error("Image generation failed: empty image buffer received.");
+  }
+
+  console.log("[REGEN DEBUG 6] Image bytes extracted", {
+    imageByteLength: imageBuffer.length,
+    imageExtension,
+  });
+
   const cleanSlug = (slug || "jyotirlinga").toLowerCase().replace(/[^a-z0-9_-]/g, "");
   const randomSuffix = Math.random().toString(36).substring(2, 9);
   const filename = `gen-${cleanSlug}-${Date.now()}-${randomSuffix}.${imageExtension}`;
+  const storagePath = `uploads/${filename}`;
 
-  const publicDir = path.join(process.cwd(), "public", "generated");
-  if (!fs.existsSync(publicDir)) {
-    fs.mkdirSync(publicDir, { recursive: true });
-  }
+  // 1. Upload buffer to Supabase Storage
+  let publicImageUrl = "";
+  try {
+    const supabase = getSupabaseAdmin();
 
-  const filePath = path.join(publicDir, filename);
-  fs.writeFileSync(filePath, imageBuffer);
-
-  // Also write to .output/public/generated if in production build
-  const outputPublicDir = path.join(process.cwd(), ".output", "public", "generated");
-  if (fs.existsSync(path.join(process.cwd(), ".output", "public"))) {
-    if (!fs.existsSync(outputPublicDir)) {
-      fs.mkdirSync(outputPublicDir, { recursive: true });
+    // Ensure social-media bucket exists
+    const { data: buckets } = await supabase.storage.listBuckets();
+    if (!buckets?.some((b) => b.name === "social-media")) {
+      await supabase.storage.createBucket("social-media", { public: true });
     }
-    fs.writeFileSync(path.join(outputPublicDir, filename), imageBuffer);
+
+    const { error: uploadErr } = await supabase.storage
+      .from("social-media")
+      .upload(storagePath, imageBuffer, {
+        contentType: imageExtension === "png" ? "image/png" : "image/jpeg",
+        upsert: true,
+      });
+
+    if (uploadErr) {
+      console.error("[REGEN DEBUG 7 ERROR] Storage upload failed:", uploadErr.message);
+    } else {
+      console.log("[REGEN DEBUG 7] Storage upload completed", { storagePath });
+      const { data: pubData } = supabase.storage.from("social-media").getPublicUrl(storagePath);
+      publicImageUrl = pubData.publicUrl;
+      console.log("[REGEN DEBUG 8] Public URL created", {
+        publicUrlCreated: Boolean(publicImageUrl),
+        publicUrl: publicImageUrl,
+      });
+    }
+  } catch (stgErr) {
+    console.error("[REGEN DEBUG 7 ERROR] Storage upload exception:", stgErr);
   }
 
-  // 3. Resolve canonical public URL
-  const publicImageUrl = resolveCanonicalImageUrl(`/generated/${filename}`);
+  // 2. Local disk fallback writing if storage publicUrl is not available
+  if (!publicImageUrl) {
+    const publicDir = path.join(process.cwd(), "public", "generated");
+    if (!fs.existsSync(publicDir)) {
+      fs.mkdirSync(publicDir, { recursive: true });
+    }
+    const filePath = path.join(publicDir, filename);
+    fs.writeFileSync(filePath, imageBuffer);
 
-  // 4. Validate URL formatting
+    publicImageUrl = resolveCanonicalImageUrl(`/generated/${filename}`);
+    console.log("[REGEN DEBUG 8] Local Public URL created", { publicUrl: publicImageUrl });
+  }
+
+  // 3. Validate URL formatting
   const validation = validateProductionImageUrl(publicImageUrl);
   if (!validation.valid) {
     throw new Error(
