@@ -520,6 +520,32 @@ export const approveSocialPost = createServerFn({ method: "POST" })
   .inputValidator((d: string) => d)
   .handler(async ({ data: id }) => {
     const supabase = adminClient();
+
+    // Verify post has image
+    const { data: existingPost, error: fetchErr } = await supabase
+      .from("social_posts")
+      .select("image_url")
+      .eq("id", id)
+      .single();
+
+    if (fetchErr || !existingPost) {
+      throw new Error("Post not found.");
+    }
+
+    // Media table check isn't strictly necessary if we only check image_url per requirements, 
+    // but we can query media as well. Let's strictly check image_url or media.
+    let hasMedia = false;
+    const { count } = await supabase
+      .from("social_post_media")
+      .select("*", { count: 'exact', head: true })
+      .eq("social_post_id", id);
+      
+    if (count && count > 0) hasMedia = true;
+
+    if (!existingPost.image_url && !hasMedia) {
+      throw new Error("Cannot approve post: Image is required.");
+    }
+
     const { data, error } = await supabase
       .from("social_posts")
       .update({

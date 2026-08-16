@@ -1684,8 +1684,21 @@ function SocialMediaManager() {
                     {/* ACTIONS FOR PENDING APPROVAL */}
                     {post.status === "pending_approval" && (
                       <div className="mt-4 flex flex-wrap gap-2 items-center">
-                        <Button size="sm" variant="hero" onClick={() => onApprove(post.id)}>
-                          <Check className="mr-1.5 size-4" /> Approve for Publishing
+                        <Button 
+                          size="sm" 
+                          variant={(!post.image_url && (!post.media || post.media.length === 0)) ? "secondary" : "hero"} 
+                          onClick={() => onApprove(post.id)}
+                          disabled={!post.image_url && (!post.media || post.media.length === 0)}
+                        >
+                          {(!post.image_url && (!post.media || post.media.length === 0)) ? (
+                            <>
+                              <span className="text-destructive font-bold">IMAGE REQUIRED</span>
+                            </>
+                          ) : (
+                            <>
+                              <Check className="mr-1.5 size-4" /> Approve for Publishing
+                            </>
+                          )}
                         </Button>
 
                         <CreateInstagramPostDialog
