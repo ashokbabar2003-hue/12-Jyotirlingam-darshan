@@ -219,14 +219,12 @@ export const getModerationQueue = createServerFn({ method: "GET" })
     const [galleryRes, storiesRes] = await Promise.all([
       supabaseAdmin
         .from("gallery_images")
-        .select("id, jyotirlinga_slug, caption, note, author_name, image_url, created_at")
-        .eq("status", "pending")
-        .order("created_at", { ascending: true }),
+        .select("id, jyotirlinga_slug, caption, note, author_name, image_url, created_at, status")
+        .order("created_at", { ascending: false }),
       supabaseAdmin
         .from("stories")
-        .select("id, jyotirlinga_slug, title, body, author_name, created_at")
-        .eq("status", "pending")
-        .order("created_at", { ascending: true }),
+        .select("id, jyotirlinga_slug, title, body, author_name, created_at, status")
+        .order("created_at", { ascending: false }),
     ]);
     const gRows = galleryRes.data ?? [];
     const { data: signed } = await supabaseAdmin.storage.from(BUCKET).createSignedUrls(
@@ -242,6 +240,7 @@ export const getModerationQueue = createServerFn({ method: "GET" })
         note: r.note ?? null,
         author_name: r.author_name,
         created_at: r.created_at,
+        status: r.status,
         url: urlByPath.get(r.image_url) ?? null,
       })),
       stories: (storiesRes.data ?? []).map((r) => ({
@@ -251,6 +250,7 @@ export const getModerationQueue = createServerFn({ method: "GET" })
         body: r.body,
         author_name: r.author_name,
         created_at: r.created_at,
+        status: r.status,
       })),
     };
   });

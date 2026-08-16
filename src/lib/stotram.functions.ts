@@ -2,7 +2,7 @@ import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { getJyotirlinga } from "@/data/jyotirlingas";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
-import { GoogleGenAI } from "@google/genai";
+import { ensureServerEnv, getGeminiApiKey, getGeminiClient } from "./gemini.server";
 
 const MessageSchema = z.object({
   role: z.enum(["user", "assistant"]),
@@ -52,10 +52,7 @@ Language:
 export const askStotram = createServerFn({ method: "POST" })
   .inputValidator((data: unknown) => InputSchema.parse(data))
   .handler(async ({ data }) => {
-    const apiKey = process.env.GEMINI_API_KEY;
-    if (!apiKey) throw new Error("GEMINI_API_KEY environment variable is not configured.");
-
-    const ai = new GoogleGenAI({ apiKey });
+    const ai = getGeminiClient();
 
     // Convert system prompt
     const systemInstruction = systemPrompt(data.slug, data.lang ?? "en");
@@ -66,21 +63,27 @@ export const askStotram = createServerFn({ method: "POST" })
       parts: [{ text: m.content }],
     }));
 
-    try {
-      const response = await ai.models.generateContent({
-        model: "gemini-3.5-flash",
-        contents,
-        config: {
-          systemInstruction,
-        },
-      });
+    const models = ["gemini-3.1-flash-lite", "gemini-flash-latest", "gemini-2.5-flash"];
+    let lastErr: Error | null = null;
 
-      return { reply: response.text ?? "" };
-    } catch (err) {
-      console.error("Gemini API error:", err);
-      const msg = err instanceof Error ? err.message : String(err);
-      throw new Error(`AI error: ${msg}`);
+    for (const model of models) {
+      try {
+        const response = await ai.models.generateContent({
+          model,
+          contents,
+          config: {
+            systemInstruction,
+          },
+        });
+
+        return { reply: response.text ?? "" };
+      } catch (err) {
+        lastErr = err instanceof Error ? err : new Error(String(err));
+        console.warn(`Stotram Gemini call with model ${model} failed:`, lastErr.message);
+      }
     }
+
+    throw new Error(`AI error: ${lastErr?.message || "All models failed"}`);
   });
 
 /* ---------------- History persistence (signed-in users) ---------------- */
@@ -228,8 +231,7 @@ function encodeWavHeader(pcmLength: number, sampleRate: number): Uint8Array {
 export const generateStotramAudio = createServerFn({ method: "POST" })
   .inputValidator((data: unknown) => AudioInput.parse(data))
   .handler(async ({ data }) => {
-    const apiKey = process.env.GEMINI_API_KEY;
-    if (!apiKey) throw new Error("GEMINI_API_KEY environment variable is not configured.");
+    ensureServerEnv();
     const jl = getJyotirlinga(data.slug);
     if (!jl) throw new Error("Unknown shrine");
 
@@ -241,7 +243,14 @@ export const generateStotramAudio = createServerFn({ method: "POST" })
     const style = VOICE_STYLES[styleKey];
     const tempoKey = data.tempo ?? "slow";
 
-    const ai = new GoogleGenAI({ apiKey });
+    const ai = new GoogleGenAI({
+      apiKey,
+      httpOptions: {
+        headers: {
+          "User-Agent": "aistudio-build",
+        },
+      },
+    });
 
     // 1) Compose script — reuse the previous one when regenerating with a new voice/tempo.
     let script = data.reuseScript?.trim() ?? "";

@@ -125,11 +125,16 @@ export function findLiveCandidatesInHtml(html: string): LiveCandidate[] {
     if (seen.has(id)) continue;
     const signalWindow = html.slice(match.index, match.index + 4000);
     if (!liveSignals.some((re) => re.test(signalWindow))) continue;
-    const detailWindow = html.slice(match.index, match.index + 9000);
+
+    // Tight centered window for title extraction to avoid cross-talk
+    const sliceStart = Math.max(0, match.index - 1500);
+    const detailWindow = html.slice(sliceStart, Math.min(html.length, match.index + 2000));
+    const videoIdOffset = match.index - sliceStart;
+
     seen.add(id);
     out.push({
       id,
-      title: extractTitleFromWindow(detailWindow),
+      title: extractTitleFromWindow(detailWindow, videoIdOffset),
       channelId: extractCandidateChannelId(detailWindow),
     });
   }
@@ -153,7 +158,8 @@ function extractPrimaryLiveCandidate(html: string): LiveCandidate | null {
   const start = html.indexOf('"videoDetails":{');
   if (start >= 0) {
     const detailWindow = html.slice(start, start + 20000);
-    const id = detailWindow.match(/"videoId":"([A-Za-z0-9_-]{11})"/)?.[1] ?? null;
+    // Ensure videoId is a direct property of videoDetails by searching only the first 200 characters
+    const id = detailWindow.slice(0, 200).match(/"videoId":"([A-Za-z0-9_-]{11})"/)?.[1] ?? null;
     const channelId = extractCandidateChannelId(detailWindow);
     const isLive = /"isLive":true/.test(detailWindow) || /"isLiveContent":true/.test(detailWindow);
     if (id && VIDEO_ID_RE.test(id) && isLive) {
@@ -167,34 +173,72 @@ function extractPrimaryLiveCandidate(html: string): LiveCandidate | null {
   // recommendations on the page.
   if (!pageLooksLive(html)) return null;
   const canon = extractCanonicalVideoId(html);
-  if (!canon) return null;
-  const match = findLiveCandidatesInHtml(html).find((c) => c.id === canon);
-  return {
-    id: canon,
-    title: match?.title ?? extractTitleFromWindow(html.slice(0, 12000)),
-    channelId: match?.channelId ?? extractChannelId(html),
-  };
+  if (canon) {
+    const match = findLiveCandidatesInHtml(html).find((c) => c.id === canon);
+    return {
+      id: canon,
+      title: match?.title ?? extractTitleFromWindow(html.slice(0, 12000)),
+      channelId: match?.channelId ?? extractChannelId(html),
+    };
+  }
+
+  // Fallback if canonical URL is missing/undefined/unparseable but the page looks live and we found candidates
+  const candidates = findLiveCandidatesInHtml(html);
+  if (candidates.length > 0) {
+    return candidates[0];
+  }
+
+  return null;
 }
 
-function extractTitleFromWindow(window: string): string {
+function extractTitleFromWindow(window: string, videoIdOffset: number = -1): string {
   // Try common YouTube JSON title shapes near the videoId.
   const patterns = [
-    /"title":\s*\{\s*"runs":\s*\[\s*\{\s*"text":"((?:[^"\\]|\\.)*)"/,
-    /"title":\s*\{\s*"simpleText":"((?:[^"\\]|\\.)*)"/,
-    /"title":"((?:[^"\\]|\\.)*)"/,
-    /"headline":\s*\{\s*"simpleText":"((?:[^"\\]|\\.)*)"/,
+    /"title":\s*\{\s*"runs":\s*\[\s*\{\s*"text":"((?:[^"\\]|\\.)*)"/g,
+    /"title":\s*\{\s*"simpleText":"((?:[^"\\]|\\.)*)"/g,
+    /"title":"((?:[^"\\]|\\.)*)"/g,
+    /"headline":\s*\{\s*"simpleText":"((?:[^"\\]|\\.)*)"/g,
   ];
+
+  if (videoIdOffset < 0) {
+    for (const re of patterns) {
+      const simpleRe = new RegExp(re.source);
+      const m = window.match(simpleRe);
+      if (m && m[1]) {
+        try {
+          return JSON.parse(`"${m[1]}"`);
+        } catch {
+          return m[1];
+        }
+      }
+    }
+    return "";
+  }
+
+  let bestTitle = "";
+  let bestDist = Infinity;
+
   for (const re of patterns) {
-    const m = window.match(re);
-    if (m && m[1]) {
-      try {
-        return JSON.parse(`"${m[1]}"`);
-      } catch {
-        return m[1];
+    let match: RegExpExecArray | null;
+    re.lastIndex = 0;
+    while ((match = re.exec(window)) !== null) {
+      const titleStr = match[1];
+      if (!titleStr) continue;
+
+      const matchCenter = match.index + match[0].length / 2;
+      const dist = Math.abs(matchCenter - videoIdOffset);
+      if (dist < bestDist) {
+        bestDist = dist;
+        try {
+          bestTitle = JSON.parse(`"${titleStr}"`);
+        } catch {
+          bestTitle = titleStr;
+        }
       }
     }
   }
-  return "";
+
+  return bestTitle;
 }
 
 /**
@@ -408,6 +452,13 @@ export async function resolveLiveVideoId(
     if (primary) {
       collect([primary]);
       if (!useScoring && allCandidates.length > 0) return allCandidates[0].id;
+
+      if (useScoring) {
+        const score = scoreLiveCandidate(primary.title, hints);
+        if (score > 0 && hasSpecificHintMatch(primary.title, hints)) {
+          return primary.id;
+        }
+      }
     }
   }
 
@@ -440,8 +491,16 @@ export async function resolveLiveVideoId(
     const html = await fetcher(`https://www.youtube.com/channel/${channelId}/live`);
     if (html && pageLooksLive(html)) {
       const primary = extractPrimaryLiveCandidate(html);
-      if (primary) collect([primary]);
-      if (!useScoring && allCandidates.length > 0) return allCandidates[0].id;
+      if (primary) {
+        collect([primary]);
+        if (!useScoring && allCandidates.length > 0) return allCandidates[0].id;
+        if (useScoring) {
+          const score = scoreLiveCandidate(primary.title, hints);
+          if (score > 0 && hasSpecificHintMatch(primary.title, hints)) {
+            return primary.id;
+          }
+        }
+      }
     }
   }
 
