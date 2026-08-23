@@ -650,6 +650,16 @@ export async function refreshAllLiveStreams(
           );
         if (upErr) outcome = { ...p, status: "error", message: upErr.message };
       }
+    } else if (p.status === "no_live") {
+      const { error: upErr } = await supabaseAdmin
+        .from("darshan_links")
+        .upsert(
+          { slug: p.slug, youtube_url: null, updated_at: new Date().toISOString() },
+          { onConflict: "slug" },
+        );
+      if (upErr) {
+        outcome = { ...p, status: "error", message: upErr.message };
+      }
     }
 
     try {
