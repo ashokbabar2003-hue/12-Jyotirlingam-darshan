@@ -27,11 +27,11 @@ const DETAIL_STRINGS: Record<Lang, DetailStrings> = {
     aboutPrefix: "About",
   },
   mr: {
-    back: "सर्व ज्योतिर्लिंगे",
+    back: "सर्व ज्योतिर्लिंग",
     counter: (n, total) => `ज्योतिर्लिंग ${n} / ${total}`,
     watchLive: "थेट दर्शन पाहा",
     liveDarshan: "थेट दर्शन",
-    aboutPrefix: "विषयी",
+    aboutPrefix: "माहिती",
   },
   hi: {
     back: "सभी ज्योतिर्लिंग",
@@ -108,7 +108,7 @@ export const Route = createFileRoute("/jyotirlinga/$slug")({
 
 function Detail() {
   const { jl } = Route.useLoaderData();
-  const { lang, isEn, isMr, fontClass } = useLanguage();
+  const { lang, isEn, fontClass, displayFontClass } = useLanguage();
   const galleryFn = useServerFn(getApprovedGallery);
   const storiesFn = useServerFn(getApprovedStories);
   const linksFn = useServerFn(getDarshanLinks);
@@ -173,16 +173,19 @@ function Detail() {
           </Link>
           <p
             className={cn(
-              "mt-6 text-sm uppercase tracking-[0.25em] text-accent",
-              isEn ? "font-display" : cn("normal-case tracking-normal", fontClass),
+              "mt-6 text-sm text-accent",
+              isEn ? "uppercase tracking-[0.25em] font-display" : cn("tracking-normal", fontClass),
             )}
           >
             {DETAIL_STRINGS[lang].counter(toLocalDigits(jl.number, lang), toLocalDigits(12, lang))}
           </p>
           <h1
             className={cn(
-              "mt-2 text-4xl font-bold text-foreground sm:text-5xl",
-              isEn ? "font-display" : fontClass,
+              "mt-2 text-4xl font-bold text-foreground sm:text-5xl overflow-visible",
+              displayFontClass,
+              isEn
+                ? "font-display tracking-tight leading-tight"
+                : "tracking-normal leading-snug sm:leading-[1.28]",
             )}
           >
             {displayName}
@@ -209,7 +212,8 @@ function Detail() {
             <h2
               className={cn(
                 "mb-3 flex items-center gap-2 text-2xl text-foreground",
-                isEn ? "font-display" : fontClass,
+                displayFontClass,
+                isEn ? "font-display tracking-tight" : "tracking-normal",
               )}
             >
               <Play className="size-5 text-primary" /> {DETAIL_STRINGS[lang].liveDarshan}
@@ -225,14 +229,14 @@ function Detail() {
         )}
 
         <section className="rounded-xl border border-border/60 bg-card p-6 shadow-elegant">
-          <h2 className={cn("text-2xl text-foreground", isEn ? "font-display" : fontClass)}>
-            {isMr ? (
-              <>{jl.deity} विषयी</>
-            ) : (
-              <>
-                {DETAIL_STRINGS[lang].aboutPrefix} {jl.deity}
-              </>
+          <h2
+            className={cn(
+              "text-2xl text-foreground",
+              displayFontClass,
+              isEn ? "font-display tracking-tight" : "tracking-normal",
             )}
+          >
+            {DETAIL_STRINGS[lang].aboutPrefix} {jl.deity}
           </h2>
           <p className="mt-3 text-muted-foreground">{jl.description}</p>
           <p className="mt-4 border-l-2 border-primary pl-4 text-foreground/90 italic">

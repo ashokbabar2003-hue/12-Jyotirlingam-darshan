@@ -70,23 +70,6 @@ const DASHBOARD_STRINGS: Record<Lang, DashboardStrings> = {
     elevation: "Elevation ~{0} m",
     backHome: "Back to Home",
   },
-  mr: {
-    title: "तुमचे आदर्श",
-    titleAccent: "ज्योतिर्लिंग शोधा",
-    subtitle:
-      "भगवान शिवांच्या बारा पवित्र ज्योतिर्लिंगांचे अन्वेषण करा. राज्य, प्रादेशिक विभाग किंवा तीर्थयात्रेच्या कठीणतेनुसार फिल्टर करा.",
-    shrinesMatching: "फिल्टरशी जुळणारी मंदिरे",
-    totalSuffix: " / १२",
-    byZone: "विभागानुसार",
-    byDifficulty: "कठीणतेनुसार",
-    stateLabel: "राज्य",
-    zoneLabel: "प्रादेशिक विभाग",
-    difficultyLabel: "प्रवास कठीणता",
-    clearFilters: "फिल्टर साफ करा",
-    emptyState: "निवडलेल्या फिल्टरशी कोणतीही मंदिरे जुळत नाहीत. एक फिल्टर काढून टाकून पहा.",
-    elevation: "उंची ~{0} मी",
-    backHome: "मुख्यपृष्ठावर परत जा",
-  },
   hi: {
     title: "अपना आदर्श",
     titleAccent: "ज्योतिर्लिंग खोजें",
@@ -162,7 +145,6 @@ const ALL_STATES = Array.from(new Set(jyotirlingas.map((j) => j.state))).sort();
 
 const zoneLabels: Record<Lang, Record<Zone, string>> = {
   en: { North: "North", South: "South", East: "East", West: "West", Central: "Central" },
-  mr: { North: "उत्तर", South: "दक्षिण", East: "पूर्व", West: "पश्चिम", Central: "मध्य" },
   hi: { North: "उत्तर", South: "दक्षिण", East: "पूर्व", West: "पश्चिम", Central: "मध्य" },
   gu: { North: "ઉત્તર", South: "દક્ષિણ", East: "પૂર્વ", West: "પશ્ચિમ", Central: "મધ્ય" },
   te: { North: "ఉత్తర", South: "దక్షిణ", East: "తూర్పు", West: "పడమర", Central: "మధ్య" },
@@ -171,7 +153,6 @@ const zoneLabels: Record<Lang, Record<Zone, string>> = {
 
 const difficultyLabels: Record<Lang, Record<Difficulty, string>> = {
   en: { Easy: "Easy", Medium: "Medium", "Challenging Trek": "Challenging Trek" },
-  mr: { Easy: "सरल", Medium: "मध्यम", "Challenging Trek": "कठिन पदयात्रा" },
   hi: { Easy: "सरल", Medium: "मध्यम", "Challenging Trek": "कठिन पदयात्रा" },
   gu: { Easy: "સરળ", Medium: "મધ્યમ", "Challenging Trek": "કઠિણ ટ્રેક" },
   te: { Easy: "సులభం", Medium: "మధ్యస్థం", "Challenging Trek": "సవాలుతరం ట్రెక్" },
@@ -180,7 +161,6 @@ const difficultyLabels: Record<Lang, Record<Difficulty, string>> = {
 
 const stateLabels: Record<Lang, Record<string, string>> = {
   en: {},
-  mr: {},
   hi: {},
   gu: {},
   te: {},
@@ -190,8 +170,6 @@ const stateLabels: Record<Lang, Record<string, string>> = {
 jyotirlingas.forEach((j) => {
   const labels = getLocalized(j, "en");
   stateLabels.en[j.state] = labels.state;
-  const mr = getLocalized(j, "mr");
-  stateLabels.mr[j.state] = mr.state;
   (["hi", "gu", "te", "ta"] as Lang[]).forEach((l) => {
     stateLabels[l][j.state] = getLocalized(j, l).state;
   });
@@ -296,11 +274,17 @@ function Dashboard() {
         <div className="min-w-0">
           <h1
             className={cn(
-              "text-3xl font-bold text-foreground sm:text-4xl",
-              isEn ? "font-display" : fontClass,
+              "text-3xl text-foreground sm:text-4xl font-display",
+              isEn ? "font-bold tracking-tight" : "tracking-normal",
             )}
           >
-            {t.title} <span className="text-gradient-gold">{t.titleAccent}</span>
+            {isEn ? (
+              <>
+                {t.title} <span className="text-gradient-gold">{t.titleAccent}</span>
+              </>
+            ) : (
+              `${t.title} ${t.titleAccent}`
+            )}
           </h1>
           <p
             className={cn(
@@ -494,8 +478,8 @@ function Dashboard() {
                 <div className="p-4">
                   <h3
                     className={cn(
-                      "text-lg font-semibold text-foreground group-hover:text-primary",
-                      isEn ? "font-display" : fontClass,
+                      "text-lg font-semibold text-foreground group-hover:text-primary font-display",
+                      isEn ? "tracking-tight" : "tracking-normal",
                     )}
                   >
                     {loc.name}

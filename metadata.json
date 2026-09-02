@@ -1,0 +1,6 @@
+{
+  "name": "12 Jyotirlingam Darshan",
+  "description": "Sacred portal for 12 Jyotirlingas darshan, live streams, devotional stotrams, chants, and stories.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

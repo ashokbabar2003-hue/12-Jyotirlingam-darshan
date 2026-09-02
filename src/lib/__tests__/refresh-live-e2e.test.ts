@@ -9,9 +9,9 @@ import {
 
 // Minimal fake catalog covering 3 shrines.
 const catalog = [
-  { slug: "somnath", name: "Somnath Jyotirlinga", nameMr: "सोमनाथ" },
-  { slug: "mahakaleshwar", name: "Mahakaleshwar Jyotirlinga", nameMr: "महाकालेश्वर" },
-  { slug: "kashi", name: "Kashi Vishwanath", nameMr: "काशी विश्वनाथ" },
+  { slug: "somnath", name: "Somnath Jyotirlinga" },
+  { slug: "mahakaleshwar", name: "Mahakaleshwar Jyotirlinga" },
+  { slug: "kashi", name: "Kashi Vishwanath" },
 ];
 
 const channels: PlanChannel[] = [

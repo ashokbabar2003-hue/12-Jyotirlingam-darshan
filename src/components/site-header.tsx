@@ -13,10 +13,11 @@ import {
   Sparkles,
 } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
-import { useLanguage, LANGUAGES, type Lang } from "@/hooks/use-language";
+import { useLanguage, type Lang } from "@/hooks/use-language";
 import { useSeason, SEASONS, type SeasonMode } from "@/hooks/use-season";
 import { useAudioChant } from "@/hooks/use-audio-chant";
 import { supabase } from "@/integrations/supabase/client";
+import { LanguageSelector } from "@/components/LanguageSelector";
 
 import { Button } from "@/components/ui/button";
 import { Slider } from "@/components/ui/slider";
@@ -29,6 +30,15 @@ import {
   DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu";
 import { cn } from "@/lib/utils";
+
+const SITE_TITLE: Record<Lang, string> = {
+  en: "12 Jyotirlinga Darshan",
+  mr: "१२ ज्योतिर्लिंग दर्शन",
+  hi: "१२ ज्योतिर्लिंग दर्शन",
+  gu: "૧૨ જ્યોતિર્લિંગ દર્શન",
+  te: "౧౨ జ్యోతిర్లింగ దర్శనం",
+  ta: "௧௨ ஜோதிர்லிங்க தரிசனம்",
+};
 
 const DASHBOARD_LABEL: Record<Lang, string> = {
   en: "Locate Your Ideal Jyotirlingam",
@@ -50,7 +60,7 @@ const PRAY_LABEL: Record<Lang, string> = {
 
 const CHANT_STATUS: Record<Lang, { playing: string; paused: string; loading: string }> = {
   en: { playing: "Chant Playing", paused: "Chant Muted", loading: "Loading..." },
-  mr: { playing: "जप सुरू आहे", paused: "जप थांबवला", loading: "लोड होत आहे..." },
+  mr: { playing: "मंत्र सुरू आहे", paused: "मंत्र शांत", loading: "लोड होत आहे..." },
   hi: { playing: "मंत्र जारी है", paused: "मंत्र मौन", loading: "लोड हो रहा है..." },
   gu: { playing: "મંત્ર ચાલુ છે", paused: "મંત્ર બંધ છે", loading: "લોડ થઈ રહ્યું છે..." },
   te: {
@@ -67,7 +77,7 @@ const CHANT_STATUS: Record<Lang, { playing: string; paused: string; loading: str
 
 export function SiteHeader() {
   const { user, signOut: authSignOut } = useAuth();
-  const { lang, setLang, fontClass } = useLanguage();
+  const { lang, fontClass } = useLanguage();
   const { season, mode: seasonMode, setMode: setSeasonMode } = useSeason();
   const { playing, loading, volume, setVolume, toggle } = useAudioChant();
   const navigate = useNavigate();
@@ -78,7 +88,6 @@ export function SiteHeader() {
     setIsMounted(true);
   }, []);
 
-  const current = LANGUAGES.find((l) => l.code === lang) ?? LANGUAGES[0];
   const currentSeason = SEASONS.find((s) => s.code === season) ?? SEASONS[0];
 
   async function signOut() {
@@ -91,8 +100,13 @@ export function SiteHeader() {
       <div className="mx-auto grid h-16 max-w-6xl grid-cols-[minmax(0,1fr)_auto] items-center gap-2 px-3 sm:px-4">
         <a href="/" className="flex min-w-0 items-center gap-2">
           <Flame className="size-6 shrink-0 text-primary diya-flicker" />
-          <span className="truncate font-display text-base font-semibold text-gradient-gold sm:text-lg">
-            12 Jyotirlinga Darshan
+          <span
+            className={cn(
+              "truncate text-base font-semibold text-gradient-gold sm:text-lg",
+              lang === "en" ? "font-display" : fontClass,
+            )}
+          >
+            {SITE_TITLE[lang]}
           </span>
         </a>
         <nav className="flex shrink-0 items-center gap-1.5 sm:gap-2">
@@ -242,36 +256,7 @@ export function SiteHeader() {
             </DropdownMenuContent>
           </DropdownMenu>
 
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <button
-                type="button"
-                aria-label="Select language"
-                className="inline-flex items-center gap-1.5 rounded-full border border-border/60 bg-card/70 px-2.5 py-1.5 text-xs font-semibold text-foreground transition-colors hover:bg-card"
-              >
-                <Languages className="size-3.5 shrink-0 text-muted-foreground" />
-                <span className={cn("hidden max-w-[7rem] truncate sm:inline", fontClass)}>
-                  {current.label}
-                </span>
-              </button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="min-w-[10rem]">
-              <DropdownMenuLabel className="text-[11px] uppercase tracking-wider text-muted-foreground">
-                Language
-              </DropdownMenuLabel>
-              <DropdownMenuSeparator />
-              {LANGUAGES.map((l) => (
-                <DropdownMenuItem
-                  key={l.code}
-                  onSelect={() => setLang(l.code as Lang)}
-                  className={cn("cursor-pointer text-sm", l.fontClass)}
-                >
-                  <span className="flex-1">{l.label}</span>
-                  {lang === l.code && <Check className="size-3.5 text-primary" />}
-                </DropdownMenuItem>
-              ))}
-            </DropdownMenuContent>
-          </DropdownMenu>
+          <LanguageSelector />
 
           {!isMounted ? (
             <Button asChild variant="hero" size="sm">

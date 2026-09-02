@@ -41,21 +41,36 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
     }
 
-    const { data: sub } = supabase.auth.onAuthStateChange((_event, s) => {
-      if (localStorage.getItem("local_admin_session")) return;
-      setSession(s);
-      setIsLocalAdmin(false);
+    let unsubscribe = () => {};
+    try {
+      const { data: sub } = supabase.auth.onAuthStateChange((_event, s) => {
+        if (localStorage.getItem("local_admin_session")) return;
+        setSession(s);
+        setIsLocalAdmin(false);
+        setLoading(false);
+      });
+      if (sub?.subscription) {
+        unsubscribe = () => sub.subscription.unsubscribe();
+      }
+    } catch {
       setLoading(false);
-    });
+    }
 
-    supabase.auth.getSession().then(({ data }) => {
-      if (localStorage.getItem("local_admin_session")) return;
-      setSession(data.session);
-      setIsLocalAdmin(false);
-      setLoading(false);
-    });
+    supabase.auth
+      .getSession()
+      .then(({ data }) => {
+        if (localStorage.getItem("local_admin_session")) return;
+        setSession(data?.session ?? null);
+        setIsLocalAdmin(false);
+        setLoading(false);
+      })
+      .catch(() => {
+        setLoading(false);
+      });
 
-    return () => sub.subscription.unsubscribe();
+    return () => {
+      unsubscribe();
+    };
   }, []);
 
   const signInAsLocalAdmin = (adminName: string) => {

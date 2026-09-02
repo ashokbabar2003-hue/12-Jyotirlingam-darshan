@@ -117,7 +117,7 @@ function AdminPage() {
     action: "approve" | "reject" | "pending",
   ) {
     try {
-      await moderateFn({ data: { type, id, action: action as any } });
+      await moderateFn({ data: { type, id, action } });
       toast.success(
         action === "approve"
           ? "Approved."
@@ -166,16 +166,16 @@ function AdminPage() {
     );
   }
 
-  const galleryPending = (queue.data?.gallery || []).filter((g: any) => g.status === "pending");
-  const galleryApproved = (queue.data?.gallery || []).filter((g: any) => g.status === "approved");
-  const galleryRejected = (queue.data?.gallery || []).filter((g: any) => g.status === "rejected");
+  const galleryPending = (queue.data?.gallery || []).filter((g) => g.status === "pending");
+  const galleryApproved = (queue.data?.gallery || []).filter((g) => g.status === "approved");
+  const galleryRejected = (queue.data?.gallery || []).filter((g) => g.status === "rejected");
 
-  const storiesPending = (queue.data?.stories || []).filter((s: any) => s.status === "pending");
-  const storiesApproved = (queue.data?.stories || []).filter((s: any) => s.status === "approved");
-  const storiesRejected = (queue.data?.stories || []).filter((s: any) => s.status === "rejected");
+  const storiesPending = (queue.data?.stories || []).filter((s) => s.status === "pending");
+  const storiesApproved = (queue.data?.stories || []).filter((s) => s.status === "approved");
+  const storiesRejected = (queue.data?.stories || []).filter((s) => s.status === "rejected");
 
   const socialPending = (Array.isArray(posts.data) ? posts.data : []).filter(
-    (p: any) => p.status === "pending_approval",
+    (p) => p.status === "pending_approval",
   );
 
   return (
@@ -1632,37 +1632,40 @@ function SocialMediaManager() {
                           ))}
                         </div>
                       </div>
-                    ) : (
-                      post.image_url ? (
-                        <div className="mt-3">
-                          
-                          <p className="text-sm font-semibold text-muted-foreground flex items-center justify-between">
-                            <span>Image Preview:</span>
-                            {post.image_url.includes("gen-") ? (
-                              <span className="rounded bg-emerald-500/10 px-2 py-0.5 text-[10px] font-bold text-emerald-600 border border-emerald-500/20">AI Generated</span>
-                            ) : post.image_url.includes("uploads/") ? (
-                              <span className="rounded bg-blue-500/10 px-2 py-0.5 text-[10px] font-bold text-blue-600 border border-blue-500/20">User Upload</span>
-                            ) : (
-                              <span className="rounded bg-slate-500/10 px-2 py-0.5 text-[10px] font-bold text-slate-600 border border-slate-500/20">Canonical</span>
-                            )}
-                          </p>
+                    ) : post.image_url ? (
+                      <div className="mt-3">
+                        <p className="text-sm font-semibold text-muted-foreground flex items-center justify-between">
+                          <span>Image Preview:</span>
+                          {post.image_url.includes("gen-") ? (
+                            <span className="rounded bg-emerald-500/10 px-2 py-0.5 text-[10px] font-bold text-emerald-600 border border-emerald-500/20">
+                              AI Generated
+                            </span>
+                          ) : post.image_url.includes("uploads/") ? (
+                            <span className="rounded bg-blue-500/10 px-2 py-0.5 text-[10px] font-bold text-blue-600 border border-blue-500/20">
+                              User Upload
+                            </span>
+                          ) : (
+                            <span className="rounded bg-slate-500/10 px-2 py-0.5 text-[10px] font-bold text-slate-600 border border-slate-500/20">
+                              Canonical
+                            </span>
+                          )}
+                        </p>
 
-                          <img
-                            src={post.image_url}
-                            alt={`${post.jyotirlinga_slug} preview`}
-                            className="mt-1 max-h-48 rounded-md object-cover border border-border/40"
-                            referrerPolicy="no-referrer"
-                          />
+                        <img
+                          src={post.image_url}
+                          alt={`${post.jyotirlinga_slug} preview`}
+                          className="mt-1 max-h-48 rounded-md object-cover border border-border/40"
+                          referrerPolicy="no-referrer"
+                        />
+                      </div>
+                    ) : (
+                      <div className="mt-3 rounded-md bg-destructive/10 p-3 text-sm text-destructive border border-destructive/20 flex items-start gap-2">
+                        <AlertCircle className="size-4 mt-0.5 shrink-0" />
+                        <div>
+                          <p className="font-bold">AI IMAGE UNAVAILABLE</p>
+                          <p>Gemini image-generation quota is currently 0.</p>
                         </div>
-                      ) : (
-                        <div className="mt-3 rounded-md bg-destructive/10 p-3 text-sm text-destructive border border-destructive/20 flex items-start gap-2">
-                          <AlertCircle className="size-4 mt-0.5 shrink-0" />
-                          <div>
-                            <p className="font-bold">AI IMAGE UNAVAILABLE</p>
-                            <p>Gemini image-generation quota is currently 0.</p>
-                          </div>
-                        </div>
-                      )
+                      </div>
                     )}
 
                     {post.image_prompt && (
@@ -1684,13 +1687,17 @@ function SocialMediaManager() {
                     {/* ACTIONS FOR PENDING APPROVAL */}
                     {post.status === "pending_approval" && (
                       <div className="mt-4 flex flex-wrap gap-2 items-center">
-                        <Button 
-                          size="sm" 
-                          variant={(!post.image_url && (!post.media || post.media.length === 0)) ? "secondary" : "hero"} 
+                        <Button
+                          size="sm"
+                          variant={
+                            !post.image_url && (!post.media || post.media.length === 0)
+                              ? "secondary"
+                              : "hero"
+                          }
                           onClick={() => onApprove(post.id)}
                           disabled={!post.image_url && (!post.media || post.media.length === 0)}
                         >
-                          {(!post.image_url && (!post.media || post.media.length === 0)) ? (
+                          {!post.image_url && (!post.media || post.media.length === 0) ? (
                             <>
                               <span className="text-destructive font-bold">IMAGE REQUIRED</span>
                             </>
@@ -1813,7 +1820,38 @@ function SocialMediaManager() {
   );
 }
 
-function StoryList({ stories, act, title, emptyMessage }: any) {
+interface StoryAdminItem {
+  id: string;
+  slug: string;
+  title: string;
+  body: string;
+  author_name: string;
+  created_at: string;
+  status: "pending" | "approved" | "rejected";
+}
+
+interface GalleryAdminItem {
+  id: string;
+  slug: string;
+  caption: string | null;
+  note: string | null;
+  author_name: string;
+  created_at: string;
+  status: "pending" | "approved" | "rejected";
+  url: string | null;
+}
+
+function StoryList({
+  stories,
+  act,
+  title,
+  emptyMessage,
+}: {
+  stories: StoryAdminItem[];
+  act: (type: "story", id: string, action: "approve" | "reject" | "pending") => Promise<void>;
+  title: string;
+  emptyMessage: string;
+}) {
   return (
     <div className="space-y-4">
       <h3 className="font-display text-lg text-foreground">
@@ -1822,7 +1860,7 @@ function StoryList({ stories, act, title, emptyMessage }: any) {
       {stories.length === 0 ? (
         <p className="text-sm text-muted-foreground">{emptyMessage}</p>
       ) : (
-        stories.map((s: any) => (
+        stories.map((s) => (
           <div key={s.id} className="rounded-lg border border-border/60 bg-card p-4">
             <p className="text-xs text-accent">{getJyotirlinga(s.slug)?.name ?? s.slug}</p>
             <h3 className="font-display text-lg text-foreground">{s.title}</h3>
@@ -1862,7 +1900,17 @@ function StoryList({ stories, act, title, emptyMessage }: any) {
   );
 }
 
-function GalleryList({ gallery, act, title, emptyMessage }: any) {
+function GalleryList({
+  gallery,
+  act,
+  title,
+  emptyMessage,
+}: {
+  gallery: GalleryAdminItem[];
+  act: (type: "gallery", id: string, action: "approve" | "reject" | "pending") => Promise<void>;
+  title: string;
+  emptyMessage: string;
+}) {
   return (
     <div className="space-y-4">
       <h3 className="font-display text-lg text-foreground">
@@ -1872,7 +1920,7 @@ function GalleryList({ gallery, act, title, emptyMessage }: any) {
         <p className="text-sm text-muted-foreground">{emptyMessage}</p>
       ) : (
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-          {gallery.map((g: any) => (
+          {gallery.map((g) => (
             <div key={g.id} className="overflow-hidden rounded-lg border border-border/60 bg-card">
               {g.url && (
                 <img

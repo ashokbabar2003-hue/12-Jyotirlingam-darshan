@@ -23,9 +23,16 @@ import {
 // Using a custom client to avoid strictly requiring generated types for the new table yet
 function adminClient() {
   ensureServerEnv();
-  const url = process.env.SUPABASE_URL;
-  const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
-  return createClient(url!, key!, {
+  const url =
+    process.env.SUPABASE_URL ||
+    process.env.VITE_SUPABASE_URL ||
+    "https://placeholder-project.supabase.co";
+  const key =
+    process.env.SUPABASE_SERVICE_ROLE_KEY ||
+    process.env.SUPABASE_PUBLISHABLE_KEY ||
+    process.env.VITE_SUPABASE_PUBLISHABLE_KEY ||
+    "placeholder-service-key";
+  return createClient(url, key, {
     auth: { persistSession: false, autoRefreshToken: false },
   });
 }
@@ -59,9 +66,13 @@ export interface SocialPost {
 export const getSocialPosts = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async () => {
+    ensureServerEnv();
+    if (!process.env.SUPABASE_URL && !process.env.VITE_SUPABASE_URL) {
+      return [];
+    }
     const supabase = adminClient();
 
-    let data: any[] | null = null;
+    let data: Array<SocialPost & { media?: SocialPostMedia[] }> | null = null;
     let error = null;
 
     // Try fetching with social_post_media relation
@@ -76,10 +87,10 @@ export const getSocialPosts = createServerFn({ method: "GET" })
         .from("social_posts")
         .select("*")
         .order("created_at", { ascending: false });
-      data = fallbackRes.data;
+      data = fallbackRes.data as Array<SocialPost & { media?: SocialPostMedia[] }> | null;
       error = fallbackRes.error;
     } else {
-      data = res.data;
+      data = res.data as Array<SocialPost & { media?: SocialPostMedia[] }> | null;
     }
 
     if (error) {
@@ -89,7 +100,7 @@ export const getSocialPosts = createServerFn({ method: "GET" })
     }
 
     // Standardize post_type and media array fallback
-    const normalized = (data || []).map((p: any) => {
+    const normalized = (data || []).map((p: SocialPost & { media?: SocialPostMedia[] }) => {
       const fallbackMedia = p.image_url
         ? [
             {
@@ -97,7 +108,7 @@ export const getSocialPosts = createServerFn({ method: "GET" })
               social_post_id: p.id,
               storage_path: p.image_url,
               public_url: p.image_url,
-              media_type: "image",
+              media_type: "image" as const,
               sort_order: 0,
               created_at: p.created_at,
             },
@@ -136,7 +147,7 @@ export const draftSocialPost = createServerFn({ method: "POST" })
     const supabase = adminClient();
 
     let targetSlug = requestedSlug;
-    
+
     // Determine random shrine if requested
     if (requestedSlug === "random") {
       const { data: allPosts } = await supabase
@@ -144,11 +155,24 @@ export const draftSocialPost = createServerFn({ method: "POST" })
         .select("jyotirlinga_slug, created_at")
         .order("created_at", { ascending: false })
         .limit(100);
-        
+
       const counts: Record<string, number> = {};
-      const allShrines = ["somnath", "mallikarjuna", "mahakaleshwar", "omkareshwar", "kedarnath", "bhimashankar", "kashi", "trimbakeshwar", "baidyanath", "nageshwar", "rameshwaram", "grishneshwar"];
-      allShrines.forEach(s => counts[s] = 0);
-      
+      const allShrines = [
+        "somnath",
+        "mallikarjuna",
+        "mahakaleshwar",
+        "omkareshwar",
+        "kedarnath",
+        "bhimashankar",
+        "kashi",
+        "trimbakeshwar",
+        "baidyanath",
+        "nageshwar",
+        "rameshwaram",
+        "grishneshwar",
+      ];
+      allShrines.forEach((s) => (counts[s] = 0));
+
       if (allPosts) {
         for (const p of allPosts) {
           if (p.jyotirlinga_slug && counts[p.jyotirlinga_slug] !== undefined) {
@@ -156,7 +180,7 @@ export const draftSocialPost = createServerFn({ method: "POST" })
           }
         }
       }
-      
+
       let minCount = Infinity;
       let underused: string[] = [];
       for (const s of allShrines) {
@@ -167,7 +191,7 @@ export const draftSocialPost = createServerFn({ method: "POST" })
           underused.push(s);
         }
       }
-      
+
       targetSlug = underused[Math.floor(Math.random() * underused.length)];
     }
 
@@ -221,9 +245,9 @@ ${summaries.join("\n")}
       "Historical / heritage context",
       "Devotee-perspective composition without requiring identifiable people",
       "Cinematic environmental storytelling",
-      "Abstract spiritual light / cosmic symbolism"
+      "Abstract spiritual light / cosmic symbolism",
     ];
-    
+
     // Pick an archetype deterministically based on past count to cycle through them
     const suggestedTheme = archetypes[pastThemesCount % archetypes.length];
 
@@ -532,14 +556,14 @@ export const approveSocialPost = createServerFn({ method: "POST" })
       throw new Error("Post not found.");
     }
 
-    // Media table check isn't strictly necessary if we only check image_url per requirements, 
+    // Media table check isn't strictly necessary if we only check image_url per requirements,
     // but we can query media as well. Let's strictly check image_url or media.
     let hasMedia = false;
     const { count } = await supabase
       .from("social_post_media")
-      .select("*", { count: 'exact', head: true })
+      .select("*", { count: "exact", head: true })
       .eq("social_post_id", id);
-      
+
     if (count && count > 0) hasMedia = true;
 
     if (!existingPost.image_url && !hasMedia) {

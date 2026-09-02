@@ -597,7 +597,7 @@ export async function planRefresh(
 }
 
 export function buildHintsFromCatalog(
-  catalog: Array<{ slug: string; name: string; nameMr: string }>,
+  catalog: Array<{ slug: string; name: string }>,
 ): Map<string, string[]> {
   const hintsBySlug = new Map<string, string[]>();
   for (const j of catalog) {
@@ -605,7 +605,7 @@ export function buildHintsFromCatalog(
       .replace(/jyotirlinga|temple|mandir/gi, "")
       .split(/[^A-Za-z\u00C0-\uFFFF]+/)
       .filter((t: string) => t.length >= 4);
-    hintsBySlug.set(j.slug, [j.name, j.nameMr, ...nameTokens, ...DARSHAN_KEYWORDS]);
+    hintsBySlug.set(j.slug, [j.name, ...nameTokens, ...DARSHAN_KEYWORDS]);
   }
   return hintsBySlug;
 }

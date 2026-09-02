@@ -600,8 +600,7 @@ export function CreateInstagramPostDialog({
                           referrerPolicy="no-referrer"
                         />
                       </div>
-                    ) : (
-                      postToEdit ? (
+                    ) : postToEdit ? (
                       <div className="rounded-md border border-destructive/20 p-6 text-center text-xs text-destructive aspect-square max-h-52 flex flex-col items-center justify-center gap-2 bg-destructive/10">
                         <AlertCircle className="size-8 opacity-80 mb-1" />
                         <span className="font-bold">AI IMAGE UNAVAILABLE</span>
@@ -612,7 +611,6 @@ export function CreateInstagramPostDialog({
                         <ImageIcon className="size-8 opacity-40 mb-1" />
                         <span>No original image present</span>
                       </div>
-                    )
                     )}
                   </div>
 

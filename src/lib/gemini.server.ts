@@ -293,14 +293,14 @@ export async function generateDraftContent(
   shrineLocation: string,
   suggestedTheme: string,
   recentPostsContext?: string,
-): Promise<{ 
-  shrineSlug: string; 
-  shrineName: string; 
-  location: string; 
-  contentArchetype: string; 
-  concept: string; 
-  caption: string; 
-  imagePrompt: string 
+): Promise<{
+  shrineSlug: string;
+  shrineName: string;
+  location: string;
+  contentArchetype: string;
+  concept: string;
+  caption: string;
+  imagePrompt: string;
 }> {
   const systemInstruction = `
 You are an expert Hindu spiritual social media manager and creative director for the sacred 12 Jyotirlingas.
@@ -336,26 +336,30 @@ CREATIVE DIVERSITY GUIDELINES:
       },
       imagePrompt: {
         type: Type.STRING,
-        description: "Detailed photographic and spiritual image prompt with geographically and architecturally accurate features",
+        description:
+          "Detailed photographic and spiritual image prompt with geographically and architecturally accurate features",
       },
     },
-    required: ["shrineSlug", "shrineName", "location", "contentArchetype", "concept", "caption", "imagePrompt"],
+    required: [
+      "shrineSlug",
+      "shrineName",
+      "location",
+      "contentArchetype",
+      "concept",
+      "caption",
+      "imagePrompt",
+    ],
   };
 
-  return generateStructuredOutput<{ 
-    shrineSlug: string; 
-    shrineName: string; 
-    location: string; 
-    contentArchetype: string; 
-    concept: string; 
-    caption: string; 
-    imagePrompt: string 
-  }>(
-    prompt,
-    schema,
-    systemInstruction,
-    "gemini-3.1-pro",
-  );
+  return generateStructuredOutput<{
+    shrineSlug: string;
+    shrineName: string;
+    location: string;
+    contentArchetype: string;
+    concept: string;
+    caption: string;
+    imagePrompt: string;
+  }>(prompt, schema, systemInstruction, "gemini-3.1-pro");
 }
 
 export async function generateCaptionAssistance(

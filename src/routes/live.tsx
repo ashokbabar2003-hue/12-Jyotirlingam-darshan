@@ -35,7 +35,7 @@ export const Route = createFileRoute("/live")({
 
 function LivePage() {
   const { slugs } = Route.useSearch();
-  const { lang, isEn, fontClass } = useLanguage();
+  const { lang, isEn, fontClass, displayFontClass } = useLanguage();
   const linksFn = useServerFn(getDarshanLinks);
   const links = useQuery({
     queryKey: ["darshan-links"],
@@ -79,7 +79,8 @@ function LivePage() {
         <h1
           className={cn(
             "text-xl font-semibold text-foreground sm:text-2xl",
-            isEn ? "font-display" : fontClass,
+            displayFontClass,
+            isEn ? "font-display tracking-tight" : "tracking-normal",
           )}
         >
           {list.length === jyotirlingas.length
@@ -141,8 +142,8 @@ function LivePage() {
                 <div>
                   <h3
                     className={cn(
-                      "text-sm font-semibold text-foreground",
-                      isEn ? "font-display" : cn("text-base", fontClass),
+                      "text-sm font-semibold text-foreground font-display",
+                      isEn ? "tracking-tight" : "tracking-normal",
                     )}
                   >
                     {toLocalDigits(j.number, lang)}. {loc.name}

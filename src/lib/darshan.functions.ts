@@ -4,11 +4,23 @@ import { z } from "zod";
 import type { Database } from "@/integrations/supabase/types";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 
+import { ensureServerEnv } from "@/lib/server-env";
+
 const BUCKET = "darshan-gallery";
 const SIGNED_TTL = 60 * 60 * 24 * 7; // 7 days
 
 function publicClient() {
-  return createClient<Database>(process.env.SUPABASE_URL!, process.env.SUPABASE_PUBLISHABLE_KEY!, {
+  ensureServerEnv();
+  const url =
+    process.env.SUPABASE_URL ||
+    process.env.VITE_SUPABASE_URL ||
+    "https://placeholder-project.supabase.co";
+  const key =
+    process.env.SUPABASE_PUBLISHABLE_KEY ||
+    process.env.VITE_SUPABASE_PUBLISHABLE_KEY ||
+    "placeholder-anon-key";
+
+  return createClient<Database>(url, key, {
     auth: { storage: undefined, persistSession: false, autoRefreshToken: false },
   });
 }
@@ -33,6 +45,10 @@ export interface StoryItem {
 export const getApprovedGallery = createServerFn({ method: "GET" })
   .inputValidator((d) => z.object({ slug: z.string() }).parse(d))
   .handler(async ({ data }): Promise<GalleryItem[]> => {
+    ensureServerEnv();
+    if (!process.env.SUPABASE_URL && !process.env.VITE_SUPABASE_URL) {
+      return [];
+    }
     const sb = publicClient();
     const { data: rows, error } = await sb
       .from("gallery_images")
@@ -61,6 +77,10 @@ export const getApprovedGallery = createServerFn({ method: "GET" })
 export const getApprovedStories = createServerFn({ method: "GET" })
   .inputValidator((d) => z.object({ slug: z.string() }).parse(d))
   .handler(async ({ data }): Promise<StoryItem[]> => {
+    ensureServerEnv();
+    if (!process.env.SUPABASE_URL && !process.env.VITE_SUPABASE_URL) {
+      return [];
+    }
     const sb = publicClient();
     const { data: rows, error } = await sb
       .from("stories")

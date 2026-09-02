@@ -29,26 +29,52 @@ function createSupabaseFetch(supabaseKey: string): typeof fetch {
   };
 }
 
-function createSupabaseClient() {
-  // Use import.meta.env for client-side (Vite build-time replacement)
-  // Fall back to process.env for SSR (server-side rendering)
-  const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL;
-  const SUPABASE_PUBLISHABLE_KEY =
-    import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY || process.env.SUPABASE_PUBLISHABLE_KEY;
+function getSupabaseEnv() {
+  const url =
+    (typeof import.meta !== "undefined" && import.meta.env?.VITE_SUPABASE_URL) ||
+    (typeof process !== "undefined" &&
+      (process.env?.VITE_SUPABASE_URL || process.env?.SUPABASE_URL)) ||
+    "";
+  const key =
+    (typeof import.meta !== "undefined" && import.meta.env?.VITE_SUPABASE_PUBLISHABLE_KEY) ||
+    (typeof process !== "undefined" &&
+      (process.env?.VITE_SUPABASE_PUBLISHABLE_KEY || process.env?.SUPABASE_PUBLISHABLE_KEY)) ||
+    "";
+  return { url: url.trim(), key: key.trim() };
+}
 
-  if (!SUPABASE_URL || !SUPABASE_PUBLISHABLE_KEY) {
-    const missing = [
-      ...(!SUPABASE_URL ? ["SUPABASE_URL"] : []),
-      ...(!SUPABASE_PUBLISHABLE_KEY ? ["SUPABASE_PUBLISHABLE_KEY"] : []),
-    ];
-    const message = `Missing Supabase environment variable(s): ${missing.join(", ")}. Please configure your Supabase environment variables.`;
-    console.error(`[Supabase] ${message}`);
-    throw new Error(message);
+export const isSupabaseConfigured = Boolean(getSupabaseEnv().url && getSupabaseEnv().key);
+
+let warnedAboutMissingEnv = false;
+
+function createSupabaseClient() {
+  const { url, key } = getSupabaseEnv();
+
+  if (!url || !key) {
+    if (!warnedAboutMissingEnv && typeof window !== "undefined") {
+      warnedAboutMissingEnv = true;
+      console.warn(
+        "[Supabase] Environment variables (SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY) are not set. Devotional portal running in client-safe offline mode.",
+      );
+    }
+    // Return a safe placeholder client that doesn't throw synchronous runtime errors
+    const fallbackUrl = "https://placeholder-project.supabase.co";
+    const fallbackKey = "placeholder-anon-key";
+    return createClient<Database>(fallbackUrl, fallbackKey, {
+      global: {
+        fetch: createSupabaseFetch(fallbackKey),
+      },
+      auth: {
+        storage: typeof window !== "undefined" ? localStorage : undefined,
+        persistSession: false,
+        autoRefreshToken: false,
+      },
+    });
   }
 
-  return createClient<Database>(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, {
+  return createClient<Database>(url, key, {
     global: {
-      fetch: createSupabaseFetch(SUPABASE_PUBLISHABLE_KEY),
+      fetch: createSupabaseFetch(key),
     },
     auth: {
       storage: typeof window !== "undefined" ? localStorage : undefined,
