@@ -1,4 +1,4 @@
-import { useRef, useState } from "react";
+import { useRef } from "react";
 import { Sparkles, Compass, MapPin } from "lucide-react";
 import { useGSAP, gsap, prefersReducedMotion } from "@/hooks/use-gsap";
 import { toLocalDigits, displayFontClassFor, type Lang } from "@/hooks/use-language";
@@ -41,8 +41,7 @@ export function SacredJourneyTransition({
   const destinationPreviewRef = useRef<HTMLDivElement | null>(null);
   const progressLineRef = useRef<HTMLDivElement | null>(null);
   const footerTrackerRef = useRef<HTMLDivElement | null>(null);
-
-  const [scrollProgress, setScrollProgress] = useState(0);
+  const progressTextRef = useRef<HTMLSpanElement | null>(null);
 
   const fromNumberDisplay = toLocalDigits(transition.fromIndex, lang);
   const toNumberDisplay = toLocalDigits(transition.toIndex, lang);

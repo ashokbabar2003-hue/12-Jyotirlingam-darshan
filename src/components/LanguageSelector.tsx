@@ -33,6 +33,28 @@ function getLanguageOptionFontClass(code: Lang | string): string {
   }
 }
 
+/**
+ * Returns explicit inline style to guarantee font-family cannot be overridden
+ * by global html[data-lang] typography rules.
+ */
+function getLanguageOptionStyle(code: Lang | string): React.CSSProperties {
+  switch (code) {
+    case "hi":
+      return { fontFamily: '"Yatra One", serif' };
+    case "mr":
+      return { fontFamily: '"Noto Serif Devanagari", serif' };
+    case "gu":
+      return { fontFamily: '"Noto Sans Gujarati", sans-serif' };
+    case "te":
+      return { fontFamily: '"Noto Sans Telugu", sans-serif' };
+    case "ta":
+      return { fontFamily: '"Noto Sans Tamil", sans-serif' };
+    case "en":
+    default:
+      return { fontFamily: '"Inter", sans-serif' };
+  }
+}
+
 interface LanguageSelectorProps {
   className?: string;
 }
@@ -41,6 +63,7 @@ export function LanguageSelector({ className }: LanguageSelectorProps) {
   const { lang, setLang } = useLanguage();
   const current = LANGUAGES.find((l) => l.code === lang) ?? LANGUAGES[0];
   const activeTriggerFontClass = getLanguageOptionFontClass(current.code);
+  const activeTriggerStyle = getLanguageOptionStyle(current.code);
 
   return (
     <DropdownMenu>
@@ -54,7 +77,11 @@ export function LanguageSelector({ className }: LanguageSelectorProps) {
           )}
         >
           <Languages className="size-3.5 shrink-0 text-muted-foreground" />
-          <span className={cn("hidden max-w-[7rem] truncate sm:inline", activeTriggerFontClass)}>
+          <span
+            lang={current.code}
+            className={cn("hidden max-w-[7rem] truncate sm:inline", activeTriggerFontClass)}
+            style={activeTriggerStyle}
+          >
             {current.label}
           </span>
         </button>
@@ -66,13 +93,18 @@ export function LanguageSelector({ className }: LanguageSelectorProps) {
         <DropdownMenuSeparator />
         {LANGUAGES.map((l) => {
           const optionFontClass = getLanguageOptionFontClass(l.code);
+          const optionStyle = getLanguageOptionStyle(l.code);
           return (
             <DropdownMenuItem
               key={l.code}
+              lang={l.code}
               onSelect={() => setLang(l.code as Lang)}
               className={cn("cursor-pointer text-sm", optionFontClass)}
+              style={optionStyle}
             >
-              <span className={cn("flex-1", optionFontClass)}>{l.label}</span>
+              <span lang={l.code} className={cn("flex-1", optionFontClass)} style={optionStyle}>
+                {l.label}
+              </span>
               {lang === l.code && <Check className="size-3.5 text-primary" />}
             </DropdownMenuItem>
           );

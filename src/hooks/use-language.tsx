@@ -93,6 +93,23 @@ export function LanguageProvider({ children }: { children: ReactNode }) {
     }
   }, []);
 
+  // Preload all script fonts so language menu options always display in their designated fonts
+  useEffect(() => {
+    if (typeof document !== "undefined" && document.fonts) {
+      const allFonts = [
+        '16px "Yatra One"',
+        '16px "Noto Serif Devanagari"',
+        '16px "Inter"',
+        '16px "Noto Sans Gujarati"',
+        '16px "Noto Sans Telugu"',
+        '16px "Noto Sans Tamil"',
+      ];
+      allFonts.forEach((f) => {
+        document.fonts.load(f).catch(() => {});
+      });
+    }
+  }, []);
+
   useEffect(() => {
     if (typeof document !== "undefined") {
       document.documentElement.lang = lang;
