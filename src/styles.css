@@ -1,6 +1,6 @@
 @import "tailwindcss" source(none);
 @import "tw-animate-css";
-@import url("https://fonts.googleapis.com/css2?family=Cinzel:wght@500;600;700;800&family=Inter:wght@300;400;500;600;700;800&family=Noto+Sans+Gujarati:wght@300;400;500;600;700&family=Noto+Sans+Tamil:wght@300;400;500;600;700&family=Noto+Sans+Telugu:wght@300;400;500;600;700&family=Noto+Serif+Devanagari:wght@400;500;600;700;800&display=swap");
+@import url("https://fonts.googleapis.com/css2?family=Cinzel:wght@500;600;700;800&family=Inter:wght@300;400;500;600;700;800&family=Noto+Sans+Gujarati:wght@300;400;500;600;700&family=Noto+Sans+Tamil:wght@300;400;500;600;700&family=Noto+Sans+Telugu:wght@300;400;500;600;700&family=Noto+Serif+Devanagari:wght@400;500;600;700;800&family=Yatra+One&display=swap");
 @source "../src";
 
 /* ==========================================================================
@@ -481,26 +481,26 @@ html[lang="hi"] label {
   }
 
   .font-en {
-    font-family: var(--font-en);
+    font-family: var(--font-en) !important;
   }
   .font-devanagari,
   .font-hindi {
-    font-family: "Yatra One", serif;
+    font-family: "Yatra One", serif !important;
     font-weight: 400;
     font-synthesis: none;
   }
   .font-marathi {
-    font-family: "Noto Serif Devanagari", serif;
+    font-family: "Noto Serif Devanagari", serif !important;
     font-synthesis: none;
   }
   .font-gujarati {
-    font-family: "Noto Sans Gujarati", sans-serif;
+    font-family: "Noto Sans Gujarati", sans-serif !important;
   }
   .font-telugu {
-    font-family: "Noto Sans Telugu", sans-serif;
+    font-family: "Noto Sans Telugu", sans-serif !important;
   }
   .font-tamil {
-    font-family: "Noto Sans Tamil", sans-serif;
+    font-family: "Noto Sans Tamil", sans-serif !important;
   }
 }
 
