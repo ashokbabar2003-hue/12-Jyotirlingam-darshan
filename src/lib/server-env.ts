@@ -19,7 +19,11 @@ function getRuntimeVar(key: string): string | undefined {
   if (typeof process !== "undefined" && process.env?.[key]?.trim()) {
     return process.env[key]?.trim();
   }
-  if (cloudflareRuntimeEnv && typeof cloudflareRuntimeEnv[key] === "string" && cloudflareRuntimeEnv[key]?.trim()) {
+  if (
+    cloudflareRuntimeEnv &&
+    typeof cloudflareRuntimeEnv[key] === "string" &&
+    cloudflareRuntimeEnv[key]?.trim()
+  ) {
     return (cloudflareRuntimeEnv[key] as string).trim();
   }
   // Check globalThis (sometimes attached by Worker runtime or nitro)
@@ -66,16 +70,17 @@ export function ensureServerEnv() {
   try {
     const isNode = Boolean(
       typeof process !== "undefined" &&
-        process.versions &&
-        process.versions.node &&
-        typeof process.cwd === "function",
+      process.versions &&
+      process.versions.node &&
+      typeof process.cwd === "function",
     );
 
     if (isNode) {
       // Dynamic import or require inside try/catch so Edge bundlers don't inject top-level Node dependencies
-      // eslint-disable-next-line @typescript-eslint/no-var-requires
+
+      // eslint-disable-next-line @typescript-eslint/no-require-imports
       const nodeFs = typeof require === "function" ? require("fs") : null;
-      // eslint-disable-next-line @typescript-eslint/no-var-requires
+      // eslint-disable-next-line @typescript-eslint/no-require-imports
       const nodePath = typeof require === "function" ? require("path") : null;
 
       if (nodeFs?.existsSync && nodePath?.join) {
@@ -158,10 +163,7 @@ export function getGeminiApiKey(): string | undefined {
 
 export function getPublicSupabaseEnv(): { url: string; publishableKey: string } {
   ensureServerEnv();
-  const url =
-    getRuntimeVar("SUPABASE_URL") ||
-    getRuntimeVar("VITE_SUPABASE_URL") ||
-    "";
+  const url = getRuntimeVar("SUPABASE_URL") || getRuntimeVar("VITE_SUPABASE_URL") || "";
   const publishableKey =
     getRuntimeVar("SUPABASE_PUBLISHABLE_KEY") ||
     getRuntimeVar("VITE_SUPABASE_PUBLISHABLE_KEY") ||
@@ -174,4 +176,3 @@ export function getPublicSupabaseEnv(): { url: string; publishableKey: string } 
     publishableKey: publishableKey.trim(),
   };
 }
-

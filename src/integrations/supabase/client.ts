@@ -144,6 +144,7 @@ function createSupabaseClient() {
       storage: typeof window !== "undefined" ? localStorage : undefined,
       persistSession: true,
       autoRefreshToken: true,
+      detectSessionInUrl: true,
     },
   });
 }
@@ -159,11 +160,15 @@ export const supabase = new Proxy({} as ReturnType<typeof createSupabaseClient>,
     } else {
       // If config was injected after initial module evaluation, recreate client with real credentials
       const { url, key } = getSupabaseEnv();
-      if (url && key && (_supabase as any)?.supabaseUrl === "https://auth-offline.local") {
+      if (
+        url &&
+        key &&
+        (_supabase as unknown as { supabaseUrl?: string })?.supabaseUrl ===
+          "https://auth-offline.local"
+      ) {
         _supabase = createSupabaseClient();
       }
     }
     return Reflect.get(_supabase, prop, receiver);
   },
 });
-

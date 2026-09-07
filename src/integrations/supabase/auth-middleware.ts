@@ -50,9 +50,7 @@ export const requireSupabaseAuth = createMiddleware({ type: "function" })
   .server(async ({ next }) => {
     ensureServerEnv();
     const SUPABASE_URL =
-      process.env.SUPABASE_URL ||
-      process.env.VITE_SUPABASE_URL ||
-      "https://auth-offline.local";
+      process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL || "https://auth-offline.local";
     const SUPABASE_PUBLISHABLE_KEY =
       process.env.SUPABASE_PUBLISHABLE_KEY ||
       process.env.VITE_SUPABASE_PUBLISHABLE_KEY ||
