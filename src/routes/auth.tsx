@@ -2,7 +2,7 @@ import { useState } from "react";
 import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
 import { toast } from "sonner";
 import { Flame, Eye, EyeOff, ArrowLeft, Loader2 } from "lucide-react";
-import { supabase } from "@/integrations/supabase/client";
+import { supabase, isSupabaseConfigured } from "@/integrations/supabase/client";
 import { useLanguage, type Lang } from "@/hooks/use-language";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -21,6 +21,18 @@ export const Route = createFileRoute("/auth")({
   }),
   component: AuthPage,
 });
+
+const PROD_AUTH_ORIGIN = "https://12jyotirlingadarshan.online";
+
+function getAuthRedirectOrigin(): string {
+  if (typeof window === "undefined") return PROD_AUTH_ORIGIN;
+  const origin = window.location.origin;
+  // If running on custom domain or local development, use current origin; default to canonical production domain
+  if (origin.includes("12jyotirlingadarshan.online") || origin.includes("localhost") || origin.includes("127.0.0.1")) {
+    return origin;
+  }
+  return PROD_AUTH_ORIGIN;
+}
 
 const AUTH_I18N: Record<
   Lang,
@@ -52,6 +64,7 @@ const AUTH_I18N: Record<
     harHarMahadev: string;
     authFailed: string;
     googleFailed: string;
+    authOfflineNotice: string;
   }
 > = {
   en: {
@@ -82,6 +95,7 @@ const AUTH_I18N: Record<
     harHarMahadev: "Har Har Mahadev! You are signed in.",
     authFailed: "Authentication failed.",
     googleFailed: "Google sign-in failed. Please try again.",
+    authOfflineNotice: "Devotee sign-in is currently unavailable in offline mode.",
   },
   mr: {
     welcomeBack: "पुन्हा आपले स्वागत आहे",
@@ -112,6 +126,7 @@ const AUTH_I18N: Record<
     harHarMahadev: "हर हर महादेव! आपण साइन इन झाले आहात.",
     authFailed: "प्रमाणीकरण अयशस्वी झाले.",
     googleFailed: "Google साइन-इन अयशस्वी. कृपया पुन्हा प्रयत्न करा.",
+    authOfflineNotice: "ऑफलाइन मोडमध्ये भाविक साइन-इन सध्या उपलब्ध नाही.",
   },
   hi: {
     welcomeBack: "पुनः आपका स्वागत है",
@@ -141,6 +156,7 @@ const AUTH_I18N: Record<
     harHarMahadev: "हर हर महादेव! आप साइन इन हो चुके हैं।",
     authFailed: "प्रमाणीकरण विफल रहा।",
     googleFailed: "Google साइन-इन विफल। कृपया पुनः प्रयास करें।",
+    authOfflineNotice: "ऑफ़लाइन मोड में भक्त साइन-इन वर्तमान में उपलब्ध नहीं है।",
   },
   gu: {
     welcomeBack: "આપનું પુનઃ સ્વાગત છે",
@@ -170,6 +186,7 @@ const AUTH_I18N: Record<
     harHarMahadev: "હર હર મહાદેવ! તમે સાઇન ઇન કર્યું છે.",
     authFailed: "સાઇન-ઇન નિષ્ફળ રહ્યું.",
     googleFailed: "Google સાઇન-ઇન નિષ્ફળ ગયું. ફરી પ્રયાસ કરો.",
+    authOfflineNotice: "ઑફલાઇન મોડમાં ભક્ત સાઇન-ઇન હાલમાં ઉપલબ્ધ નથી.",
   },
   te: {
     welcomeBack: "తిరిగి స్వాగతం",
@@ -200,6 +217,7 @@ const AUTH_I18N: Record<
     harHarMahadev: "హర హర మహాదేవ్! మీరు సైన్ ఇన్ అయ్యారు.",
     authFailed: "ధృవీకరణ విఫలమైంది.",
     googleFailed: "Google సైన్ ఇన్ విఫలమైంది. దయచేసి మళ్ళీ ప్రయత్నించండి.",
+    authOfflineNotice: "ఆఫ్‌లైన్ మోడ్‌లో భక్తుల సైన్-ఇన్ ప్రస్తుతం అందుబాటులో లేదు.",
   },
   ta: {
     welcomeBack: "மீண்டும் வருக",
@@ -231,6 +249,7 @@ const AUTH_I18N: Record<
     harHarMahadev: "ஹர ஹர மஹாதேவ்! நீங்கள் உள்நுழைந்துவிட்டீர்கள்.",
     authFailed: "அங்கீகாரம் தோல்வியடைந்தது.",
     googleFailed: "Google உள்நுழைவு தோல்வியடைந்தது. மீண்டும் முயற்சிக்கவும்.",
+    authOfflineNotice: "ஆஃப்லைன் பயன்முறையில் பக்தர் உள்நுழைவு தற்போது கிடைக்கவில்லை.",
   },
 };
 
@@ -271,14 +290,19 @@ function AuthPage() {
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
+    if (!isSupabaseConfigured) {
+      toast.info(t.authOfflineNotice);
+      return;
+    }
     setBusy(true);
     try {
+      const redirectOrigin = getAuthRedirectOrigin();
       if (mode === "signup") {
         const { data, error } = await supabase.auth.signUp({
           email,
           password,
           options: {
-            emailRedirectTo: window.location.origin,
+            emailRedirectTo: redirectOrigin,
             data: { display_name: name.trim() || email.split("@")[0] },
           },
         });
@@ -304,11 +328,16 @@ function AuthPage() {
   }
 
   async function googleSignIn() {
+    if (!isSupabaseConfigured) {
+      toast.info(t.authOfflineNotice);
+      return;
+    }
     try {
+      const redirectOrigin = getAuthRedirectOrigin();
       const { error } = await supabase.auth.signInWithOAuth({
         provider: "google",
         options: {
-          redirectTo: window.location.origin,
+          redirectTo: redirectOrigin,
         },
       });
       if (error) throw error;

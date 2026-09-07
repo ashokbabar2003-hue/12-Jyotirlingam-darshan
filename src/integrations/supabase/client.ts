@@ -58,11 +58,26 @@ function createSupabaseClient() {
       );
     }
     // Return a safe placeholder client that doesn't throw synchronous runtime errors
+    // and returns graceful rejection for auth attempts when offline
     const fallbackUrl = "https://placeholder-project.supabase.co";
     const fallbackKey = "placeholder-anon-key";
     return createClient<Database>(fallbackUrl, fallbackKey, {
       global: {
-        fetch: createSupabaseFetch(fallbackKey),
+        fetch: ((input: RequestInfo | URL, init?: RequestInit) => {
+          const urlStr = typeof input === "string" ? input : input instanceof URL ? input.toString() : input.url;
+          if (urlStr.includes("placeholder-project.supabase.co")) {
+            return Promise.resolve(
+              new Response(
+                JSON.stringify({
+                  error: "auth_unavailable",
+                  message: "Supabase environment is not configured in offline mode.",
+                }),
+                { status: 503, headers: { "Content-Type": "application/json" } },
+              ),
+            );
+          }
+          return createSupabaseFetch(fallbackKey)(input, init);
+        }) as typeof fetch,
       },
       auth: {
         storage: typeof window !== "undefined" ? localStorage : undefined,
