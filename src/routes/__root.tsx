@@ -23,13 +23,6 @@ export const Route = createRootRouteWithContext<{
 }>()({
   meta: () => [
     {
-      charSet: "utf-8",
-    },
-    {
-      name: "viewport",
-      content: "width=device-width, initial-scale=1",
-    },
-    {
       title: "12 Jyotirlingam Darshan",
     },
     {
@@ -178,6 +171,8 @@ function RootComponent() {
   return (
     <html lang="en" suppressHydrationWarning>
       <head suppressHydrationWarning>
+        <meta charSet="utf-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
         <HeadContent />
         <script
           dangerouslySetInnerHTML={{

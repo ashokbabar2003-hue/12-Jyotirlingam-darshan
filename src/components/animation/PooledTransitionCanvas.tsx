@@ -234,7 +234,7 @@ export function PooledTransitionCanvas({ activeBoundary, className }: PooledTran
         return;
       }
 
-      const isMobile = window.innerWidth < 768;
+      const isMobile = window.innerWidth < 600;
       const width = canvasContainer.clientWidth || 800;
       const height = canvasContainer.clientHeight || 500;
 

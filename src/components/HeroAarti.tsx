@@ -164,13 +164,13 @@ export function HeroAarti({ t, lang, isEn, fontClass }: HeroAartiProps) {
         );
 
       // 3. Scroll Choreography (Parallax and Fade Transition)
-      const isMobile = window.innerWidth < 768;
+      const isCompactMobile = window.innerWidth < 600;
       const scrollTl = gsap.timeline({
         scrollTrigger: {
           trigger: container,
           start: "top top",
           end: "bottom top",
-          scrub: isMobile ? 0.5 : 1.0,
+          scrub: isCompactMobile ? 0.5 : 1.0,
           invalidateOnRefresh: true,
         },
       });
@@ -180,8 +180,8 @@ export function HeroAarti({ t, lang, isEn, fontClass }: HeroAartiProps) {
         .to(
           bgImg,
           {
-            yPercent: isMobile ? 12 : 25,
-            scale: isMobile ? 1.08 : 1.15,
+            yPercent: isCompactMobile ? 12 : 25,
+            scale: isCompactMobile ? 1.08 : 1.15,
             ease: "none",
           },
           0,
@@ -190,7 +190,7 @@ export function HeroAarti({ t, lang, isEn, fontClass }: HeroAartiProps) {
         .to(
           [flame, tagline, title],
           {
-            y: isMobile ? -30 : -60,
+            y: isCompactMobile ? -30 : -60,
             opacity: 0,
             ease: "power1.in",
           },
@@ -199,7 +199,7 @@ export function HeroAarti({ t, lang, isEn, fontClass }: HeroAartiProps) {
         .to(
           [desc, cta],
           {
-            y: isMobile ? -20 : -40,
+            y: isCompactMobile ? -20 : -40,
             opacity: 0,
             ease: "power1.in",
           },
@@ -228,7 +228,7 @@ export function HeroAarti({ t, lang, isEn, fontClass }: HeroAartiProps) {
   return (
     <section
       ref={containerRef}
-      className="relative flex min-h-[90vh] items-center justify-center overflow-hidden sm:min-h-[95vh]"
+      className="relative flex min-h-[calc(100dvh-4rem)] items-center justify-center overflow-hidden sm:min-h-[95vh]"
     >
       {/* Background Image with layered scale and parallax depth */}
       <img
@@ -248,18 +248,18 @@ export function HeroAarti({ t, lang, isEn, fontClass }: HeroAartiProps) {
       />
 
       {/* Foreground Hero Content */}
-      <div className="relative mx-auto flex max-w-4xl flex-col items-center px-4 py-24 text-center sm:py-32">
-        <div ref={flameRef} className="mb-2">
-          <Flame className="size-10 text-primary diya-flicker sm:size-12" />
+      <div className="relative mx-auto flex max-w-4xl flex-col items-center px-4 py-8 sm:py-16 md:py-32 text-center">
+        <div ref={flameRef} className="mb-1 sm:mb-2">
+          <Flame className="size-8 text-primary diya-flicker sm:size-12" />
         </div>
 
         <p
           ref={taglineRef}
           className={cn(
-            "mt-4 text-sm font-semibold text-accent",
+            "mt-2 text-xs font-semibold text-accent sm:mt-4 sm:text-sm",
             isEn
-              ? "font-display uppercase tracking-[0.3em]"
-              : cn("text-base normal-case tracking-normal", displayFontClassFor(lang)),
+              ? "font-display uppercase tracking-[0.25em] sm:tracking-[0.3em]"
+              : cn("text-sm sm:text-base normal-case tracking-normal", displayFontClassFor(lang)),
           )}
         >
           {t.tagline}
@@ -268,7 +268,7 @@ export function HeroAarti({ t, lang, isEn, fontClass }: HeroAartiProps) {
         <h1
           ref={titleRef}
           className={cn(
-            "mt-4 text-4xl text-foreground sm:text-6xl lg:text-7xl overflow-visible",
+            "mt-2 text-3xl text-foreground sm:mt-4 sm:text-5xl md:text-6xl lg:text-7xl overflow-visible",
             isEn
               ? "font-display tracking-tight leading-tight"
               : cn("tracking-normal leading-snug sm:leading-[1.28]", displayFontClassFor(lang)),
@@ -286,7 +286,7 @@ export function HeroAarti({ t, lang, isEn, fontClass }: HeroAartiProps) {
         <p
           ref={descRef}
           className={cn(
-            "mt-6 max-w-2xl text-base leading-relaxed text-muted-foreground sm:text-lg sm:leading-relaxed",
+            "mt-3 max-w-2xl text-xs sm:text-base leading-relaxed text-muted-foreground sm:mt-6 sm:text-lg sm:leading-relaxed",
             fontClass,
           )}
         >
@@ -297,7 +297,7 @@ export function HeroAarti({ t, lang, isEn, fontClass }: HeroAartiProps) {
           ref={ctaRef}
           href="#live-darshan"
           className={cn(
-            "mt-8 inline-flex items-center justify-center rounded-md bg-gradient-aarti px-8 py-3.5 text-sm font-semibold text-primary-foreground shadow-glow transition-all duration-300 hover:opacity-95 hover:shadow-lg focus:outline-none focus:ring-2 focus:ring-primary/50",
+            "mt-5 inline-flex min-h-[44px] items-center justify-center rounded-md bg-gradient-aarti px-6 py-2.5 sm:px-8 sm:py-3.5 text-sm font-semibold text-primary-foreground shadow-glow transition-all duration-300 hover:opacity-95 hover:shadow-lg focus:outline-none focus:ring-2 focus:ring-primary/50 sm:mt-8",
             !isEn && cn("text-base", fontClass),
           )}
         >
@@ -307,7 +307,7 @@ export function HeroAarti({ t, lang, isEn, fontClass }: HeroAartiProps) {
         {/* Subtle scroll guide indicator */}
         <div
           ref={scrollIndicatorRef}
-          className="mt-14 hidden flex-col items-center gap-1.5 text-xs text-muted-foreground/70 sm:flex"
+          className="mt-8 hidden flex-col items-center gap-1.5 text-xs text-muted-foreground/70 sm:flex sm:mt-14"
         >
           <span className="tracking-widest uppercase text-[10px]">Scroll to enter</span>
           <ChevronDown className="size-4 animate-bounce text-muted-foreground/60" />

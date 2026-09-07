@@ -41,7 +41,7 @@ export function SiteFooter() {
 
   return (
     <footer className="border-t border-border/60 bg-background/60">
-      <div className="mx-auto flex max-w-6xl flex-col items-center gap-3 px-4 py-8 text-center">
+      <div className="mx-auto flex max-w-6xl flex-col items-center gap-3 px-4 pt-8 pb-[max(2.5rem,calc(1.5rem+env(safe-area-inset-bottom,0px)))] sm:pb-8 text-center">
         <Flame className="size-5 text-primary diya-flicker" />
         <p className="font-display text-sm text-foreground">{t.om}</p>
         <p className={cn("max-w-md text-xs text-muted-foreground", fontClass)}>{t.desc}</p>

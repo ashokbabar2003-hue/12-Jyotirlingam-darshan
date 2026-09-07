@@ -1,15 +1,9 @@
-import somnath from "@/assets/jl-somnath.jpg";
-import mallikarjuna from "@/assets/jl-mallikarjuna.jpg";
-import mahakaleshwar from "@/assets/jl-mahakaleshwar.jpg";
-import omkareshwar from "@/assets/jl-omkareshwar.jpg";
-import kedarnath from "@/assets/jl-kedarnath.jpg";
-import bhimashankar from "@/assets/jl-bhimashankar.jpg";
-import kashi from "@/assets/jl-kashi.jpg";
-import trimbakeshwar from "@/assets/jl-trimbakeshwar.jpg";
-import baidyanath from "@/assets/jl-baidyanath.jpg";
-import nageshwar from "@/assets/jl-nageshwar.jpg";
-import rameshwaram from "@/assets/jl-rameshwaram.jpg";
-import grishneshwar from "@/assets/jl-grishneshwar.jpg";
+import {
+  shrineImages,
+  getShrineImageUrl,
+  getShrineImageConfig,
+  type ShrineImageConfig,
+} from "@/data/shrine-images";
 
 import type { Lang } from "@/hooks/use-language";
 
@@ -89,6 +83,8 @@ export interface Jyotirlinga {
   description: string;
   significance: string;
   image: string;
+  fallbackImage?: string;
+  imageConfig?: ShrineImageConfig;
   /** Placeholder live YouTube link — edit to your official channel/stream. */
   youtubeUrl: string;
   /** Fallback YouTube link used if the live one fails to embed/play. */
@@ -115,7 +111,11 @@ export const jyotirlingas: Jyotirlinga[] = [
       "The first among the twelve Jyotirlingas, standing eternal on the shore of the Arabian Sea. Rebuilt many times through history, Somnath shines as a symbol of unshakeable faith.",
     significance:
       "Worshipped by the Moon God (Soma) himself, who regained his lustre here by Lord Shiva's grace — hence the name Somnath, 'Lord of the Moon'.",
-    image: somnath,
+    get image() {
+      return getShrineImageUrl("somnath");
+    },
+    fallbackImage: shrineImages.somnath.fallbackImage,
+    imageConfig: shrineImages.somnath,
     youtubeUrl: liveSearch("Somnath Temple"),
     defaultYoutubeUrl: liveSearch("Somnath Temple"),
     i18n: {
@@ -145,7 +145,11 @@ export const jyotirlingas: Jyotirlinga[] = [
       "Perched on the Nallamala hills beside the Krishna river, Srisailam is revered as both a Jyotirlinga and a Shakti Peetha — the abode of Shiva as Mallikarjuna and Devi as Bhramaramba.",
     significance:
       "Here Lord Shiva and Goddess Parvati came to console their son Kartikeya, making it one of the most sacred Shaiva sites of the South.",
-    image: mallikarjuna,
+    get image() {
+      return getShrineImageUrl("mallikarjuna");
+    },
+    fallbackImage: shrineImages.mallikarjuna.fallbackImage,
+    imageConfig: shrineImages.mallikarjuna,
     youtubeUrl: liveSearch("Srisailam Mallikarjuna Temple"),
     defaultYoutubeUrl: liveSearch("Srisailam Mallikarjuna Temple"),
     i18n: {
@@ -175,7 +179,11 @@ export const jyotirlingas: Jyotirlinga[] = [
       "The only south-facing Jyotirlinga, famed for its predawn Bhasma Aarti where the lingam is adorned with sacred ash. Mahakal is the timeless Lord of Ujjain.",
     significance:
       "Regarded as Swayambhu (self-manifested), Mahakal is believed to be the ruler of time and death, protecting his devotees from fear.",
-    image: mahakaleshwar,
+    get image() {
+      return getShrineImageUrl("mahakaleshwar");
+    },
+    fallbackImage: shrineImages.mahakaleshwar.fallbackImage,
+    imageConfig: shrineImages.mahakaleshwar,
     youtubeUrl: liveSearch("Mahakaleshwar Ujjain Bhasma Aarti"),
     defaultYoutubeUrl: liveSearch("Mahakaleshwar Ujjain Bhasma Aarti"),
     i18n: {
@@ -205,7 +213,11 @@ export const jyotirlingas: Jyotirlinga[] = [
       "Set on a sacred island in the Narmada shaped like the holy symbol 'Om', Omkareshwar radiates serenity from every ghat and shrine.",
     significance:
       "The very form of the island, resembling Omkara, makes this one of the most spiritually charged of all Jyotirlingas.",
-    image: omkareshwar,
+    get image() {
+      return getShrineImageUrl("omkareshwar");
+    },
+    fallbackImage: shrineImages.omkareshwar.fallbackImage,
+    imageConfig: shrineImages.omkareshwar,
     youtubeUrl: liveSearch("Omkareshwar Temple"),
     defaultYoutubeUrl: liveSearch("Omkareshwar Temple"),
     i18n: {
@@ -235,7 +247,11 @@ export const jyotirlingas: Jyotirlinga[] = [
       "Cradled high in the Garhwal Himalayas, this ancient stone shrine is among the holiest pilgrimages — open only when the mountain passes thaw.",
     significance:
       "Here Shiva appeared as a bull and dived into the ground, leaving his hump worshipped as the Kedarnath lingam.",
-    image: kedarnath,
+    get image() {
+      return getShrineImageUrl("kedarnath");
+    },
+    fallbackImage: shrineImages.kedarnath.fallbackImage,
+    imageConfig: shrineImages.kedarnath,
     youtubeUrl: liveSearch("Kedarnath Temple"),
     defaultYoutubeUrl: liveSearch("Kedarnath Temple"),
     i18n: {
@@ -265,7 +281,11 @@ export const jyotirlingas: Jyotirlinga[] = [
       "Nestled in the misty Sahyadri Western Ghats, Bhimashankar marks the source of the Bhima river amid dense, sacred forest.",
     significance:
       "Lord Shiva is said to have slain the demon Tripurasura here; the sweat of his battle gave rise to the Bhima river.",
-    image: bhimashankar,
+    get image() {
+      return getShrineImageUrl("bhimashankar");
+    },
+    fallbackImage: shrineImages.bhimashankar.fallbackImage,
+    imageConfig: shrineImages.bhimashankar,
     youtubeUrl: liveSearch("Bhimashankar Temple"),
     defaultYoutubeUrl: liveSearch("Bhimashankar Temple"),
     i18n: {
@@ -295,7 +315,11 @@ export const jyotirlingas: Jyotirlinga[] = [
       "The golden-spired heart of Kashi, the eternal city on the Ganga. Vishwanath, 'Lord of the Universe', presides over the most ancient living city of faith.",
     significance:
       "It is believed that Shiva himself whispers the Taraka mantra of liberation into the ear of those who depart in Kashi.",
-    image: kashi,
+    get image() {
+      return getShrineImageUrl("kashi-vishwanath");
+    },
+    fallbackImage: shrineImages.kashi.fallbackImage,
+    imageConfig: shrineImages.kashi,
     youtubeUrl: liveSearch("Kashi Vishwanath Ganga Aarti"),
     defaultYoutubeUrl: liveSearch("Kashi Vishwanath Ganga Aarti"),
     i18n: {
@@ -325,7 +349,11 @@ export const jyotirlingas: Jyotirlinga[] = [
       "At the foot of Brahmagiri hill rises the source of the Godavari. The lingam here bears three faces — Brahma, Vishnu and Shiva.",
     significance:
       "Uniquely, the three-faced lingam represents the holy trinity, making Trimbakeshwar a site of profound cosmic balance.",
-    image: trimbakeshwar,
+    get image() {
+      return getShrineImageUrl("trimbakeshwar");
+    },
+    fallbackImage: shrineImages.trimbakeshwar.fallbackImage,
+    imageConfig: shrineImages.trimbakeshwar,
     youtubeUrl: liveSearch("Trimbakeshwar Temple"),
     defaultYoutubeUrl: liveSearch("Trimbakeshwar Temple"),
     i18n: {
@@ -355,7 +383,11 @@ export const jyotirlingas: Jyotirlinga[] = [
       "Known as Baba Baidyanath Dham, this temple draws rivers of saffron-clad pilgrims who carry holy water on foot during the Shravan month.",
     significance:
       "Worshipped as the 'divine physician', Baidyanath is believed to heal ailments of body and soul for the truly devoted.",
-    image: baidyanath,
+    get image() {
+      return getShrineImageUrl("baidyanath");
+    },
+    fallbackImage: shrineImages.baidyanath.fallbackImage,
+    imageConfig: shrineImages.baidyanath,
     youtubeUrl: liveSearch("Baidyanath Dham Deoghar"),
     defaultYoutubeUrl: liveSearch("Baidyanath Dham Deoghar"),
     i18n: {
@@ -385,7 +417,11 @@ export const jyotirlingas: Jyotirlinga[] = [
       "Beside the sea near Dwarka, Nageshwar is guarded by a towering image of the meditating Shiva, radiating calm to all who arrive.",
     significance:
       "Nageshwar, 'Lord of Serpents', is revered as a protector against all poison and negativity for his devotees.",
-    image: nageshwar,
+    get image() {
+      return getShrineImageUrl("nageshwar");
+    },
+    fallbackImage: shrineImages.nageshwar.fallbackImage,
+    imageConfig: shrineImages.nageshwar,
     youtubeUrl: liveSearch("Nageshwar Jyotirlinga Dwarka"),
     defaultYoutubeUrl: liveSearch("Nageshwar Jyotirlinga Dwarka"),
     i18n: {
@@ -415,7 +451,11 @@ export const jyotirlingas: Jyotirlinga[] = [
       "Famous for the longest ornate temple corridor in India, Ramanathaswamy temple shimmers with thousands of carved pillars and sacred bathing wells.",
     significance:
       "Lord Rama is said to have worshipped Shiva here to absolve himself before and after the war in Lanka.",
-    image: rameshwaram,
+    get image() {
+      return getShrineImageUrl("rameshwaram");
+    },
+    fallbackImage: shrineImages.rameshwaram.fallbackImage,
+    imageConfig: shrineImages.rameshwaram,
     youtubeUrl: liveSearch("Rameshwaram Ramanathaswamy Temple"),
     defaultYoutubeUrl: liveSearch("Rameshwaram Ramanathaswamy Temple"),
     i18n: {
@@ -445,7 +485,11 @@ export const jyotirlingas: Jyotirlinga[] = [
       "The last of the twelve Jyotirlingas, a beautifully carved red-stone temple beside the world-famous Ellora caves.",
     significance:
       "Its tale of a devotee's faith reviving her son embodies the boundless compassion of Lord Shiva.",
-    image: grishneshwar,
+    get image() {
+      return getShrineImageUrl("grishneshwar");
+    },
+    fallbackImage: shrineImages.grishneshwar.fallbackImage,
+    imageConfig: shrineImages.grishneshwar,
     youtubeUrl: liveSearch("Grishneshwar Temple Ellora"),
     defaultYoutubeUrl: liveSearch("Grishneshwar Temple Ellora"),
     i18n: {
@@ -481,3 +525,10 @@ export function getTransitionForBoundary(
   const match = pilgrimageTransitions.find((t) => t.fromSlug === fromSlug && t.toSlug === toSlug);
   return match?.config;
 }
+
+export {
+  shrineImages,
+  getShrineImageUrl,
+  getShrineImageConfig,
+  type ShrineImageConfig,
+} from "@/data/shrine-images";

@@ -46,50 +46,58 @@ export const getApprovedGallery = createServerFn({ method: "GET" })
   .inputValidator((d) => z.object({ slug: z.string() }).parse(d))
   .handler(async ({ data }): Promise<GalleryItem[]> => {
     ensureServerEnv();
-    if (!process.env.SUPABASE_URL && !process.env.VITE_SUPABASE_URL) {
+    try {
+      if (!process.env.SUPABASE_URL && !process.env.VITE_SUPABASE_URL) {
+        return [];
+      }
+      const sb = publicClient();
+      const { data: rows, error } = await sb
+        .from("gallery_images")
+        .select("id, caption, note, author_name, image_url, created_at")
+        .eq("jyotirlinga_slug", data.slug)
+        .eq("status", "approved")
+        .order("created_at", { ascending: false });
+      if (error || !rows || rows.length === 0) return [];
+
+      const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+      const paths = rows.map((r) => r.image_url);
+      const { data: signed } = await supabaseAdmin.storage
+        .from(BUCKET)
+        .createSignedUrls(paths, SIGNED_TTL);
+      const urlByPath = new Map((signed ?? []).map((s) => [s.path, s.signedUrl]));
+      return rows.map((r) => ({
+        id: r.id,
+        caption: r.caption,
+        note: r.note ?? null,
+        author_name: r.author_name,
+        created_at: r.created_at,
+        url: urlByPath.get(r.image_url) ?? null,
+      }));
+    } catch {
       return [];
     }
-    const sb = publicClient();
-    const { data: rows, error } = await sb
-      .from("gallery_images")
-      .select("id, caption, note, author_name, image_url, created_at")
-      .eq("jyotirlinga_slug", data.slug)
-      .eq("status", "approved")
-      .order("created_at", { ascending: false });
-    if (error || !rows) return [];
-
-    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-    const paths = rows.map((r) => r.image_url);
-    const { data: signed } = await supabaseAdmin.storage
-      .from(BUCKET)
-      .createSignedUrls(paths, SIGNED_TTL);
-    const urlByPath = new Map((signed ?? []).map((s) => [s.path, s.signedUrl]));
-    return rows.map((r) => ({
-      id: r.id,
-      caption: r.caption,
-      note: r.note ?? null,
-      author_name: r.author_name,
-      created_at: r.created_at,
-      url: urlByPath.get(r.image_url) ?? null,
-    }));
   });
 
 export const getApprovedStories = createServerFn({ method: "GET" })
   .inputValidator((d) => z.object({ slug: z.string() }).parse(d))
   .handler(async ({ data }): Promise<StoryItem[]> => {
     ensureServerEnv();
-    if (!process.env.SUPABASE_URL && !process.env.VITE_SUPABASE_URL) {
+    try {
+      if (!process.env.SUPABASE_URL && !process.env.VITE_SUPABASE_URL) {
+        return [];
+      }
+      const sb = publicClient();
+      const { data: rows, error } = await sb
+        .from("stories")
+        .select("id, title, body, author_name, created_at")
+        .eq("jyotirlinga_slug", data.slug)
+        .eq("status", "approved")
+        .order("created_at", { ascending: false });
+      if (error || !rows) return [];
+      return rows;
+    } catch {
       return [];
     }
-    const sb = publicClient();
-    const { data: rows, error } = await sb
-      .from("stories")
-      .select("id, title, body, author_name, created_at")
-      .eq("jyotirlinga_slug", data.slug)
-      .eq("status", "approved")
-      .order("created_at", { ascending: false });
-    if (error || !rows) return [];
-    return rows;
   });
 
 async function authorName(supabase: SupabaseClient<Database>, userId: string): Promise<string> {
@@ -189,9 +197,6 @@ export const submitGalleryImage = createServerFn({ method: "POST" })
 export const getMyRoles = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
-    if ((context as { isLocalAdmin?: boolean }).isLocalAdmin) {
-      return { roles: ["admin"] };
-    }
     const { data } = await context.supabase
       .from("user_roles")
       .select("role")
@@ -202,9 +207,6 @@ export const getMyRoles = createServerFn({ method: "GET" })
 export const bootstrapAdmin = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
-    if ((context as { isLocalAdmin?: boolean }).isLocalAdmin) {
-      return { granted: true };
-    }
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const { count } = await supabaseAdmin
       .from("user_roles")
@@ -218,12 +220,7 @@ export const bootstrapAdmin = createServerFn({ method: "POST" })
     return { granted: true };
   });
 
-async function assertAdmin(context: {
-  supabase: SupabaseClient<Database>;
-  userId: string;
-  isLocalAdmin?: boolean;
-}) {
-  if (context.isLocalAdmin) return;
+async function assertAdmin(context: { supabase: SupabaseClient<Database>; userId: string }) {
   const { data } = await context.supabase.rpc("has_role", {
     _user_id: context.userId,
     _role: "admin",
@@ -312,10 +309,23 @@ export const moderate = createServerFn({ method: "POST" })
   });
 
 export const getDarshanLinks = createServerFn({ method: "GET" }).handler(async () => {
-  const sb = publicClient();
-  const { data } = await sb.from("darshan_links").select("slug, youtube_url");
+  ensureServerEnv();
   const map: Record<string, string> = {};
-  for (const row of data ?? []) map[row.slug] = row.youtube_url;
+  try {
+    if (!process.env.SUPABASE_URL && !process.env.VITE_SUPABASE_URL) {
+      return map;
+    }
+    const sb = publicClient();
+    const { data, error } = await sb.from("darshan_links").select("slug, youtube_url");
+    if (error || !data) return map;
+    for (const row of data) {
+      if (row.slug && row.youtube_url) {
+        map[row.slug] = row.youtube_url;
+      }
+    }
+  } catch {
+    // Fail-safe: return empty map so caller seamlessly falls back to default shrine stream URLs
+  }
   return map;
 });
 

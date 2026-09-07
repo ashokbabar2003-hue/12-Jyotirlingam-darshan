@@ -37,26 +37,11 @@ import { ensureServerEnv } from "@/lib/server-env";
 export const requireSupabaseAuth = createMiddleware({ type: "function" })
   .client(async ({ next }) => {
     let token = null;
-    if (typeof window !== "undefined") {
-      const localSessionStr = localStorage.getItem("local_admin_session");
-      if (localSessionStr) {
-        try {
-          const parsed = JSON.parse(localSessionStr);
-          if (parsed && parsed.access_token) {
-            token = parsed.access_token;
-          }
-        } catch (err) {
-          console.warn("Could not parse local admin session", err);
-        }
-      }
-    }
-    if (!token) {
-      try {
-        const { data } = await supabase.auth.getSession();
-        token = data?.session?.access_token;
-      } catch {
-        token = null;
-      }
+    try {
+      const { data } = await supabase.auth.getSession();
+      token = data?.session?.access_token;
+    } catch {
+      token = null;
     }
     return next({
       headers: token ? { Authorization: `Bearer ${token}` } : {},
@@ -92,24 +77,6 @@ export const requireSupabaseAuth = createMiddleware({ type: "function" })
     const token = authHeader.replace("Bearer ", "");
     if (!token) {
       throw new Error("Unauthorized: No token provided");
-    }
-
-    if (token === "local-admin-bypass-token") {
-      const supabase = createClient<Database>(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, {
-        auth: {
-          storage: undefined,
-          persistSession: false,
-          autoRefreshToken: false,
-        },
-      });
-      return next({
-        context: {
-          supabase,
-          userId: "00000000-0000-0000-0000-000000000000",
-          claims: { sub: "00000000-0000-0000-0000-000000000000" } as Record<string, unknown>,
-          isLocalAdmin: true,
-        },
-      });
     }
 
     if (token.split(".").length !== 3) {

@@ -53,6 +53,7 @@ import {
   setSocialPostImage,
 } from "@/lib/social.functions";
 import { getGeminiDebugStatus } from "@/lib/gemini-debug.functions";
+import { ShrineImageManager } from "@/components/admin/ShrineImageManager";
 
 export const Route = createFileRoute("/_authenticated/admin")({
   head: () => ({ meta: [{ title: "Manage submissions — 12 Jyotirlinga Darshan" }] }),
@@ -262,6 +263,12 @@ function AdminPage() {
           >
             Users & Roles
           </TabsTrigger>
+          <TabsTrigger
+            value="shrine-images"
+            className="justify-start data-[state=active]:bg-primary/10 w-full px-4 py-2"
+          >
+            Shrine Images
+          </TabsTrigger>
         </TabsList>
 
         <div className="flex-1 w-full min-w-0">
@@ -385,6 +392,10 @@ function AdminPage() {
               User and role management is handled via the Postgres database using Row Level Security
               and the public.user_roles table. Currently, you hold the roles displayed above.
             </p>
+          </TabsContent>
+
+          <TabsContent value="shrine-images" className="mt-0">
+            <ShrineImageManager />
           </TabsContent>
         </div>
       </Tabs>

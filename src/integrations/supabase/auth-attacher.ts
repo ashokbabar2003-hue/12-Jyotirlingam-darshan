@@ -7,26 +7,11 @@ import { supabase } from "./client";
 export const attachSupabaseAuth = createMiddleware({ type: "function" }).client(
   async ({ next }) => {
     let token = null;
-    if (typeof window !== "undefined") {
-      const localSessionStr = localStorage.getItem("local_admin_session");
-      if (localSessionStr) {
-        try {
-          const parsed = JSON.parse(localSessionStr);
-          if (parsed && parsed.access_token) {
-            token = parsed.access_token;
-          }
-        } catch (err) {
-          console.warn("Could not parse local admin session", err);
-        }
-      }
-    }
-    if (!token) {
-      try {
-        const { data } = await supabase.auth.getSession();
-        token = data?.session?.access_token;
-      } catch {
-        token = null;
-      }
+    try {
+      const { data } = await supabase.auth.getSession();
+      token = data?.session?.access_token;
+    } catch {
+      token = null;
     }
     return next({
       headers: token ? { Authorization: `Bearer ${token}` } : {},

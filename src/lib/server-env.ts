@@ -1,6 +1,3 @@
-import fs from "fs";
-import path from "path";
-
 let initialized = false;
 
 function parseEnvFile(content: string): Record<string, string> {
@@ -31,43 +28,67 @@ export function ensureServerEnv() {
   if (typeof process === "undefined" || !process.env) return;
   if (initialized) return;
 
-  const candidatePaths = [
-    "/app/.dev.env.json",
-    path.join(process.cwd(), ".dev.env.json"),
-    path.join(process.cwd(), "..", ".dev.env.json"),
-    "/app/applet/.dev.env.json",
-    path.join(process.cwd(), ".env"),
-    path.join(process.cwd(), ".env.local"),
-    path.join(process.cwd(), "..", ".env"),
-    "/app/.env",
-    "/app/applet/.env",
-  ];
+  // In Node.js server environments, try to dynamically read local dev env files if available.
+  // In Cloudflare Workers / Edge environments, process.versions.node is absent or fs is unavailable.
+  try {
+    const isNode = Boolean(
+      typeof process !== "undefined" &&
+        process.versions &&
+        process.versions.node &&
+        typeof process.cwd === "function",
+    );
 
-  for (const filePath of candidatePaths) {
-    try {
-      if (fs.existsSync(filePath)) {
-        const content = fs.readFileSync(filePath, "utf8");
-        if (filePath.endsWith(".json")) {
-          const parsed = JSON.parse(content) as Record<string, unknown>;
-          for (const [key, value] of Object.entries(parsed)) {
-            if (typeof value === "string" && value.trim()) {
-              if (!process.env[key] || !process.env[key]!.trim()) {
-                process.env[key] = value.trim();
+    if (isNode) {
+      // Dynamic import or require inside try/catch so Edge bundlers don't inject top-level Node dependencies
+      // eslint-disable-next-line @typescript-eslint/no-var-requires
+      const nodeFs = typeof require === "function" ? require("fs") : null;
+      // eslint-disable-next-line @typescript-eslint/no-var-requires
+      const nodePath = typeof require === "function" ? require("path") : null;
+
+      if (nodeFs?.existsSync && nodePath?.join) {
+        const cwd = process.cwd();
+        const candidatePaths = [
+          "/app/.dev.env.json",
+          nodePath.join(cwd, ".dev.env.json"),
+          nodePath.join(cwd, "..", ".dev.env.json"),
+          "/app/applet/.dev.env.json",
+          nodePath.join(cwd, ".env"),
+          nodePath.join(cwd, ".env.local"),
+          nodePath.join(cwd, "..", ".env"),
+          "/app/.env",
+          "/app/applet/.env",
+        ];
+
+        for (const filePath of candidatePaths) {
+          try {
+            if (nodeFs.existsSync(filePath)) {
+              const content = nodeFs.readFileSync(filePath, "utf8");
+              if (filePath.endsWith(".json")) {
+                const parsed = JSON.parse(content) as Record<string, unknown>;
+                for (const [key, value] of Object.entries(parsed)) {
+                  if (typeof value === "string" && value.trim()) {
+                    if (!process.env[key] || !process.env[key]!.trim()) {
+                      process.env[key] = value.trim();
+                    }
+                  }
+                }
+              } else {
+                const parsed = parseEnvFile(content);
+                for (const [key, value] of Object.entries(parsed)) {
+                  if (value && (!process.env[key] || !process.env[key]!.trim())) {
+                    process.env[key] = value.trim();
+                  }
+                }
               }
             }
-          }
-        } else {
-          const parsed = parseEnvFile(content);
-          for (const [key, value] of Object.entries(parsed)) {
-            if (value && (!process.env[key] || !process.env[key]!.trim())) {
-              process.env[key] = value.trim();
-            }
+          } catch {
+            // Continue checking other candidates
           }
         }
       }
-    } catch {
-      // Continue checking other candidates
     }
+  } catch {
+    // Edge runtime safe fallback
   }
 
   // Check aliases for Gemini API key

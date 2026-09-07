@@ -68,17 +68,17 @@ function LivePage() {
           : "grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4";
 
   return (
-    <div className="mx-auto max-w-7xl px-4 py-8">
-      <div className="mb-6 flex items-center justify-between gap-3">
+    <div className="mx-auto max-w-7xl px-3 sm:px-4 py-5 sm:py-8">
+      <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
         <Link
           to="/"
-          className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground"
+          className="inline-flex items-center gap-1.5 text-xs sm:text-sm text-muted-foreground hover:text-foreground"
         >
           <ArrowLeft className="size-4" /> Home
         </Link>
         <h1
           className={cn(
-            "text-xl font-semibold text-foreground sm:text-2xl",
+            "text-lg font-semibold text-foreground sm:text-2xl",
             displayFontClass,
             isEn ? "font-display tracking-tight" : "tracking-normal",
           )}
@@ -135,6 +135,8 @@ function LivePage() {
                 title={`${j.name} live darshan`}
                 liveUrl={liveUrl}
                 defaultUrl={defaultUrl}
+                fallbackImage={j.image}
+                shrineName={loc.name}
                 onStatusChange={(s) => setStatus(j.slug, s)}
               />
 

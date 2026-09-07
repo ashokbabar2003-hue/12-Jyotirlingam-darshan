@@ -468,11 +468,13 @@ export function LiveDarshanSection({
               ref={featuredStageRef}
               className="relative mx-auto max-w-5xl overflow-hidden rounded-2xl border border-primary/30 bg-card/90 shadow-2xl backdrop-blur-md"
             >
-              <div className="relative aspect-video w-full bg-black">
+              <div className="relative aspect-video w-full overflow-hidden bg-neutral-950">
                 <DarshanTile
                   title={`${activeShrine.name} live darshan`}
                   liveUrl={activeUrls.liveUrl}
                   defaultUrl={activeUrls.defaultUrl}
+                  fallbackImage={activeShrine.image}
+                  shrineName={activeLoc.name}
                   onStatusChange={(s) => setStatus(activeShrine.slug, s)}
                 />
 
@@ -498,7 +500,7 @@ export function LiveDarshanSection({
               </div>
 
               {/* Dominant Active Temple Details Bar */}
-              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 p-4 sm:p-6 bg-gradient-to-r from-card via-card/95 to-card/90 border-t border-border/40">
+              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 p-3.5 sm:p-6 bg-gradient-to-r from-card via-card/95 to-card/90 border-t border-border/40">
                 <div className="space-y-1">
                   <div className="flex items-center gap-2">
                     <span className="font-mono text-xs font-semibold text-primary">
@@ -672,6 +674,8 @@ export function LiveDarshanSection({
                     title={`${j.name} live darshan`}
                     liveUrl={urls.liveUrl}
                     defaultUrl={urls.defaultUrl}
+                    fallbackImage={j.image}
+                    shrineName={loc.name}
                     onStatusChange={(s) => setStatus(j.slug, s)}
                   />
 

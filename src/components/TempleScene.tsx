@@ -104,12 +104,12 @@ export function TempleScene({
         return;
       }
 
-      const isMobile = window.innerWidth < 768;
+      const isCompactMobile = window.innerWidth < 600;
 
       // Initial visual states: restrained, understated offsets
       gsap.set(img, {
-        scale: isMobile ? 1.04 : 1.08,
-        yPercent: isMobile ? 0 : -4,
+        scale: isCompactMobile ? 1.04 : 1.08,
+        yPercent: isCompactMobile ? 0 : -4,
         opacity: 0.85,
       });
 
@@ -124,7 +124,7 @@ export function TempleScene({
         y: 12,
       });
 
-      if (!isMobile) {
+      if (window.innerWidth >= 768) {
         // Desktop Experience: Data-driven pinned narrative hold
         const masterTl = gsap.timeline({
           scrollTrigger: {
@@ -308,7 +308,7 @@ export function TempleScene({
 
       <div
         ref={pinTargetRef}
-        className="relative flex min-h-screen w-full flex-col justify-center overflow-hidden px-4 py-12 sm:px-6 lg:px-12 lg:py-16"
+        className="relative flex min-h-[auto] sm:min-h-screen w-full flex-col justify-center overflow-hidden px-3.5 py-7 sm:px-6 lg:px-12 sm:py-12 lg:py-16"
       >
         {/* Subtle atmospheric ambient glow */}
         <div
@@ -345,6 +345,11 @@ export function TempleScene({
                 loading="lazy"
                 decoding="async"
                 referrerPolicy="no-referrer"
+                onError={(e) => {
+                  if (shrine.fallbackImage && e.currentTarget.src !== shrine.fallbackImage) {
+                    e.currentTarget.src = shrine.fallbackImage;
+                  }
+                }}
                 style={{ objectPosition: presentation.objectPosition || "center" }}
                 className="size-full object-cover select-none will-change-transform"
               />

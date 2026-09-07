@@ -158,6 +158,11 @@ function Detail() {
           width={1920}
           height={1080}
           referrerPolicy="no-referrer"
+          onError={(e) => {
+            if (jl.fallbackImage && e.currentTarget.src !== jl.fallbackImage) {
+              e.currentTarget.src = jl.fallbackImage;
+            }
+          }}
           className="absolute inset-0 size-full object-cover opacity-40"
         />
         <div className="absolute inset-0 bg-gradient-to-b from-background/60 to-background" />
@@ -223,6 +228,8 @@ function Detail() {
                 title={`${jl.name} live darshan`}
                 liveUrl={liveUrl}
                 defaultUrl={defaultUrl}
+                fallbackImage={jl.image}
+                shrineName={displayName}
               />
             </div>
           </section>

@@ -79,10 +79,13 @@ export function SacredJourneyTransition({
         });
         if (progressLine) gsap.set(progressLine, { scaleX: 1 });
         if (stageRayLine) gsap.set(stageRayLine, { scaleX: 1 });
+        if (progressTextRef.current) {
+          progressTextRef.current.textContent = `100% ${isEn ? "Traversed" : "प्रवास"}`;
+        }
         return;
       }
 
-      const isMobile = window.innerWidth < 768;
+      const isMobile = window.innerWidth < 600;
 
       // -------------------------------------------------------------
       // INITIAL VISUAL STATES (Carefully balanced depth and contrast)
@@ -142,7 +145,10 @@ export function SacredJourneyTransition({
           scrub: isMobile ? 0.4 : 0.65,
           invalidateOnRefresh: true,
           onUpdate: (self) => {
-            setScrollProgress(self.progress);
+            if (progressTextRef.current) {
+              const pct = Math.round(self.progress * 100);
+              progressTextRef.current.textContent = `${pct}% ${isEn ? "Traversed" : "प्रवास"}`;
+            }
           },
         },
       });
@@ -581,8 +587,11 @@ export function SacredJourneyTransition({
             >
               {fromNumberDisplay}. {transition.fromName}
             </span>
-            <span className="text-[10px] uppercase tracking-widest text-muted-foreground/70 shrink-0 px-2">
-              {Math.round(scrollProgress * 100)}% {isEn ? "Traversed" : "प्रवास"}
+            <span
+              ref={progressTextRef}
+              className="text-[10px] uppercase tracking-widest text-muted-foreground/70 shrink-0 px-2"
+            >
+              0% {isEn ? "Traversed" : "प्रवास"}
             </span>
             <span
               className={cn(

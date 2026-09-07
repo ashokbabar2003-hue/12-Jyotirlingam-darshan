@@ -259,11 +259,11 @@ function Dashboard() {
   const totalSuffix = ` / ${toLocalDigits(12, lang)}`;
 
   return (
-    <div className="mx-auto max-w-7xl px-4 py-10">
+    <div className="mx-auto max-w-7xl px-3.5 sm:px-4 py-6 sm:py-10">
       <Link
         to="/"
         className={cn(
-          "mb-4 inline-flex items-center gap-1.5 text-sm text-muted-foreground transition-colors hover:text-foreground",
+          "mb-4 inline-flex items-center gap-1.5 text-xs sm:text-sm text-muted-foreground transition-colors hover:text-foreground",
           fontClass,
         )}
       >
@@ -432,7 +432,7 @@ function Dashboard() {
           </p>
         </div>
       ) : (
-        <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="grid gap-4 sm:gap-5 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
           {filtered.map((j) => {
             const meta = jyotirlingaMeta[j.slug];
             const loc = getLocalized(j, lang);

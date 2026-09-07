@@ -9,29 +9,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { useLanguage, LANGUAGES, type Lang } from "@/hooks/use-language";
 import { cn } from "@/lib/utils";
-
-/**
- * Returns the explicit font class associated with each language code.
- * Ensures 'hi' always uses 'font-hindi' and 'mr' always uses 'font-marathi'
- * regardless of active application locale.
- */
-function getLanguageOptionFontClass(code: Lang | string): string {
-  switch (code) {
-    case "hi":
-      return "font-hindi";
-    case "mr":
-      return "font-marathi";
-    case "gu":
-      return "font-gujarati";
-    case "te":
-      return "font-telugu";
-    case "ta":
-      return "font-tamil";
-    case "en":
-    default:
-      return "font-en";
-  }
-}
+import { getLanguageOptionFontClass } from "@/lib/language-utils";
 
 /**
  * Returns explicit inline style to guarantee font-family cannot be overridden
