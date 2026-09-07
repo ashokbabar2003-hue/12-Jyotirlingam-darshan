@@ -29,55 +29,104 @@ function createSupabaseFetch(supabaseKey: string): typeof fetch {
   };
 }
 
-function getSupabaseEnv() {
-  const url =
+declare global {
+  interface Window {
+    __PUBLIC_SUPABASE_CONFIG__?: {
+      url?: string;
+      publishableKey?: string;
+    };
+  }
+}
+
+export function getSupabaseEnv() {
+  // 1. Check window.__PUBLIC_SUPABASE_CONFIG__ injected at runtime by SSR/Cloudflare Worker
+  const runtimeUrl =
+    typeof window !== "undefined" && window.__PUBLIC_SUPABASE_CONFIG__?.url
+      ? window.__PUBLIC_SUPABASE_CONFIG__.url
+      : "";
+  const runtimeKey =
+    typeof window !== "undefined" && window.__PUBLIC_SUPABASE_CONFIG__?.publishableKey
+      ? window.__PUBLIC_SUPABASE_CONFIG__.publishableKey
+      : "";
+
+  // 2. Check Vite build-time env or Node/Edge process.env
+  const buildUrl =
     (typeof import.meta !== "undefined" && import.meta.env?.VITE_SUPABASE_URL) ||
     (typeof process !== "undefined" &&
       (process.env?.VITE_SUPABASE_URL || process.env?.SUPABASE_URL)) ||
     "";
-  const key =
-    (typeof import.meta !== "undefined" && import.meta.env?.VITE_SUPABASE_PUBLISHABLE_KEY) ||
+  const buildKey =
+    (typeof import.meta !== "undefined" &&
+      (import.meta.env?.VITE_SUPABASE_PUBLISHABLE_KEY ||
+        import.meta.env?.VITE_SUPABASE_ANON_KEY)) ||
     (typeof process !== "undefined" &&
-      (process.env?.VITE_SUPABASE_PUBLISHABLE_KEY || process.env?.SUPABASE_PUBLISHABLE_KEY)) ||
+      (process.env?.VITE_SUPABASE_PUBLISHABLE_KEY ||
+        process.env?.SUPABASE_PUBLISHABLE_KEY ||
+        process.env?.SUPABASE_ANON_KEY ||
+        process.env?.VITE_SUPABASE_ANON_KEY)) ||
     "";
-  return { url: url.trim(), key: key.trim() };
+
+  const url = (runtimeUrl || buildUrl || "").trim();
+  const key = (runtimeKey || buildKey || "").trim();
+
+  return { url, key };
 }
 
-export const isSupabaseConfigured = Boolean(getSupabaseEnv().url && getSupabaseEnv().key);
+export function isSupabaseReady(): boolean {
+  const { url, key } = getSupabaseEnv();
+  return Boolean(url && key);
+}
+
+export const isSupabaseConfigured = isSupabaseReady();
 
 let warnedAboutMissingEnv = false;
+let loggedDiagnostic = false;
+
+function logSupabaseRuntimeDiagnostic(url: string, key: string) {
+  if (loggedDiagnostic || typeof window === "undefined") return;
+  loggedDiagnostic = true;
+
+  let supabaseHost: string | null = null;
+  if (url) {
+    try {
+      supabaseHost = new URL(url).hostname;
+    } catch {
+      supabaseHost = "invalid-url";
+    }
+  }
+
+  console.info("[Supabase Runtime]", {
+    configured: Boolean(url && key),
+    supabaseHost,
+    hasPublishableKey: Boolean(key),
+    origin: window.location.origin,
+  });
+}
 
 function createSupabaseClient() {
   const { url, key } = getSupabaseEnv();
+  logSupabaseRuntimeDiagnostic(url, key);
 
   if (!url || !key) {
     if (!warnedAboutMissingEnv && typeof window !== "undefined") {
       warnedAboutMissingEnv = true;
       console.warn(
-        "[Supabase] Environment variables (SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY) are not set. Devotional portal running in client-safe offline mode.",
+        "[Supabase] Production public environment configuration is not set. Devotional portal running in client-safe offline mode.",
       );
     }
-    // Return a safe placeholder client that doesn't throw synchronous runtime errors
-    // and returns graceful rejection for auth attempts when offline
-    const fallbackUrl = "https://placeholder-project.supabase.co";
-    const fallbackKey = "placeholder-anon-key";
-    return createClient<Database>(fallbackUrl, fallbackKey, {
+    // Return a safe mock client that intercepts all calls gracefully without touching any placeholder domains
+    return createClient<Database>("https://auth-offline.local", "offline-dummy-key", {
       global: {
-        fetch: ((input: RequestInfo | URL, init?: RequestInit) => {
-          const urlStr = typeof input === "string" ? input : input instanceof URL ? input.toString() : input.url;
-          if (urlStr.includes("placeholder-project.supabase.co")) {
-            return Promise.resolve(
-              new Response(
-                JSON.stringify({
-                  error: "auth_unavailable",
-                  message: "Supabase environment is not configured in offline mode.",
-                }),
-                { status: 503, headers: { "Content-Type": "application/json" } },
-              ),
-            );
-          }
-          return createSupabaseFetch(fallbackKey)(input, init);
-        }) as typeof fetch,
+        fetch: () =>
+          Promise.resolve(
+            new Response(
+              JSON.stringify({
+                error: "auth_unavailable",
+                message: "Authentication is not configured.",
+              }),
+              { status: 503, headers: { "Content-Type": "application/json" } },
+            ),
+          ),
       },
       auth: {
         storage: typeof window !== "undefined" ? localStorage : undefined,
@@ -105,7 +154,16 @@ let _supabase: ReturnType<typeof createSupabaseClient> | undefined;
 // import { supabase } from "@/integrations/supabase/client";
 export const supabase = new Proxy({} as ReturnType<typeof createSupabaseClient>, {
   get(_, prop, receiver) {
-    if (!_supabase) _supabase = createSupabaseClient();
+    if (!_supabase || !_supabase.auth) {
+      _supabase = createSupabaseClient();
+    } else {
+      // If config was injected after initial module evaluation, recreate client with real credentials
+      const { url, key } = getSupabaseEnv();
+      if (url && key && (_supabase as any)?.supabaseUrl === "https://auth-offline.local") {
+        _supabase = createSupabaseClient();
+      }
+    }
     return Reflect.get(_supabase, prop, receiver);
   },
 });
+

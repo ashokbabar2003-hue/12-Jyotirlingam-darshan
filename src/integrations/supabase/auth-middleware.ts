@@ -52,11 +52,13 @@ export const requireSupabaseAuth = createMiddleware({ type: "function" })
     const SUPABASE_URL =
       process.env.SUPABASE_URL ||
       process.env.VITE_SUPABASE_URL ||
-      "https://placeholder-project.supabase.co";
+      "https://auth-offline.local";
     const SUPABASE_PUBLISHABLE_KEY =
       process.env.SUPABASE_PUBLISHABLE_KEY ||
       process.env.VITE_SUPABASE_PUBLISHABLE_KEY ||
-      "placeholder-anon-key";
+      process.env.SUPABASE_ANON_KEY ||
+      process.env.VITE_SUPABASE_ANON_KEY ||
+      "offline-key";
 
     const request = getRequest();
 

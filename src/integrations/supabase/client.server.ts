@@ -40,10 +40,12 @@ function createSupabaseAdminClient() {
   const SUPABASE_SERVICE_ROLE_KEY =
     process.env.SUPABASE_SERVICE_ROLE_KEY ||
     process.env.SUPABASE_PUBLISHABLE_KEY ||
-    process.env.VITE_SUPABASE_PUBLISHABLE_KEY;
+    process.env.VITE_SUPABASE_PUBLISHABLE_KEY ||
+    process.env.SUPABASE_ANON_KEY ||
+    process.env.VITE_SUPABASE_ANON_KEY;
 
-  const url = SUPABASE_URL || "https://placeholder-project.supabase.co";
-  const key = SUPABASE_SERVICE_ROLE_KEY || "placeholder-service-key";
+  const url = SUPABASE_URL || "https://auth-offline.local";
+  const key = SUPABASE_SERVICE_ROLE_KEY || "offline-service-key";
 
   return createClient<Database>(url, key, {
     global: {

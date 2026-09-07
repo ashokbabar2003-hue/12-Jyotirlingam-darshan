@@ -6,6 +6,7 @@ import {
   Scripts,
   Link,
 } from "@tanstack/react-router";
+import { createServerFn } from "@tanstack/react-start";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import * as React from "react";
 import "@/styles.css";
@@ -18,9 +19,23 @@ import { Compass, Home, RefreshCw } from "lucide-react";
 import { SiteHeader } from "@/components/site-header";
 import { SiteFooter } from "@/components/site-footer";
 
+import { getPublicSupabaseEnv } from "@/lib/server-env";
+
+const fetchPublicSupabaseConfig = createServerFn({ method: "GET" }).handler(async () => {
+  return getPublicSupabaseEnv();
+});
+
 export const Route = createRootRouteWithContext<{
   queryClient: QueryClient;
 }>()({
+  loader: async () => {
+    try {
+      const config = await fetchPublicSupabaseConfig();
+      return { publicConfig: config };
+    } catch {
+      return { publicConfig: { url: "", publishableKey: "" } };
+    }
+  },
   meta: () => [
     {
       title: "12 Jyotirlingam Darshan",
@@ -62,6 +77,7 @@ export const Route = createRootRouteWithContext<{
   notFoundComponent: NotFoundComponent,
   errorComponent: RootErrorComponent,
 });
+
 
 function RootErrorComponent({ error, reset }: { error: Error; reset: () => void }) {
   React.useEffect(() => {
@@ -167,6 +183,10 @@ function NotFoundComponent() {
 
 function RootComponent() {
   const context = Route.useRouteContext();
+  const loaderData = Route.useLoaderData();
+  const publicConfig = loaderData?.publicConfig || (typeof getPublicSupabaseEnv === "function" ? getPublicSupabaseEnv() : { url: "", publishableKey: "" });
+
+  const hasConfig = Boolean(publicConfig?.url && publicConfig?.publishableKey);
 
   return (
     <html lang="en" suppressHydrationWarning>
@@ -176,7 +196,9 @@ function RootComponent() {
         <HeadContent />
         <script
           dangerouslySetInnerHTML={{
-            __html: `(function(){try{var l=localStorage.getItem('lang');if(l&&['en','mr','hi','gu','te','ta'].indexOf(l)>-1){document.documentElement.setAttribute('data-lang',l);document.documentElement.lang=l;}}catch(e){}})();`,
+            __html: `(function(){try{${
+              hasConfig ? `window.__PUBLIC_SUPABASE_CONFIG__=${JSON.stringify(publicConfig)};` : ""
+            }var l=localStorage.getItem('lang');if(l&&['en','mr','hi','gu','te','ta'].indexOf(l)>-1){document.documentElement.setAttribute('data-lang',l);document.documentElement.lang=l;}}catch(e){}})();`,
           }}
         />
       </head>

@@ -26,12 +26,14 @@ function adminClient() {
   const url =
     process.env.SUPABASE_URL ||
     process.env.VITE_SUPABASE_URL ||
-    "https://placeholder-project.supabase.co";
+    "https://auth-offline.local";
   const key =
     process.env.SUPABASE_SERVICE_ROLE_KEY ||
     process.env.SUPABASE_PUBLISHABLE_KEY ||
     process.env.VITE_SUPABASE_PUBLISHABLE_KEY ||
-    "placeholder-service-key";
+    process.env.SUPABASE_ANON_KEY ||
+    process.env.VITE_SUPABASE_ANON_KEY ||
+    "offline-service-key";
   return createClient(url, key, {
     auth: { persistSession: false, autoRefreshToken: false },
   });

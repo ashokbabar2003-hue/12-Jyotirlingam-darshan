@@ -2,7 +2,7 @@ import { useState } from "react";
 import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
 import { toast } from "sonner";
 import { Flame, Eye, EyeOff, ArrowLeft, Loader2 } from "lucide-react";
-import { supabase, isSupabaseConfigured } from "@/integrations/supabase/client";
+import { supabase, isSupabaseReady, getSupabaseEnv } from "@/integrations/supabase/client";
 import { useLanguage, type Lang } from "@/hooks/use-language";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -290,8 +290,14 @@ function AuthPage() {
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    if (!isSupabaseConfigured) {
-      toast.info(t.authOfflineNotice);
+    const env = getSupabaseEnv();
+    if (!env.url || !env.key) {
+      console.warn("[Auth Diagnostics] Missing Supabase configuration during email auth submission", {
+        hasUrl: Boolean(env.url),
+        hasKey: Boolean(env.key),
+        origin: typeof window !== "undefined" ? window.location.origin : "ssr",
+      });
+      toast.error(t.authOfflineNotice);
       return;
     }
     setBusy(true);
@@ -321,19 +327,40 @@ function AuthPage() {
       }
       navigate({ to: "/" });
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : t.authFailed);
+      const msg = err instanceof Error ? err.message : t.authFailed;
+      console.error("[Auth Error]", err);
+      toast.error(msg);
     } finally {
       setBusy(false);
     }
   }
 
   async function googleSignIn() {
-    if (!isSupabaseConfigured) {
-      toast.info(t.authOfflineNotice);
+    const env = getSupabaseEnv();
+    const redirectOrigin = getAuthRedirectOrigin();
+
+    // Production safe diagnostics without exposing secrets
+    let hostname = "not-configured";
+    try {
+      if (env.url) hostname = new URL(env.url).hostname;
+    } catch {
+      hostname = "invalid-url";
+    }
+
+    console.info("[Auth Diagnostics]", {
+      isConfigured: Boolean(env.url && env.key),
+      supabaseHost: hostname,
+      hasPublishableKey: Boolean(env.key),
+      redirectOrigin,
+    });
+
+    if (!env.url || !env.key) {
+      toast.error(t.authOfflineNotice);
       return;
     }
+
     try {
-      const redirectOrigin = getAuthRedirectOrigin();
+      setBusy(true);
       const { error } = await supabase.auth.signInWithOAuth({
         provider: "google",
         options: {
@@ -342,7 +369,10 @@ function AuthPage() {
       });
       if (error) throw error;
     } catch (err) {
-      toast.error(t.googleFailed);
+      console.error("[Google OAuth Error]", err);
+      const msg = err instanceof Error ? err.message : t.googleFailed;
+      toast.error(msg);
+      setBusy(false);
     }
   }
 
