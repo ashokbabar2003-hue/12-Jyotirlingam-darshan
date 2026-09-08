@@ -1,8 +1,23 @@
 // Server-only helper: scans configured YouTube channels for an active live stream
-// and updates `darshan_links` for each shrine. On any failure, the existing
-// live link is left untouched.
+// and updates `darshan_links` for each shrine. On any failure or when no live stream is active,
+// the existing live link is left untouched.
 
 import { validateYoutubeUrl } from "@/lib/youtube";
+import { DEFAULT_CHANNELS } from "@/data/channels";
+
+export { DEFAULT_CHANNELS };
+
+export type TelemetryResultStatus =
+  | "updated"
+  | "unchanged"
+  | "no_live"
+  | "channel_not_found"
+  | "channel_not_resolved"
+  | "youtube_bot_interstitial"
+  | "youtube_request_failed"
+  | "youtube_rate_limited"
+  | "database_update_failed"
+  | "error";
 
 export interface DiscoveryTelemetry {
   shrine: string;
@@ -10,7 +25,7 @@ export interface DiscoveryTelemetry {
   candidateCount: number;
   liveCandidateCount: number;
   selectedVideo: string | null;
-  result: "updated" | "unchanged" | "no_live" | "error";
+  result: TelemetryResultStatus;
   reason: string;
 }
 
@@ -38,60 +53,141 @@ export interface RefreshOutcome {
 const VIDEO_ID_RE = /^[A-Za-z0-9_-]{11}$/;
 const CHANNEL_ID_RE = /^UC[A-Za-z0-9_-]{22}$/;
 
-// Use crawler User-Agent so YouTube returns clean server-rendered HTML with canonical watch links
-// instead of interactive SPA bot-detection skeletons ("Sign in to confirm you're not a bot").
-const UA = "Mozilla/5.0 (compatible; Googlebot/2.1; +http://www.google.com/bot.html)";
+// Primary crawler User-Agent to encourage clean server-rendered HTML
+const CRAWLER_UA = "Mozilla/5.0 (compatible; Googlebot/2.1; +http://www.google.com/bot.html)";
+// Fallback browser User-Agent when needed
+const BROWSER_UA =
+  "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36";
 
-async function fetchHtml(url: string): Promise<string | null> {
+export interface FetchResponse {
+  html: string | null;
+  status: number;
+  isBotInterstitial: boolean;
+  isRateLimited: boolean;
+  isNotFound: boolean;
+  finalUrl?: string;
+}
+
+export async function fetchHtmlWithMeta(
+  url: string,
+  userAgent: string = CRAWLER_UA,
+): Promise<FetchResponse> {
   try {
     const res = await fetch(url, {
       method: "GET",
       headers: {
-        "user-agent": UA,
-        "accept-language": "en-US,en;q=0.9",
+        "user-agent": userAgent,
+        "accept-language": "en-US,en;q=0.9,hi;q=0.8",
         accept:
           "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8",
       },
       redirect: "follow",
     });
-    if (!res.ok) return null;
-    return await res.text();
+
+    if (res.status === 404) {
+      return {
+        html: null,
+        status: 404,
+        isBotInterstitial: false,
+        isRateLimited: false,
+        isNotFound: true,
+        finalUrl: res.url,
+      };
+    }
+
+    if (res.status === 429) {
+      return {
+        html: null,
+        status: 429,
+        isBotInterstitial: false,
+        isRateLimited: true,
+        isNotFound: false,
+        finalUrl: res.url,
+      };
+    }
+
+    if (!res.ok) {
+      return {
+        html: null,
+        status: res.status,
+        isBotInterstitial: false,
+        isRateLimited: false,
+        isNotFound: false,
+        finalUrl: res.url,
+      };
+    }
+
+    const html = await res.text();
+
+    const isBot =
+      html.includes("Sign in to confirm you're not a bot") ||
+      html.includes('"status":"LOGIN_REQUIRED"') ||
+      html.includes('"reason":"LOGIN_REQUIRED"') ||
+      html.includes("consent.youtube.com") ||
+      html.includes("google.com/sorry/index");
+
+    return {
+      html,
+      status: res.status,
+      isBotInterstitial: isBot,
+      isRateLimited: false,
+      isNotFound: false,
+      finalUrl: res.url,
+    };
   } catch {
-    return null;
+    return {
+      html: null,
+      status: 0,
+      isBotInterstitial: false,
+      isRateLimited: false,
+      isNotFound: false,
+    };
   }
 }
 
+async function fetchHtml(url: string): Promise<string | null> {
+  const resp = await fetchHtmlWithMeta(url, CRAWLER_UA);
+  if (resp.html && !resp.isBotInterstitial) return resp.html;
+  if (resp.isBotInterstitial) {
+    const retry = await fetchHtmlWithMeta(url, BROWSER_UA);
+    if (retry.html && !retry.isBotInterstitial) return retry.html;
+  }
+  return resp.html;
+}
+
 export function extractCanonicalVideoId(html: string): string | null {
-  // <link rel="canonical" href="https://www.youtube.com/watch?v=XXXXX">
   const canon = html.match(/<link[^>]+rel="canonical"[^>]+href="([^"]+)"/i);
   if (canon) {
     try {
       const u = new URL(canon[1]);
       const v = u.searchParams.get("v");
       if (v && VIDEO_ID_RE.test(v)) return v;
-      // /live/XXXXX or /embed/XXXXX in canonical
       const m = u.pathname.match(/\/(?:live|embed|shorts)\/([A-Za-z0-9_-]{11})/);
       if (m) return m[1];
     } catch {
       /* ignore */
     }
   }
-  // og:url meta tag
   const og = html.match(/<meta[^>]+property="og:url"[^>]+content="([^"]+)"/i);
   if (og) {
     try {
       const u = new URL(og[1]);
       const v = u.searchParams.get("v");
       if (v && VIDEO_ID_RE.test(v)) return v;
+      const m = u.pathname.match(/\/(?:live|embed|shorts)\/([A-Za-z0-9_-]{11})/);
+      if (m) return m[1];
     } catch {
       /* ignore */
     }
+  }
+  const metaVid = html.match(/<meta[^>]+itemprop="videoId"[^>]+content="([A-Za-z0-9_-]{11})"/i);
+  if (metaVid && VIDEO_ID_RE.test(metaVid[1])) {
+    return metaVid[1];
   }
   return null;
 }
 
 export function extractChannelId(html: string): string | null {
-  // Try several places channel IDs appear in YouTube HTML.
   const patterns = [
     /"channelId":"(UC[A-Za-z0-9_-]{22})"/,
     /"externalChannelId":"(UC[A-Za-z0-9_-]{22})"/,
@@ -106,14 +202,34 @@ export function extractChannelId(html: string): string | null {
   return null;
 }
 
-/**
- * Look at all 11-char videoIds in the HTML and return the first one whose
- * surrounding JSON window suggests it's currently live (badge "LIVE", "isLive":true,
- * "isLiveNow":true, watching-now counter, etc.).
- */
-export function findLiveVideoIdInHtml(html: string): string | null {
-  const cands = findLiveCandidatesInHtml(html);
-  return cands.length > 0 ? cands[0].id : null;
+export function extractTitleFromHtml(html: string): string {
+  const og = html.match(/<meta[^>]+property="og:title"[^>]+content="([^"]+)"/i)?.[1];
+  if (og && og.trim()) {
+    return decodeHtmlEntities(og.trim());
+  }
+  const itemPropName = html.match(/<meta[^>]+itemprop="name"[^>]+content="([^"]+)"/i)?.[1];
+  if (itemPropName && itemPropName.trim()) {
+    return decodeHtmlEntities(itemPropName.trim());
+  }
+  const metaTitle = html.match(/<meta[^>]+name="title"[^>]+content="([^"]+)"/i)?.[1];
+  if (metaTitle && metaTitle.trim()) {
+    return decodeHtmlEntities(metaTitle.trim());
+  }
+  const titleTag = html.match(/<title>([^<]+)<\/title>/i)?.[1];
+  if (titleTag) {
+    return decodeHtmlEntities(titleTag.replace(/\s*-\s*YouTube\s*$/i, "").trim());
+  }
+  return "";
+}
+
+function decodeHtmlEntities(str: string): string {
+  return str
+    .replace(/&amp;/g, "&")
+    .replace(/&lt;/g, "<")
+    .replace(/&gt;/g, ">")
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;/g, "'")
+    .replace(/&apos;/g, "'");
 }
 
 export interface LiveCandidate {
@@ -122,11 +238,6 @@ export interface LiveCandidate {
   channelId?: string | null;
 }
 
-/**
- * Return every videoId on the page whose surrounding JSON window suggests
- * it's currently live, along with the best-effort title we can pull from
- * that same window.
- */
 export function findLiveCandidatesInHtml(html: string): LiveCandidate[] {
   const idRe = /"videoId":"([A-Za-z0-9_-]{11})"/g;
   const seen = new Set<string>();
@@ -140,6 +251,7 @@ export function findLiveCandidatesInHtml(html: string): LiveCandidate[] {
     /"text":"LIVE"/,
     /watching now/i,
   ];
+
   let match: RegExpExecArray | null;
   while ((match = idRe.exec(html)) !== null) {
     const id = match[1];
@@ -147,19 +259,25 @@ export function findLiveCandidatesInHtml(html: string): LiveCandidate[] {
     const signalWindow = html.slice(match.index, match.index + 4000);
     if (!liveSignals.some((re) => re.test(signalWindow))) continue;
 
-    // Tight centered window for title extraction to avoid cross-talk
     const sliceStart = Math.max(0, match.index - 1500);
     const detailWindow = html.slice(sliceStart, Math.min(html.length, match.index + 2000));
     const videoIdOffset = match.index - sliceStart;
 
+    const title = extractTitleFromWindow(detailWindow, videoIdOffset) || extractTitleFromHtml(html);
+
     seen.add(id);
     out.push({
       id,
-      title: extractTitleFromWindow(detailWindow, videoIdOffset),
+      title,
       channelId: extractCandidateChannelId(detailWindow),
     });
   }
   return out;
+}
+
+export function findLiveVideoIdInHtml(html: string): string | null {
+  const cands = findLiveCandidatesInHtml(html);
+  return cands.length > 0 ? cands[0].id : null;
 }
 
 function extractCandidateChannelId(window: string): string | null {
@@ -175,65 +293,52 @@ function extractCandidateChannelId(window: string): string | null {
   return null;
 }
 
-export function extractTitleFromHtml(html: string): string {
-  const og = html.match(/<meta[^>]+property="og:title"[^>]+content="([^"]+)"/i)?.[1];
-  if (og && og.trim()) return og.trim();
-  const titleTag = html.match(/<title>([^<]+)<\/title>/i)?.[1];
-  if (titleTag) return titleTag.replace(/\s*-\s*YouTube\s*$/i, "").trim();
-  return "";
-}
-
 function extractPrimaryLiveCandidate(html: string): LiveCandidate | null {
   const start = html.indexOf('"videoDetails":{');
   if (start >= 0) {
     const detailWindow = html.slice(start, start + 20000);
-    // Ensure videoId is a direct property of videoDetails by searching only the first 200 characters
     const id = detailWindow.slice(0, 200).match(/"videoId":"([A-Za-z0-9_-]{11})"/)?.[1] ?? null;
     const channelId = extractCandidateChannelId(detailWindow);
     const isLive = /"isLive":true/.test(detailWindow) || /"isLiveContent":true/.test(detailWindow);
     if (id && VIDEO_ID_RE.test(id) && isLive) {
+      const windowTitle = extractTitleFromWindow(detailWindow);
+      const pageTitle = extractTitleFromHtml(html);
       return {
         id,
-        title: extractTitleFromWindow(detailWindow) || extractTitleFromHtml(html),
+        title: windowTitle || pageTitle,
         channelId,
       };
     }
   }
 
-  // Some YouTube responses do not expose videoDetails in the HTML, but the
-  // /live page still declares the current video in its canonical URL. In that
-  // case only use the canonical ID itself, never every LIVE-looking video from
-  // recommendations on the page.
-  if (!pageLooksLive(html)) return null;
-  const canon = extractCanonicalVideoId(html);
-  if (canon) {
-    const match = findLiveCandidatesInHtml(html).find((c) => c.id === canon);
-    const htmlTitle = extractTitleFromHtml(html);
-    const title =
-      match?.title && match.title.length > 0
-        ? match.title
-        : htmlTitle || extractTitleFromWindow(html.slice(0, 12000));
-    return {
-      id: canon,
-      title,
-      channelId: match?.channelId ?? extractCandidateChannelId(html) ?? extractChannelId(html),
-    };
-  }
+  if (pageLooksLive(html)) {
+    const canon = extractCanonicalVideoId(html);
+    if (canon) {
+      const match = findLiveCandidatesInHtml(html).find((c) => c.id === canon);
+      const htmlTitle = extractTitleFromHtml(html);
+      const title =
+        match?.title && match.title.length > 0
+          ? match.title
+          : htmlTitle || extractTitleFromWindow(html.slice(0, 12000));
+      return {
+        id: canon,
+        title,
+        channelId: match?.channelId ?? extractCandidateChannelId(html) ?? extractChannelId(html),
+      };
+    }
 
-  // Fallback if canonical URL is missing/undefined/unparseable but the page looks live and we found candidates.
-  // Guard against picking recommended videos from other channels by checking channelId when available.
-  const pageChannelId = extractChannelId(html);
-  const candidates = findLiveCandidatesInHtml(html);
-  for (const c of candidates) {
-    if (pageChannelId && c.channelId && c.channelId !== pageChannelId) continue;
-    return c;
+    const pageChannelId = extractChannelId(html);
+    const candidates = findLiveCandidatesInHtml(html);
+    for (const c of candidates) {
+      if (pageChannelId && c.channelId && c.channelId !== pageChannelId) continue;
+      return c;
+    }
   }
 
   return null;
 }
 
 function extractTitleFromWindow(window: string, videoIdOffset: number = -1): string {
-  // Try common YouTube JSON title shapes near the videoId.
   const patterns = [
     /"title":\s*\{\s*"runs":\s*\[\s*\{\s*"text":"((?:[^"\\]|\\.)*)"/g,
     /"title":\s*\{\s*"simpleText":"((?:[^"\\]|\\.)*)"/g,
@@ -282,25 +387,16 @@ function extractTitleFromWindow(window: string, videoIdOffset: number = -1): str
   return bestTitle;
 }
 
-/**
- * Score a candidate's title against shrine hints. Higher is better, 0 means
- * nothing matched. Matches whole words, case-insensitive, and tolerates
- * Devanagari/Tamil/etc. by also checking raw substring.
- */
-export function scoreLiveCandidate(title: string, hints: string[]): number {
-  if (!title) return 0;
-  const lower = title.toLowerCase();
-  let score = 0;
-  for (const hint of hints) {
-    const h = hint.trim();
-    if (!h) continue;
-    const hl = h.toLowerCase();
-    if (lower.includes(hl)) {
-      // Longer hints (shrine names) are more discriminating than generic keywords.
-      score += hl.length >= 6 ? 10 : 3;
-    }
-  }
-  return score;
+export function pageLooksLive(html: string): boolean {
+  return (
+    /"isLiveContent":true/.test(html) ||
+    /"isLive":true/.test(html) ||
+    /"isLiveNow":true/.test(html) ||
+    /"liveBroadcastDetails"/.test(html) ||
+    /BADGE_STYLE_TYPE_LIVE_NOW/.test(html) ||
+    /"label":"LIVE"/.test(html) ||
+    /watching now/i.test(html)
+  );
 }
 
 const DARSHAN_KEYWORDS = [
@@ -315,14 +411,26 @@ const DARSHAN_KEYWORDS = [
 ];
 const WEAK_HINT_SET = new Set(DARSHAN_KEYWORDS.map((k) => k.toLowerCase()));
 
-/** A "specific" hint is one that identifies the shrine (name / long token),
- * not a generic devotional word. Used to avoid mixing unrelated live streams
- * into the wrong shrine when a channel broadcasts many different things. */
 function isSpecificHint(hint: string): boolean {
   const hl = hint.trim().toLowerCase();
   if (!hl) return false;
   if (WEAK_HINT_SET.has(hl)) return false;
   return hl.length >= 4;
+}
+
+export function scoreLiveCandidate(title: string, hints: string[]): number {
+  if (!title) return 0;
+  const lower = title.toLowerCase();
+  let score = 0;
+  for (const hint of hints) {
+    const h = hint.trim();
+    if (!h) continue;
+    const hl = h.toLowerCase();
+    if (lower.includes(hl)) {
+      score += hl.length >= 6 ? 10 : 3;
+    }
+  }
+  return score;
 }
 
 export function hasSpecificHintMatch(title: string, hints: string[]): boolean {
@@ -332,8 +440,6 @@ export function hasSpecificHintMatch(title: string, hints: string[]): boolean {
     if (!isSpecificHint(h)) continue;
     const hl = h.trim().toLowerCase();
     if (lower.includes(hl)) return true;
-    // Multi-word hints (e.g. "Mahakaleshwar Jyotirlinga") match when any
-    // standalone token of length >= 4 appears in the title.
     for (const token of hl.split(/[^a-z0-9\u00C0-\uFFFF]+/)) {
       if (token.length >= 4 && !WEAK_HINT_SET.has(token) && lower.includes(token)) return true;
     }
@@ -341,9 +447,6 @@ export function hasSpecificHintMatch(title: string, hints: string[]): boolean {
   return false;
 }
 
-/** True when the channel URL's handle/path already identifies the shrine
- * (e.g. @KedarnathLiveDarshanOfficial for kedarnath). When true, the channel
- * is trusted and its first live stream is used without title-scoring. */
 export function channelHandleMatchesHints(channelUrl: string, hints: string[]): boolean {
   let path = "";
   try {
@@ -365,22 +468,10 @@ export function channelHandleMatchesHints(channelUrl: string, hints: string[]): 
   return false;
 }
 
-export function pageLooksLive(html: string): boolean {
-  return (
-    /"isLiveContent":true/.test(html) ||
-    /"isLive":true/.test(html) ||
-    /"isLiveNow":true/.test(html) ||
-    /"liveBroadcastDetails"/.test(html) ||
-    /BADGE_STYLE_TYPE_LIVE_NOW/.test(html) ||
-    /"label":"LIVE"/.test(html) ||
-    /watching now/i.test(html)
-  );
-}
-
 async function isEmbeddableLive(videoId: string): Promise<boolean> {
   const oembed = `https://www.youtube.com/oembed?url=https://www.youtube.com/watch?v=${videoId}&format=json`;
   try {
-    const r = await fetch(oembed, { method: "GET", headers: { "user-agent": UA } });
+    const r = await fetch(oembed, { method: "GET", headers: { "user-agent": CRAWLER_UA } });
     if (!r.ok) return false;
     const body = await r.json().catch(() => null);
     return !!(body && typeof body === "object");
@@ -389,10 +480,6 @@ async function isEmbeddableLive(videoId: string): Promise<boolean> {
   }
 }
 
-/**
- * Normalize a user-pasted YouTube channel URL into a set of candidate pages to
- * probe for the current live stream.
- */
 export function buildCandidatePages(channelUrl: string): {
   bases: string[];
   directVideoId: string | null;
@@ -435,11 +522,8 @@ export function buildCandidatePages(channelUrl: string): {
 export type HtmlFetcher = (url: string) => Promise<string | null>;
 
 /**
- * Find the active live videoId for a channel URL. When `hints` is provided
- * (e.g. shrine name + "darshan"/"aarti"/"puja"), all live candidates across
- * /live, /streams and the channel home are scored against the hints and the
- * best match wins. Without hints, returns the first live candidate found
- * (preserves the simple legacy behaviour).
+ * Core discovery function: searches a channel's /live, /streams, and home pages
+ * for an active livestream broadcast.
  */
 export async function resolveLiveVideoIdDetails(
   channelUrl: string,
@@ -447,6 +531,20 @@ export async function resolveLiveVideoIdDetails(
   hints: string[] = [],
   shrineSlug: string = "",
 ): Promise<DetailedDiscoveryResult> {
+  if (!channelUrl || !channelUrl.trim()) {
+    return {
+      videoId: null,
+      channelResolved: null,
+      candidateCount: 0,
+      liveCandidateCount: 0,
+      selectedVideo: null,
+      reason:
+        shrineSlug === "bhimashankar"
+          ? "No official YouTube channel exists for Bhimashankar Devasthan"
+          : "No channel URL configured for shrine",
+    };
+  }
+
   const { bases, directVideoId, channelId: initialChannelId } = buildCandidatePages(channelUrl);
   let channelId = initialChannelId;
 
@@ -461,7 +559,17 @@ export async function resolveLiveVideoIdDetails(
     };
   }
 
-  const useScoring = hints.length > 0;
+  if (bases.length === 0 && !channelId) {
+    return {
+      videoId: null,
+      channelResolved: null,
+      candidateCount: 0,
+      liveCandidateCount: 0,
+      selectedVideo: null,
+      reason: "Invalid or unrecognized YouTube channel URL format",
+    };
+  }
+
   const allCandidates: LiveCandidate[] = [];
   const seen = new Set<string>();
   const collect = (cands: LiveCandidate[]) => {
@@ -474,37 +582,45 @@ export async function resolveLiveVideoIdDetails(
   };
 
   let totalLiveFound = 0;
-  let has404 = false;
+  let hasBotInterstitial = false;
   let pageFetched = false;
 
-  // 1) /live — single canonical live video
-  for (const base of bases) {
-    const html = await fetcher(`${base}/live`);
-    if (!html) {
-      has404 = true;
-      continue;
+  const probeUrl = async (url: string): Promise<string | null> => {
+    const html = await fetcher(url);
+    if (!html) return null;
+
+    const isBot =
+      html.includes("Sign in to confirm you're not a bot") ||
+      html.includes('"status":"LOGIN_REQUIRED"') ||
+      html.includes('"reason":"LOGIN_REQUIRED"') ||
+      html.includes("consent.youtube.com") ||
+      html.includes("google.com/sorry/index");
+
+    if (isBot) {
+      hasBotInterstitial = true;
+      return null;
     }
+
     pageFetched = true;
+    return html;
+  };
+
+  // 1) Probe /live (canonical active broadcast)
+  for (const base of bases) {
+    const html = await probeUrl(`${base}/live`);
+    if (!html) continue;
+
     if (!channelId) {
       const cid = extractChannelId(html);
       if (cid) channelId = cid;
     }
+
     const primary = extractPrimaryLiveCandidate(html);
     if (primary) {
       totalLiveFound++;
       collect([primary]);
-      if (!useScoring && allCandidates.length > 0) {
-        return {
-          videoId: allCandidates[0].id,
-          channelResolved: channelId,
-          candidateCount: allCandidates.length,
-          liveCandidateCount: totalLiveFound,
-          selectedVideo: allCandidates[0].id,
-          reason: "Canonical live stream matched on /live without scoring",
-        };
-      }
 
-      if (useScoring) {
+      if (hints.length > 0) {
         const score = scoreLiveCandidate(primary.title, hints);
         if (score > 0 && hasSpecificHintMatch(primary.title, hints)) {
           return {
@@ -520,150 +636,136 @@ export async function resolveLiveVideoIdDetails(
     }
   }
 
-  // 2) /streams — current + upcoming live broadcasts.
+  // 2) Probe /streams (current & upcoming live tab)
   for (const base of bases) {
-    const html = await fetcher(`${base}/streams`);
+    const html = await probeUrl(`${base}/streams`);
     if (!html) continue;
-    pageFetched = true;
+
     if (!channelId) {
       const cid = extractChannelId(html);
       if (cid) channelId = cid;
     }
+
     const streamsCands = findLiveCandidatesInHtml(html);
     totalLiveFound += streamsCands.length;
     collect(streamsCands);
-    if (!useScoring && allCandidates.length > 0) {
-      return {
-        videoId: allCandidates[0].id,
-        channelResolved: channelId,
-        candidateCount: allCandidates.length,
-        liveCandidateCount: totalLiveFound,
-        selectedVideo: allCandidates[0].id,
-        reason: "Live candidate found on /streams without scoring",
-      };
-    }
   }
 
-  // 3) Channel home.
+  // 3) Probe channel home page
   for (const base of bases) {
-    const html = await fetcher(base);
+    const html = await probeUrl(base);
     if (!html) continue;
-    pageFetched = true;
+
     if (!channelId) {
       const cid = extractChannelId(html);
       if (cid) channelId = cid;
     }
+
     const homeCands = findLiveCandidatesInHtml(html);
     totalLiveFound += homeCands.length;
     collect(homeCands);
-    if (!useScoring && allCandidates.length > 0) {
-      return {
-        videoId: allCandidates[0].id,
-        channelResolved: channelId,
-        candidateCount: allCandidates.length,
-        liveCandidateCount: totalLiveFound,
-        selectedVideo: allCandidates[0].id,
-        reason: "Live candidate found on channel home without scoring",
-      };
-    }
   }
 
-  // 4) Fallback to /channel/UC.../live when only the channel ID resolved.
+  // 4) Fallback to /channel/UC.../live when channel ID is discovered
   if (allCandidates.length === 0 && channelId) {
-    const html = await fetcher(`https://www.youtube.com/channel/${channelId}/live`);
+    const html = await probeUrl(`https://www.youtube.com/channel/${channelId}/live`);
     if (html && pageLooksLive(html)) {
-      pageFetched = true;
       const primary = extractPrimaryLiveCandidate(html);
       if (primary) {
         totalLiveFound++;
         collect([primary]);
-        if (!useScoring && allCandidates.length > 0) {
-          return {
-            videoId: allCandidates[0].id,
-            channelResolved: channelId,
-            candidateCount: allCandidates.length,
-            liveCandidateCount: totalLiveFound,
-            selectedVideo: allCandidates[0].id,
-            reason: "Canonical live stream resolved via channel ID fallback",
-          };
-        }
-        if (useScoring) {
-          const score = scoreLiveCandidate(primary.title, hints);
-          if (score > 0 && hasSpecificHintMatch(primary.title, hints)) {
-            return {
-              videoId: primary.id,
-              channelResolved: channelId,
-              candidateCount: allCandidates.length,
-              liveCandidateCount: totalLiveFound,
-              selectedVideo: primary.id,
-              reason: `Live stream resolved via channel ID fallback matched shrine hints (score: ${score})`,
-            };
-          }
-        }
       }
     }
   }
 
+  // Determine outcome when no live candidates found
   if (allCandidates.length === 0) {
+    if (hasBotInterstitial) {
+      return {
+        videoId: null,
+        channelResolved: channelId,
+        candidateCount: 0,
+        liveCandidateCount: 0,
+        selectedVideo: null,
+        reason: "YouTube returned bot detection / LOGIN_REQUIRED interstitial shell",
+      };
+    }
+
+    if (!pageFetched) {
+      return {
+        videoId: null,
+        channelResolved: channelId,
+        candidateCount: 0,
+        liveCandidateCount: 0,
+        selectedVideo: null,
+        reason: "Channel returned 404 or is unreachable",
+      };
+    }
+
     return {
       videoId: null,
       channelResolved: channelId,
       candidateCount: 0,
-      liveCandidateCount: totalLiveFound,
+      liveCandidateCount: 0,
       selectedVideo: null,
-      reason:
-        !pageFetched && has404
-          ? "Channel URL returned 404 or unreachable on YouTube"
-          : "No active live stream found on channel pages",
+      reason: "Channel is valid and resolved, but no active live broadcast currently exists",
     };
   }
 
-  if (!useScoring) {
+  // Select best candidate
+  if (allCandidates.length === 1 && hints.length === 0) {
+    const candidate = allCandidates[0];
     return {
-      videoId: allCandidates[0].id,
+      videoId: candidate.id,
       channelResolved: channelId,
-      candidateCount: allCandidates.length,
+      candidateCount: 1,
       liveCandidateCount: totalLiveFound,
-      selectedVideo: allCandidates[0].id,
-      reason: "Picked first available candidate (scoring disabled)",
+      selectedVideo: candidate.id,
+      reason: `Verified official live stream on channel: "${candidate.title.slice(0, 50)}"`,
     };
   }
 
-  let best: { id: string; title: string; score: number } | null = null;
-  for (const c of allCandidates) {
-    const s = scoreLiveCandidate(c.title, hints);
-    if (!best || s > best.score) best = { id: c.id, title: c.title, score: s };
+  // If hints provided, score all candidates and pick highest scoring
+  if (hints.length > 0) {
+    let bestCandidate: { id: string; title: string; score: number } | null = null;
+    for (const c of allCandidates) {
+      const s = scoreLiveCandidate(c.title, hints);
+      if (s > 0 && (!bestCandidate || s > bestCandidate.score)) {
+        bestCandidate = { id: c.id, title: c.title, score: s };
+      }
+    }
+    if (bestCandidate) {
+      return {
+        videoId: bestCandidate.id,
+        channelResolved: channelId,
+        candidateCount: allCandidates.length,
+        liveCandidateCount: totalLiveFound,
+        selectedVideo: bestCandidate.id,
+        reason: `Matched candidate based on shrine hints (score: ${bestCandidate.score})`,
+      };
+    }
+
+    if (!channelHandleMatchesHints(channelUrl, hints)) {
+      return {
+        videoId: null,
+        channelResolved: channelId,
+        candidateCount: allCandidates.length,
+        liveCandidateCount: totalLiveFound,
+        selectedVideo: null,
+        reason:
+          "Active live streams found on channel, but none matched the shrine's devotional hints",
+      };
+    }
   }
 
-  if (!best || best.score <= 0) {
-    return {
-      videoId: null,
-      channelResolved: channelId,
-      candidateCount: allCandidates.length,
-      liveCandidateCount: totalLiveFound,
-      selectedVideo: null,
-      reason: `Found ${allCandidates.length} candidate(s), but none matched devotional hints`,
-    };
-  }
-
-  if (!hasSpecificHintMatch(best.title, hints)) {
-    return {
-      videoId: null,
-      channelResolved: channelId,
-      candidateCount: allCandidates.length,
-      liveCandidateCount: totalLiveFound,
-      selectedVideo: null,
-      reason: `Candidate "${best.title.slice(0, 50)}" matched generic keywords but lacked specific shrine token`,
-    };
-  }
-
+  const selected = allCandidates[0];
   return {
-    videoId: best.id,
+    videoId: selected.id,
     channelResolved: channelId,
     candidateCount: allCandidates.length,
     liveCandidateCount: totalLiveFound,
-    selectedVideo: best.id,
-    reason: `Selected live candidate "${best.title.slice(0, 50)}" with score ${best.score}`,
+    selectedVideo: selected.id,
+    reason: `Selected live candidate on channel: "${selected.title.slice(0, 50)}"`,
   };
 }
 
@@ -684,109 +786,6 @@ export interface PlanChannel {
   last_video_id?: string | null;
 }
 
-/**
- * Pure planner: takes channels + current links + per-shrine hints and resolves
- * the next live videoId for each shrine, enforcing anti-collision so a single
- * videoId never gets assigned to two shrines in one run. No DB writes, no
- * embeddable check — safe to call from tests with a mock fetcher.
- *
- * Both the manual "Refresh now" and the cron auto-refresh paths funnel into
- * this planner so they cannot diverge.
- */
-export async function planRefresh(
-  channels: PlanChannel[],
-  currentBySlug: Map<string, string | null>,
-  hintsBySlug: Map<string, string[]>,
-  fetcher: HtmlFetcher = fetchHtml,
-): Promise<RefreshOutcome[]> {
-  const outcomes: RefreshOutcome[] = [];
-  const claimedVideoIds = new Set<string>();
-
-  for (const ch of channels) {
-    const slug = ch.slug;
-    const channelUrl = ch.channel_url;
-    const previousUrl = currentBySlug.get(slug) ?? null;
-    const checkedAt = new Date().toISOString();
-    let outcome: RefreshOutcome = {
-      slug,
-      channelUrl,
-      status: "no_live",
-      previousUrl,
-      newUrl: previousUrl,
-      checkedAt,
-    };
-    try {
-      const hints = hintsBySlug.get(slug) ?? DARSHAN_KEYWORDS;
-      // Prefer a scored, shrine-name-matching stream so we never assign an
-      // unrelated live from a multi-topic channel to the wrong shrine.
-      let discovery = await resolveLiveVideoIdDetails(channelUrl, fetcher, hints, slug);
-      let videoId = discovery.videoId;
-
-      // If the channel handle itself clearly identifies this shrine (e.g.
-      // @KedarnathLiveDarshanOfficial for kedarnath) and no scored candidate
-      // won, fall back to its first active live stream — many temple
-      // channels title streams in local scripts we can't reliably tokenize.
-      if (!videoId && channelHandleMatchesHints(channelUrl, hints)) {
-        const fallback = await resolveLiveVideoIdDetails(channelUrl, fetcher, [], slug);
-        if (fallback.videoId) {
-          videoId = fallback.videoId;
-          discovery = {
-            ...fallback,
-            reason: `Channel handle matches shrine; fell back to official broadcast: ${fallback.reason}`,
-          };
-        }
-      }
-
-      if (!videoId) {
-        outcome = {
-          ...outcome,
-          status: "no_live",
-          message: `No active live stream matched this shrine — link unchanged (${discovery.reason}).`,
-        };
-      } else if (claimedVideoIds.has(videoId)) {
-        outcome = {
-          ...outcome,
-          status: "no_live",
-          message: `Video ${videoId} already assigned to another shrine this run; skipped.`,
-          videoId,
-        };
-      } else {
-        const newUrl = `https://www.youtube.com/watch?v=${videoId}`;
-        claimedVideoIds.add(videoId);
-        const same = previousUrl === newUrl;
-        outcome = {
-          ...outcome,
-          status: same ? "unchanged" : "updated",
-          videoId,
-          newUrl,
-          message: same ? "Live link still the same — no change." : undefined,
-        };
-      }
-
-      const telemetry: DiscoveryTelemetry = {
-        shrine: slug,
-        channelResolved: discovery.channelResolved,
-        candidateCount: discovery.candidateCount,
-        liveCandidateCount: discovery.liveCandidateCount,
-        selectedVideo: discovery.selectedVideo,
-        result: outcome.status,
-        reason: discovery.reason,
-      };
-      outcome.telemetry = telemetry;
-      console.log("[Darshan Discovery Telemetry]", telemetry);
-    } catch (e) {
-      outcome = {
-        ...outcome,
-        status: "error",
-        message: e instanceof Error ? e.message : String(e),
-      };
-    }
-    outcomes.push(outcome);
-  }
-
-  return outcomes;
-}
-
 export function buildHintsFromCatalog(
   catalog: Array<{ slug: string; name: string }>,
 ): Map<string, string[]> {
@@ -801,10 +800,118 @@ export function buildHintsFromCatalog(
   return hintsBySlug;
 }
 
-export type RefreshSource = "cron" | "manual";
+export async function planRefresh(
+  channels: PlanChannel[],
+  currentBySlug: Map<string, string | null>,
+  hintsBySlug: Map<string, string[]>,
+  fetcher: HtmlFetcher = fetchHtml,
+): Promise<RefreshOutcome[]> {
+  const outcomes: RefreshOutcome[] = [];
+  const claimedVideoIds = new Set<string>();
 
-import { DEFAULT_CHANNELS } from "@/data/channels";
-export { DEFAULT_CHANNELS };
+  for (const ch of channels) {
+    const slug = ch.slug;
+    const channelUrl = ch.channel_url;
+    const previousUrl = currentBySlug.get(slug) ?? null;
+    const checkedAt = new Date().toISOString();
+
+    let outcome: RefreshOutcome = {
+      slug,
+      channelUrl,
+      status: "no_live",
+      previousUrl,
+      newUrl: previousUrl,
+      checkedAt,
+    };
+
+    try {
+      const hints = hintsBySlug.get(slug) ?? DARSHAN_KEYWORDS;
+      const discovery = await resolveLiveVideoIdDetails(channelUrl, fetcher, hints, slug);
+      const videoId = discovery.videoId;
+
+      let resultStatus: TelemetryResultStatus = "no_live";
+
+      if (!videoId) {
+        const isError =
+          discovery.reason.includes("404") ||
+          discovery.reason.includes("unreachable") ||
+          discovery.reason.includes("bot detection") ||
+          discovery.reason.includes("Invalid");
+
+        resultStatus = isError
+          ? discovery.reason.includes("bot detection")
+            ? "youtube_bot_interstitial"
+            : discovery.reason.includes("404")
+              ? "channel_not_found"
+              : "error"
+          : "no_live";
+
+        outcome = {
+          ...outcome,
+          status: isError ? "error" : "no_live",
+          newUrl: previousUrl,
+          message: `${discovery.reason}. Previous link preserved.`,
+        };
+      } else if (claimedVideoIds.has(videoId)) {
+        resultStatus = "no_live";
+        outcome = {
+          ...outcome,
+          status: "no_live",
+          newUrl: previousUrl,
+          message: `Video ${videoId} already assigned to another shrine this run; previous link preserved.`,
+          videoId,
+        };
+      } else {
+        const newUrl = `https://www.youtube.com/watch?v=${videoId}`;
+        claimedVideoIds.add(videoId);
+        const same = previousUrl === newUrl;
+        resultStatus = same ? "unchanged" : "updated";
+        outcome = {
+          ...outcome,
+          status: same ? "unchanged" : "updated",
+          videoId,
+          newUrl,
+          message: same
+            ? "Live stream still the same — no change."
+            : "New active live broadcast found and selected.",
+        };
+      }
+
+      const telemetry: DiscoveryTelemetry = {
+        shrine: slug,
+        channelResolved: discovery.channelResolved,
+        candidateCount: discovery.candidateCount,
+        liveCandidateCount: discovery.liveCandidateCount,
+        selectedVideo: discovery.selectedVideo,
+        result: resultStatus,
+        reason: discovery.reason,
+      };
+      outcome.telemetry = telemetry;
+      console.log("[Darshan Discovery Telemetry]", telemetry);
+    } catch (e) {
+      outcome = {
+        ...outcome,
+        status: "error",
+        newUrl: previousUrl,
+        message: e instanceof Error ? e.message : String(e),
+        telemetry: {
+          shrine: slug,
+          channelResolved: null,
+          candidateCount: 0,
+          liveCandidateCount: 0,
+          selectedVideo: null,
+          result: "error",
+          reason: e instanceof Error ? e.message : String(e),
+        },
+      };
+    }
+    outcomes.push(outcome);
+  }
+
+  return outcomes;
+}
+
+export type RefreshSource = "cron" | "manual";
 
 export async function refreshAllLiveStreams(
   source: RefreshSource = "manual",
@@ -815,7 +922,6 @@ export async function refreshAllLiveStreams(
   const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
   const sb = supabaseClient ?? supabaseAdmin;
 
-  // Read saved channels from database
   let dbChannels: PlanChannel[] = [];
   const { data: channelsData, error: chanErr } = await sb
     .from("darshan_channels")
@@ -826,7 +932,6 @@ export async function refreshAllLiveStreams(
       stage: "database",
       message: chanErr.message,
     });
-    // Try via supabaseAdmin if sb was client
     if (sb !== supabaseAdmin) {
       const { data: adminChan } = await supabaseAdmin
         .from("darshan_channels")
@@ -837,14 +942,12 @@ export async function refreshAllLiveStreams(
     dbChannels = channelsData;
   }
 
-  // Build effective channels list: database configuration first,
-  // supplemented by verified default channels for shrines without DB configuration.
   const channelMap = new Map<string, PlanChannel>();
   for (const [slug, url] of Object.entries(DEFAULT_CHANNELS)) {
     channelMap.set(slug, { slug, channel_url: url });
   }
   for (const ch of dbChannels) {
-    if (ch.channel_url?.trim()) {
+    if (ch.channel_url !== undefined && ch.channel_url !== null) {
       channelMap.set(ch.slug, {
         slug: ch.slug,
         channel_url: ch.channel_url.trim(),
@@ -865,7 +968,6 @@ export async function refreshAllLiveStreams(
   const outcomes: RefreshOutcome[] = [];
 
   try {
-    // Single planner shared by manual + auto refresh so they cannot diverge.
     const planned = await planRefresh(effectiveChannels, currentBySlug, hintsBySlug, fetchHtml);
 
     for (const p of planned) {
@@ -875,7 +977,12 @@ export async function refreshAllLiveStreams(
       if (p.status === "updated" && p.videoId) {
         const ok = await isEmbeddableLive(p.videoId);
         if (!ok) {
-          outcome = { ...p, status: "error", message: "Video found but not embeddable." };
+          outcome = {
+            ...p,
+            status: "error",
+            newUrl: p.previousUrl,
+            message: "Video found but not embeddable. Previous link kept.",
+          };
         } else {
           const newUrl = `https://www.youtube.com/watch?v=${p.videoId}`;
           const { data: updatedRows, error: upErr } = await sb
@@ -892,12 +999,13 @@ export async function refreshAllLiveStreams(
               shrine: p.slug,
               targetFound: false,
               rowsAffected,
-              result: "no_target_row",
+              result: "database_update_failed",
               error: upErr?.message,
             });
             outcome = {
               ...p,
               status: "error",
+              newUrl: p.previousUrl,
               message:
                 upErr?.message || "Database update affected 0 rows (no target row or RLS denied)",
             };
@@ -913,41 +1021,6 @@ export async function refreshAllLiveStreams(
             });
           }
         }
-      } else if (p.status === "no_live") {
-        const { data: updatedRows, error: upErr } = await sb
-          .from("darshan_links")
-          .upsert(
-            { slug: p.slug, youtube_url: null, updated_at: new Date().toISOString() },
-            { onConflict: "slug" },
-          )
-          .select("slug, youtube_url");
-
-        const rowsAffected = updatedRows?.length ?? 0;
-        if (upErr || rowsAffected === 0) {
-          console.error("[Darshan Link Update Error]", {
-            shrine: p.slug,
-            targetFound: false,
-            rowsAffected,
-            result: "no_target_row",
-            error: upErr?.message,
-          });
-          outcome = {
-            ...p,
-            status: "error",
-            message:
-              upErr?.message || "Database update affected 0 rows (no target row or RLS denied)",
-          };
-        } else {
-          console.log("[Darshan Link Update]", {
-            shrine: p.slug,
-            targetFound: true,
-            targetRowType: "primary",
-            previousVideoIdPresent: Boolean(p.previousUrl),
-            newVideoIdPresent: false,
-            rowsAffected,
-            result: "cleared_to_null",
-          });
-        }
       } else if (p.status === "unchanged") {
         console.log("[Darshan Link Unchanged]", {
           shrine: p.slug,
@@ -955,6 +1028,13 @@ export async function refreshAllLiveStreams(
           targetRowType: "primary",
           currentVideoIdPresent: Boolean(p.videoId),
           result: "unchanged",
+        });
+      } else {
+        console.log("[Darshan Link Preserved]", {
+          shrine: p.slug,
+          status: p.status,
+          preservedUrl: p.previousUrl,
+          reason: p.telemetry?.reason,
         });
       }
 
@@ -978,7 +1058,6 @@ export async function refreshAllLiveStreams(
   } catch (planErr) {
     const errorMsg = planErr instanceof Error ? planErr.message : String(planErr);
     console.error("[Darshan Refresh Fatal Error in Planning]", { error: errorMsg });
-    // Record error outcome for all channels that were not processed
     for (const ch of effectiveChannels) {
       if (!outcomes.some((o) => o.slug === ch.slug)) {
         outcomes.push({
@@ -992,8 +1071,6 @@ export async function refreshAllLiveStreams(
     }
   }
 
-  // Persist an audit log row for this run so admins can review what
-  // happened, when, and which video link replaced which shrine.
   const finishedAt = new Date();
   const tally = {
     updated: outcomes.filter((o) => o.status === "updated").length,
@@ -1016,7 +1093,7 @@ export async function refreshAllLiveStreams(
       status: o.status,
       videoId: o.videoId ?? null,
       previous_url: o.previousUrl ?? null,
-      new_url: o.newUrl ?? (o.videoId ? `https://www.youtube.com/watch?v=${o.videoId}` : null),
+      new_url: o.newUrl ?? null,
       youtube_url: o.videoId ? `https://www.youtube.com/watch?v=${o.videoId}` : null,
       message: o.message ?? null,
       channelUrl: o.channelUrl,
@@ -1031,11 +1108,6 @@ export async function refreshAllLiveStreams(
     const { error: insertErr } = await sb.from("darshan_refresh_logs").insert(logPayload);
     if (insertErr) {
       logError = insertErr.message;
-      console.error("[Darshan Refresh Error]", {
-        stage: "database_log_insert",
-        message: insertErr.message,
-      });
-      // Try fallback to supabaseAdmin if sb was client
       if (sb !== supabaseAdmin) {
         const { error: adminLogErr } = await supabaseAdmin
           .from("darshan_refresh_logs")
@@ -1052,13 +1124,9 @@ export async function refreshAllLiveStreams(
     }
   } catch (err) {
     logError = err instanceof Error ? err.message : String(err);
-    console.error("[Darshan Refresh Error]", {
-      stage: "database_log_insert",
-      message: logError,
-    });
   }
 
-  console.log("[Darshan Refresh]", {
+  console.log("[Darshan Refresh Completed]", {
     source,
     shrineCount: outcomes.length,
     updatedCount: tally.updated,
