@@ -612,105 +612,220 @@ export function buildHintsFromCatalog(
 
 export type RefreshSource = "cron" | "manual";
 
+import { DEFAULT_CHANNELS } from "@/data/channels";
+export { DEFAULT_CHANNELS };
+
 export async function refreshAllLiveStreams(
   source: RefreshSource = "manual",
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  supabaseClient?: any,
 ): Promise<RefreshOutcome[]> {
   const startedAt = new Date();
   const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-  const { data: channels, error } = await supabaseAdmin
+  const sb = supabaseClient ?? supabaseAdmin;
+
+  // Read saved channels from database
+  let dbChannels: PlanChannel[] = [];
+  const { data: channelsData, error: chanErr } = await sb
     .from("darshan_channels")
     .select("slug, channel_url, last_video_id");
-  if (error) throw new Error(error.message);
 
-  const { data: links } = await supabaseAdmin.from("darshan_links").select("slug, youtube_url");
-  const currentBySlug = new Map((links ?? []).map((r) => [r.slug, r.youtube_url]));
+  if (chanErr) {
+    console.error("[Darshan Refresh Error]", {
+      stage: "database",
+      message: chanErr.message,
+    });
+    // Try via supabaseAdmin if sb was client
+    if (sb !== supabaseAdmin) {
+      const { data: adminChan } = await supabaseAdmin
+        .from("darshan_channels")
+        .select("slug, channel_url, last_video_id");
+      if (adminChan) dbChannels = adminChan;
+    }
+  } else if (channelsData) {
+    dbChannels = channelsData;
+  }
+
+  // Build effective channels list: database configuration first,
+  // supplemented by verified default channels for shrines without DB configuration.
+  const channelMap = new Map<string, PlanChannel>();
+  for (const [slug, url] of Object.entries(DEFAULT_CHANNELS)) {
+    channelMap.set(slug, { slug, channel_url: url });
+  }
+  for (const ch of dbChannels) {
+    if (ch.channel_url?.trim()) {
+      channelMap.set(ch.slug, {
+        slug: ch.slug,
+        channel_url: ch.channel_url.trim(),
+        last_video_id: ch.last_video_id,
+      });
+    }
+  }
+  const effectiveChannels = Array.from(channelMap.values());
+
+  const { data: links } = await sb.from("darshan_links").select("slug, youtube_url");
+  const currentBySlug = new Map(
+    (links ?? []).map((r: { slug: string; youtube_url: string | null }) => [r.slug, r.youtube_url]),
+  );
 
   const { jyotirlingas } = await import("@/data/jyotirlingas");
   const hintsBySlug = buildHintsFromCatalog(jyotirlingas);
 
-  // Single planner shared by manual + auto refresh so they cannot diverge.
-  const planned = await planRefresh(channels ?? [], currentBySlug, hintsBySlug, fetchHtml);
-
   const outcomes: RefreshOutcome[] = [];
-  for (const p of planned) {
-    let outcome = p;
-    const ch = (channels ?? []).find((c) => c.slug === p.slug);
 
-    if (p.status === "updated" && p.videoId) {
-      const ok = await isEmbeddableLive(p.videoId);
-      if (!ok) {
-        outcome = { ...p, status: "error", message: "Video found but not embeddable." };
-      } else {
-        const newUrl = `https://www.youtube.com/watch?v=${p.videoId}`;
-        const { error: upErr } = await supabaseAdmin
+  try {
+    // Single planner shared by manual + auto refresh so they cannot diverge.
+    const planned = await planRefresh(effectiveChannels, currentBySlug, hintsBySlug, fetchHtml);
+
+    for (const p of planned) {
+      let outcome = p;
+      const ch = effectiveChannels.find((c) => c.slug === p.slug);
+
+      if (p.status === "updated" && p.videoId) {
+        const ok = await isEmbeddableLive(p.videoId);
+        if (!ok) {
+          outcome = { ...p, status: "error", message: "Video found but not embeddable." };
+        } else {
+          const newUrl = `https://www.youtube.com/watch?v=${p.videoId}`;
+          const { error: upErr } = await sb
+            .from("darshan_links")
+            .upsert(
+              { slug: p.slug, youtube_url: newUrl, updated_at: new Date().toISOString() },
+              { onConflict: "slug" },
+            );
+          if (upErr) {
+            console.error("[Darshan Refresh Error]", {
+              stage: "database_links",
+              message: upErr.message,
+            });
+            outcome = { ...p, status: "error", message: upErr.message };
+          }
+        }
+      } else if (p.status === "no_live") {
+        const { error: upErr } = await sb
           .from("darshan_links")
           .upsert(
-            { slug: p.slug, youtube_url: newUrl, updated_at: new Date().toISOString() },
+            { slug: p.slug, youtube_url: null, updated_at: new Date().toISOString() },
             { onConflict: "slug" },
           );
-        if (upErr) outcome = { ...p, status: "error", message: upErr.message };
+        if (upErr) {
+          console.error("[Darshan Refresh Error]", {
+            stage: "database_links",
+            message: upErr.message,
+          });
+          outcome = { ...p, status: "error", message: upErr.message };
+        }
       }
-    } else if (p.status === "no_live") {
-      const { error: upErr } = await supabaseAdmin
-        .from("darshan_links")
-        .upsert(
-          { slug: p.slug, youtube_url: null, updated_at: new Date().toISOString() },
+
+      try {
+        await sb.from("darshan_channels").upsert(
+          {
+            slug: p.slug,
+            channel_url: p.channelUrl,
+            last_checked: new Date().toISOString(),
+            last_status: outcome.status + (outcome.message ? `: ${outcome.message}` : ""),
+            last_video_id: outcome.videoId ?? ch?.last_video_id ?? null,
+            updated_at: new Date().toISOString(),
+          },
           { onConflict: "slug" },
         );
-      if (upErr) {
-        outcome = { ...p, status: "error", message: upErr.message };
+      } catch {
+        /* ignore channel metadata write failure */
+      }
+      outcomes.push(outcome);
+    }
+  } catch (planErr) {
+    const errorMsg = planErr instanceof Error ? planErr.message : String(planErr);
+    console.error("[Darshan Refresh Fatal Error in Planning]", { error: errorMsg });
+    // Record error outcome for all channels that were not processed
+    for (const ch of effectiveChannels) {
+      if (!outcomes.some((o) => o.slug === ch.slug)) {
+        outcomes.push({
+          slug: ch.slug,
+          status: "error",
+          channelUrl: ch.channel_url,
+          message: `Refresh planning failed: ${errorMsg}`,
+          checkedAt: new Date().toISOString(),
+        });
       }
     }
-
-    try {
-      await supabaseAdmin
-        .from("darshan_channels")
-        .update({
-          last_checked: new Date().toISOString(),
-          last_status: outcome.status + (outcome.message ? `: ${outcome.message}` : ""),
-          last_video_id: outcome.videoId ?? ch?.last_video_id ?? null,
-        })
-        .eq("slug", p.slug);
-    } catch {
-      /* ignore */
-    }
-    outcomes.push(outcome);
   }
 
   // Persist an audit log row for this run so admins can review what
-  // happened, when, and which video link replaced which shrine. Best-effort.
+  // happened, when, and which video link replaced which shrine.
+  const finishedAt = new Date();
+  const tally = {
+    updated: outcomes.filter((o) => o.status === "updated").length,
+    unchanged: outcomes.filter((o) => o.status === "unchanged").length,
+    no_live: outcomes.filter((o) => o.status === "no_live").length,
+    errors: outcomes.filter((o) => o.status === "error").length,
+  };
+
+  const logPayload = {
+    started_at: startedAt.toISOString(),
+    finished_at: finishedAt.toISOString(),
+    source,
+    total: outcomes.length,
+    updated: tally.updated,
+    unchanged: tally.unchanged,
+    no_live: tally.no_live,
+    errors: tally.errors,
+    outcomes: outcomes.map((o) => ({
+      slug: o.slug,
+      status: o.status,
+      videoId: o.videoId ?? null,
+      previous_url: o.previousUrl ?? null,
+      new_url: o.newUrl ?? (o.videoId ? `https://www.youtube.com/watch?v=${o.videoId}` : null),
+      youtube_url: o.videoId ? `https://www.youtube.com/watch?v=${o.videoId}` : null,
+      message: o.message ?? null,
+      channelUrl: o.channelUrl,
+      checked_at: o.checkedAt ?? new Date().toISOString(),
+    })),
+  };
+
+  let logInserted = false;
+  let logError: string | null = null;
   try {
-    const finishedAt = new Date();
-    const tally = {
-      updated: outcomes.filter((o) => o.status === "updated").length,
-      unchanged: outcomes.filter((o) => o.status === "unchanged").length,
-      no_live: outcomes.filter((o) => o.status === "no_live").length,
-      errors: outcomes.filter((o) => o.status === "error").length,
-    };
-    await supabaseAdmin.from("darshan_refresh_logs").insert({
-      started_at: startedAt.toISOString(),
-      finished_at: finishedAt.toISOString(),
-      source,
-      total: outcomes.length,
-      updated: tally.updated,
-      unchanged: tally.unchanged,
-      no_live: tally.no_live,
-      errors: tally.errors,
-      outcomes: outcomes.map((o) => ({
-        slug: o.slug,
-        status: o.status,
-        videoId: o.videoId ?? null,
-        previous_url: o.previousUrl ?? null,
-        new_url: o.newUrl ?? (o.videoId ? `https://www.youtube.com/watch?v=${o.videoId}` : null),
-        youtube_url: o.videoId ? `https://www.youtube.com/watch?v=${o.videoId}` : null,
-        message: o.message ?? null,
-        channelUrl: o.channelUrl,
-        checked_at: o.checkedAt ?? new Date().toISOString(),
-      })),
+    const { error: insertErr } = await sb.from("darshan_refresh_logs").insert(logPayload);
+    if (insertErr) {
+      logError = insertErr.message;
+      console.error("[Darshan Refresh Error]", {
+        stage: "database_log_insert",
+        message: insertErr.message,
+      });
+      // Try fallback to supabaseAdmin if sb was client
+      if (sb !== supabaseAdmin) {
+        const { error: adminLogErr } = await supabaseAdmin
+          .from("darshan_refresh_logs")
+          .insert(logPayload);
+        if (!adminLogErr) {
+          logInserted = true;
+          logError = null;
+        } else {
+          logError = adminLogErr.message;
+        }
+      }
+    } else {
+      logInserted = true;
+    }
+  } catch (err) {
+    logError = err instanceof Error ? err.message : String(err);
+    console.error("[Darshan Refresh Error]", {
+      stage: "database_log_insert",
+      message: logError,
     });
-  } catch {
-    /* logging failure must never break refresh */
   }
+
+  console.log("[Darshan Refresh]", {
+    source,
+    shrineCount: outcomes.length,
+    updatedCount: tally.updated,
+    unchangedCount: tally.unchanged,
+    noLiveCount: tally.no_live,
+    failedCount: tally.errors,
+    logInserted,
+    logError,
+  });
 
   return outcomes;
 }

@@ -55,4 +55,36 @@ export default {
       });
     }
   },
+
+  async scheduled(
+    controller: unknown,
+    env: unknown,
+    ctx: { waitUntil?: (p: Promise<unknown>) => void },
+  ) {
+    try {
+      if (env) {
+        setCloudflareRuntimeEnv(env);
+      }
+      const runCron = async () => {
+        try {
+          console.log("[Worker Scheduled Cron] Starting live darshan refresh...");
+          const { refreshAllLiveStreams } = await import("./lib/refresh-live.server");
+          const outcomes = await refreshAllLiveStreams("cron");
+          console.log(
+            `[Worker Scheduled Cron] Completed refresh: ${outcomes.length} shrines checked.`,
+          );
+        } catch (cronErr) {
+          console.error("[Worker Scheduled Cron Error]:", cronErr);
+        }
+      };
+
+      if (ctx && typeof ctx.waitUntil === "function") {
+        ctx.waitUntil(runCron());
+      } else {
+        await runCron();
+      }
+    } catch (error) {
+      console.error("[Worker Scheduled Handler Error]:", error);
+    }
+  },
 };

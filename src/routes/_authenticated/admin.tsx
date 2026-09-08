@@ -865,13 +865,10 @@ function LinkPreview({
 
 // Verified official YouTube channels. Only include URLs we've confirmed are run by
 // the temple trust itself — a wrong "official" URL here would feed bad video IDs to
-// the live tile every 10 minutes. Leave shrines with no confirmed channel out of
-// this map; the admin gets a "Search on YouTube" helper to find and paste theirs.
-const SUGGESTED_CHANNELS: Record<string, string> = {
-  somnath: "https://www.youtube.com/channel/UCT1egsvA08YcdMLiEu1DTRg",
-  mahakaleshwar: "https://www.youtube.com/channel/UCEUuwXHmHckwmdANSy4c7Sw",
-  "kashi-vishwanath": "https://www.youtube.com/@ShreeKashiVishwanathMandir",
-};
+import { DEFAULT_CHANNELS } from "@/data/channels";
+
+// Pre-researched official/devotional channel URLs.
+const SUGGESTED_CHANNELS: Record<string, string> = DEFAULT_CHANNELS;
 
 function youtubeSearchUrl(name: string) {
   return `https://www.youtube.com/results?search_query=${encodeURIComponent(

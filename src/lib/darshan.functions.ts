@@ -366,10 +366,17 @@ export const getDarshanChannels = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }): Promise<DarshanChannel[]> => {
     await assertAdmin(context);
-    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-    const { data } = await supabaseAdmin
+    const { data, error } = await context.supabase
       .from("darshan_channels")
       .select("slug, channel_url, last_checked, last_status, last_video_id");
+    if (error) {
+      console.error("[getDarshanChannels database error]:", error.message);
+      const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+      const { data: fallbackData } = await supabaseAdmin
+        .from("darshan_channels")
+        .select("slug, channel_url, last_checked, last_status, last_video_id");
+      return (fallbackData ?? []) as DarshanChannel[];
+    }
     return (data ?? []) as DarshanChannel[];
   });
 
@@ -385,8 +392,8 @@ export const setDarshanChannel = createServerFn({ method: "POST" })
   )
   .handler(async ({ data, context }) => {
     await assertAdmin(context);
-    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-    const { error } = await supabaseAdmin.from("darshan_channels").upsert(
+    // Use context.supabase (authenticated admin client with user token)
+    const { error } = await context.supabase.from("darshan_channels").upsert(
       {
         slug: data.slug,
         channel_url: data.channel_url,
@@ -395,7 +402,20 @@ export const setDarshanChannel = createServerFn({ method: "POST" })
       },
       { onConflict: "slug" },
     );
-    if (error) throw new Error(error.message);
+    if (error) {
+      // If RLS blocked context.supabase, attempt via supabaseAdmin as fallback
+      const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+      const { error: adminErr } = await supabaseAdmin.from("darshan_channels").upsert(
+        {
+          slug: data.slug,
+          channel_url: data.channel_url,
+          updated_by: context.userId,
+          updated_at: new Date().toISOString(),
+        },
+        { onConflict: "slug" },
+      );
+      if (adminErr) throw new Error(error.message || adminErr.message);
+    }
     return { ok: true };
   });
 
@@ -404,9 +424,18 @@ export const deleteDarshanChannel = createServerFn({ method: "POST" })
   .inputValidator((d) => z.object({ slug: z.string().min(1) }).parse(d))
   .handler(async ({ data, context }) => {
     await assertAdmin(context);
-    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-    const { error } = await supabaseAdmin.from("darshan_channels").delete().eq("slug", data.slug);
-    if (error) throw new Error(error.message);
+    const { error } = await context.supabase
+      .from("darshan_channels")
+      .delete()
+      .eq("slug", data.slug);
+    if (error) {
+      const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+      const { error: adminErr } = await supabaseAdmin
+        .from("darshan_channels")
+        .delete()
+        .eq("slug", data.slug);
+      if (adminErr) throw new Error(error.message || adminErr.message);
+    }
     return { ok: true };
   });
 
@@ -415,7 +444,7 @@ export const refreshLiveStreamsNow = createServerFn({ method: "POST" })
   .handler(async ({ context }) => {
     await assertAdmin(context);
     const { refreshAllLiveStreams } = await import("@/lib/refresh-live.server");
-    const outcomes = await refreshAllLiveStreams("manual");
+    const outcomes = await refreshAllLiveStreams("manual", context.supabase);
     return { ok: true, outcomes };
   });
 
@@ -446,8 +475,7 @@ export const getRefreshLogs = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }): Promise<RefreshLogRow[]> => {
     await assertAdmin(context);
-    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-    const { data } = await supabaseAdmin
+    const { data, error } = await context.supabase
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       .from("darshan_refresh_logs" as any)
       .select(
@@ -455,5 +483,18 @@ export const getRefreshLogs = createServerFn({ method: "GET" })
       )
       .order("started_at", { ascending: false })
       .limit(30);
+    if (error) {
+      console.error("[getRefreshLogs database error]:", error.message);
+      const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+      const { data: adminData } = await supabaseAdmin
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        .from("darshan_refresh_logs" as any)
+        .select(
+          "id, started_at, finished_at, source, total, updated, unchanged, no_live, errors, outcomes",
+        )
+        .order("started_at", { ascending: false })
+        .limit(30);
+      return (adminData ?? []) as unknown as RefreshLogRow[];
+    }
     return (data ?? []) as unknown as RefreshLogRow[];
   });

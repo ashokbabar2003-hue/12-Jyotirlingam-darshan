@@ -4,6 +4,7 @@
 // For user-authenticated queries (with RLS), use the auth middleware instead.
 import { createClient } from "@supabase/supabase-js";
 import type { Database } from "./types";
+import { ensureServerEnv, getServerEnv, getPublicSupabaseEnv } from "@/lib/server-env";
 
 function isNewSupabaseApiKey(value: string): boolean {
   return value.startsWith("sb_publishable_") || value.startsWith("sb_secret_");
@@ -32,22 +33,47 @@ function createSupabaseFetch(supabaseKey: string): typeof fetch {
   };
 }
 
-import { ensureServerEnv } from "@/lib/server-env";
+export function isServiceRoleKey(key: string | undefined): boolean {
+  if (!key) return false;
+  if (key.startsWith("sb_secret_")) return true;
+  if (key.includes(".")) {
+    const parts = key.split(".");
+    if (parts.length === 3) {
+      try {
+        const payload = JSON.parse(Buffer.from(parts[1], "base64").toString());
+        return payload.role === "service_role";
+      } catch {
+        return false;
+      }
+    }
+  }
+  return false;
+}
 
+export function hasValidServiceRoleKey(): boolean {
+  ensureServerEnv();
+  const key = getServerEnv("SUPABASE_SERVICE_ROLE_KEY");
+  return isServiceRoleKey(key);
+}
+
+// 1. Privileged Server Client (service-role - bypasses RLS)
+// SECURITY: Server-only. Used for background jobs (cron) that have no user session.
 function createSupabaseAdminClient() {
   ensureServerEnv();
-  const SUPABASE_URL = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL;
-  const SUPABASE_SERVICE_ROLE_KEY =
-    process.env.SUPABASE_SERVICE_ROLE_KEY ||
-    process.env.SUPABASE_PUBLISHABLE_KEY ||
-    process.env.VITE_SUPABASE_PUBLISHABLE_KEY ||
-    process.env.SUPABASE_ANON_KEY ||
-    process.env.VITE_SUPABASE_ANON_KEY;
+  const SUPABASE_URL =
+    getServerEnv("SUPABASE_URL") || process.env.VITE_SUPABASE_URL || "https://auth-offline.local";
+  const SUPABASE_SERVICE_ROLE_KEY = getServerEnv("SUPABASE_SERVICE_ROLE_KEY");
 
-  const url = SUPABASE_URL || "https://auth-offline.local";
+  const isLegit = isServiceRoleKey(SUPABASE_SERVICE_ROLE_KEY);
+  if (!isLegit && typeof process !== "undefined" && process.env.NODE_ENV !== "test") {
+    console.warn(
+      "[supabaseAdmin] WARNING: SUPABASE_SERVICE_ROLE_KEY is not a valid service_role key. Background operations requiring RLS bypass (e.g. cron) will fail RLS checks.",
+    );
+  }
+
   const key = SUPABASE_SERVICE_ROLE_KEY || "offline-service-key";
 
-  return createClient<Database>(url, key, {
+  return createClient<Database>(SUPABASE_URL, key, {
     global: {
       fetch: createSupabaseFetch(key),
     },
@@ -61,13 +87,37 @@ function createSupabaseAdminClient() {
 
 let _supabaseAdmin: ReturnType<typeof createSupabaseAdminClient> | undefined;
 
-// Server-side Supabase client with service role - bypasses RLS
-// SECURITY: Only use this for trusted server-side operations, never expose to client code
-// Load inside server handlers: const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-// Top-level import is safe only in other .server.ts modules - route files and *.functions.ts ship to the client bundle.
 export const supabaseAdmin = new Proxy({} as ReturnType<typeof createSupabaseAdminClient>, {
   get(_, prop, receiver) {
     if (!_supabaseAdmin) _supabaseAdmin = createSupabaseAdminClient();
     return Reflect.get(_supabaseAdmin, prop, receiver);
+  },
+});
+
+// 2. Public Server Client (anon/publishable key - obeys RLS)
+// Safe for general server routes and unauthenticated read-only server actions.
+function createSupabaseServerClient() {
+  const { url, publishableKey } = getPublicSupabaseEnv();
+  const targetUrl = url || "https://auth-offline.local";
+  const targetKey = publishableKey || "offline-anon-key";
+
+  return createClient<Database>(targetUrl, targetKey, {
+    global: {
+      fetch: createSupabaseFetch(targetKey),
+    },
+    auth: {
+      storage: undefined,
+      persistSession: false,
+      autoRefreshToken: false,
+    },
+  });
+}
+
+let _supabaseServer: ReturnType<typeof createSupabaseServerClient> | undefined;
+
+export const supabaseServer = new Proxy({} as ReturnType<typeof createSupabaseServerClient>, {
+  get(_, prop, receiver) {
+    if (!_supabaseServer) _supabaseServer = createSupabaseServerClient();
+    return Reflect.get(_supabaseServer, prop, receiver);
   },
 });
