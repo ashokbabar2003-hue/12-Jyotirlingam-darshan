@@ -1,4 +1,4 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, Link, useRouter } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
@@ -882,6 +882,7 @@ function ChannelAutoRefreshManager() {
   const delFn = useServerFn(deleteDarshanChannel);
   const refreshFn = useServerFn(refreshLiveStreamsNow);
   const qc = useQueryClient();
+  const router = useRouter();
 
   const channels = useQuery({ queryKey: ["darshan-channels"], queryFn: () => channelsFn() });
   const [drafts, setDrafts] = useState<Record<string, string>>({});
@@ -940,18 +941,55 @@ function ChannelAutoRefreshManager() {
 
   async function refreshNow() {
     setRefreshing(true);
+    const startTime = performance.now();
+    console.log("[Refresh Now Start]", { timestamp: new Date().toISOString() });
     try {
       const res = await refreshFn();
-      const updated = res.outcomes.filter((o) => o.status === "updated").length;
-      const noLive = res.outcomes.filter((o) => o.status === "no_live").length;
-      const errors = res.outcomes.filter((o) => o.status === "error").length;
+      const durationMs = Math.round(performance.now() - startTime);
+      const isSuccess = res.success ?? res.ok ?? true;
+      const outcomesList = res.outcomes ?? [];
+      const updated = res.updatedCount ?? outcomesList.filter((o) => o.status === "updated").length;
+      const noLive = res.noLiveCount ?? outcomesList.filter((o) => o.status === "no_live").length;
+      const errors = res.errorCount ?? outcomesList.filter((o) => o.status === "error").length;
+
+      console.log("[Refresh Now Response]", {
+        status: 200,
+        ok: isSuccess,
+        durationMs,
+        updatedCount: updated,
+        noLiveCount: noLive,
+        errorCount: errors,
+        logInserted: res.logInserted ?? true,
+      });
+
+      if (!isSuccess) {
+        throw new Error(res.logError || "Refresh returned unsuccessful result");
+      }
+
       toast.success(
         `Refresh done — ${updated} updated, ${noLive} idle, ${errors} errors. Links with errors were kept as-is.`,
       );
-      qc.invalidateQueries({ queryKey: ["darshan-channels"] });
-      qc.invalidateQueries({ queryKey: ["darshan-links"] });
-      qc.invalidateQueries({ queryKey: ["refresh-logs"] });
+
+      // Invalidate and immediately refetch all related data queries
+      await Promise.all([
+        qc.invalidateQueries({ queryKey: ["darshan-channels"] }),
+        qc.invalidateQueries({ queryKey: ["darshan-links"] }),
+        qc.invalidateQueries({ queryKey: ["refresh-logs"] }),
+      ]);
+      await Promise.all([
+        qc.refetchQueries({ queryKey: ["darshan-channels"] }),
+        qc.refetchQueries({ queryKey: ["darshan-links"] }),
+        qc.refetchQueries({ queryKey: ["refresh-logs"] }),
+      ]);
+      await router.invalidate();
+
+      console.log("[Refresh Now Complete]", { durationMs });
     } catch (e) {
+      const durationMs = Math.round(performance.now() - startTime);
+      console.error("[Refresh Now Error]", {
+        message: e instanceof Error ? e.message : String(e),
+        durationMs,
+      });
       toast.error(e instanceof Error ? e.message : "Refresh failed.");
     } finally {
       setRefreshing(false);

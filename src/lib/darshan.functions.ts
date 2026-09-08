@@ -443,9 +443,9 @@ export const refreshLiveStreamsNow = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
     await assertAdmin(context);
-    const { refreshAllLiveStreams } = await import("@/lib/refresh-live.server");
-    const outcomes = await refreshAllLiveStreams("manual", context.supabase);
-    return { ok: true, outcomes };
+    const { refreshAllLiveStreamsDetailed } = await import("@/lib/refresh-live.server");
+    const result = await refreshAllLiveStreamsDetailed("manual", context.supabase);
+    return result;
   });
 
 export interface RefreshLogRow {

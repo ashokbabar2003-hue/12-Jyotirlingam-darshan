@@ -918,6 +918,21 @@ export async function refreshAllLiveStreams(
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   supabaseClient?: any,
 ): Promise<RefreshOutcome[]> {
+  const res = await refreshAllLiveStreamsInternal(source, supabaseClient);
+  return res.outcomes;
+}
+
+async function refreshAllLiveStreamsInternal(
+  source: RefreshSource = "manual",
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  supabaseClient?: any,
+): Promise<{
+  outcomes: RefreshOutcome[];
+  logInserted: boolean;
+  logError: string | null;
+  startedAt: string;
+  finishedAt: string;
+}> {
   const startedAt = new Date();
   const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
   const sb = supabaseClient ?? supabaseAdmin;
@@ -985,13 +1000,25 @@ export async function refreshAllLiveStreams(
           };
         } else {
           const newUrl = `https://www.youtube.com/watch?v=${p.videoId}`;
-          const { data: updatedRows, error: upErr } = await sb
+          let { data: updatedRows, error: upErr } = await sb
             .from("darshan_links")
             .upsert(
               { slug: p.slug, youtube_url: newUrl, updated_at: new Date().toISOString() },
               { onConflict: "slug" },
             )
             .select("slug, youtube_url");
+
+          if (upErr && sb !== supabaseAdmin) {
+            const adminRes = await supabaseAdmin
+              .from("darshan_links")
+              .upsert(
+                { slug: p.slug, youtube_url: newUrl, updated_at: new Date().toISOString() },
+                { onConflict: "slug" },
+              )
+              .select("slug, youtube_url");
+            updatedRows = adminRes.data;
+            upErr = adminRes.error;
+          }
 
           const rowsAffected = updatedRows?.length ?? 0;
           if (upErr || rowsAffected === 0) {
@@ -1039,7 +1066,7 @@ export async function refreshAllLiveStreams(
       }
 
       try {
-        await sb.from("darshan_channels").upsert(
+        const { error: chanErr } = await sb.from("darshan_channels").upsert(
           {
             slug: p.slug,
             channel_url: p.channelUrl,
@@ -1050,6 +1077,19 @@ export async function refreshAllLiveStreams(
           },
           { onConflict: "slug" },
         );
+        if (chanErr && sb !== supabaseAdmin) {
+          await supabaseAdmin.from("darshan_channels").upsert(
+            {
+              slug: p.slug,
+              channel_url: p.channelUrl,
+              last_checked: new Date().toISOString(),
+              last_status: outcome.status + (outcome.message ? `: ${outcome.message}` : ""),
+              last_video_id: outcome.videoId ?? ch?.last_video_id ?? null,
+              updated_at: new Date().toISOString(),
+            },
+            { onConflict: "slug" },
+          );
+        }
       } catch {
         /* ignore channel metadata write failure */
       }
@@ -1108,6 +1148,12 @@ export async function refreshAllLiveStreams(
     const { error: insertErr } = await sb.from("darshan_refresh_logs").insert(logPayload);
     if (insertErr) {
       logError = insertErr.message;
+      console.error("[Darshan Refresh Log Insert Error]", {
+        code: (insertErr as { code?: string }).code ?? "UNKNOWN",
+        message: insertErr.message,
+        details: (insertErr as { details?: string }).details ?? null,
+        hint: (insertErr as { hint?: string }).hint ?? null,
+      });
       if (sb !== supabaseAdmin) {
         const { error: adminLogErr } = await supabaseAdmin
           .from("darshan_refresh_logs")
@@ -1117,6 +1163,12 @@ export async function refreshAllLiveStreams(
           logError = null;
         } else {
           logError = adminLogErr.message;
+          console.error("[Darshan Refresh Admin Log Insert Error]", {
+            code: (adminLogErr as { code?: string }).code ?? "UNKNOWN",
+            message: adminLogErr.message,
+            details: (adminLogErr as { details?: string }).details ?? null,
+            hint: (adminLogErr as { hint?: string }).hint ?? null,
+          });
         }
       }
     } else {
@@ -1124,6 +1176,9 @@ export async function refreshAllLiveStreams(
     }
   } catch (err) {
     logError = err instanceof Error ? err.message : String(err);
+    console.error("[Darshan Refresh Log Insert Exception]", {
+      message: logError,
+    });
   }
 
   console.log("[Darshan Refresh Completed]", {
@@ -1137,5 +1192,56 @@ export async function refreshAllLiveStreams(
     logError,
   });
 
-  return outcomes;
+  return {
+    outcomes,
+    logInserted,
+    logError,
+    startedAt: startedAt.toISOString(),
+    finishedAt: finishedAt.toISOString(),
+  };
+}
+
+export interface RefreshExecutionSummary {
+  success: boolean;
+  ok: boolean;
+  source: RefreshSource;
+  startedAt: string;
+  finishedAt: string;
+  total: number;
+  updatedCount: number;
+  unchangedCount: number;
+  noLiveCount: number;
+  errorCount: number;
+  logInserted: boolean;
+  logError: string | null;
+  outcomes: RefreshOutcome[];
+}
+
+export async function refreshAllLiveStreamsDetailed(
+  source: RefreshSource = "manual",
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  supabaseClient?: any,
+): Promise<RefreshExecutionSummary> {
+  const result = await refreshAllLiveStreamsInternal(source, supabaseClient);
+  const outcomes = result.outcomes;
+  const updatedCount = outcomes.filter((o) => o.status === "updated").length;
+  const unchangedCount = outcomes.filter((o) => o.status === "unchanged").length;
+  const noLiveCount = outcomes.filter((o) => o.status === "no_live").length;
+  const errorCount = outcomes.filter((o) => o.status === "error").length;
+
+  return {
+    success: true,
+    ok: true,
+    source,
+    startedAt: result.startedAt,
+    finishedAt: result.finishedAt,
+    total: outcomes.length,
+    updatedCount,
+    unchangedCount,
+    noLiveCount,
+    errorCount,
+    logInserted: result.logInserted,
+    logError: result.logError,
+    outcomes,
+  };
 }
