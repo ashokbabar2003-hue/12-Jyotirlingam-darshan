@@ -3,10 +3,12 @@ import {
   buildCandidatePages,
   extractCanonicalVideoId,
   extractChannelId,
+  extractTitleFromHtml,
   findLiveCandidatesInHtml,
   findLiveVideoIdInHtml,
   pageLooksLive,
   resolveLiveVideoId,
+  resolveLiveVideoIdDetails,
   scoreLiveCandidate,
   type HtmlFetcher,
 } from "@/lib/refresh-live.server";
@@ -290,5 +292,39 @@ describe("resolveLiveVideoId with hints", () => {
       "darshan",
     ]);
     expect(id).toBeNull();
+  });
+});
+
+describe("extractTitleFromHtml", () => {
+  it("extracts og:title property", () => {
+    const html = `<html><head><meta property="og:title" content="Shree Somnath Live Darshan"></head></html>`;
+    expect(extractTitleFromHtml(html)).toBe("Shree Somnath Live Darshan");
+  });
+
+  it("extracts <title> tag and removes - YouTube suffix", () => {
+    const html = `<html><head><title>Somnath Aarti Live - YouTube</title></head></html>`;
+    expect(extractTitleFromHtml(html)).toBe("Somnath Aarti Live");
+  });
+});
+
+describe("resolveLiveVideoIdDetails", () => {
+  it("returns comprehensive safe telemetry for direct video", async () => {
+    const res = await resolveLiveVideoIdDetails("https://www.youtube.com/watch?v=dQw4w9WgXcQ");
+    expect(res).toEqual({
+      videoId: "dQw4w9WgXcQ",
+      channelResolved: null,
+      candidateCount: 1,
+      liveCandidateCount: 1,
+      selectedVideo: "dQw4w9WgXcQ",
+      reason: "Direct watch or embed video URL provided",
+    });
+  });
+
+  it("returns telemetry explaining no_live when channel 404s", async () => {
+    const fetcher = makeFetcher({});
+    const res = await resolveLiveVideoIdDetails("https://www.youtube.com/@NotFound", fetcher);
+    expect(res.videoId).toBeNull();
+    expect(res.candidateCount).toBe(0);
+    expect(res.reason).toMatch(/404|unreachable/i);
   });
 });

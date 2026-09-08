@@ -1,6 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { ensureServerEnv, getServerEnv, getPublicSupabaseEnv } from "@/lib/server-env";
 import { hasValidServiceRoleKey } from "@/integrations/supabase/client.server";
+import { jyotirlingas } from "@/data/jyotirlingas";
 
 export const Route = createFileRoute("/api/debug/database")({
   server: {
@@ -40,6 +41,15 @@ export const Route = createFileRoute("/api/debug/database")({
         let refreshLogTableReachable = false;
         let refreshLogCount = 0;
 
+        const mapping: Record<
+          string,
+          {
+            channelRow: boolean;
+            primaryLinkRow: boolean;
+            defaultLinkRow: boolean;
+          }
+        > = {};
+
         try {
           const { supabaseServer, supabaseAdmin } =
             await import("@/integrations/supabase/client.server");
@@ -47,9 +57,11 @@ export const Route = createFileRoute("/api/debug/database")({
           const probeClient = hasServiceRoleKey ? supabaseAdmin : supabaseServer;
 
           // 1. Check darshan_links table
-          const { count: linkCount, error: linkErr } = await probeClient
-            .from("darshan_links")
-            .select("slug", { count: "exact", head: true });
+          const {
+            data: linkRows,
+            count: linkCount,
+            error: linkErr,
+          } = await probeClient.from("darshan_links").select("slug", { count: "exact" });
           if (!linkErr) {
             databaseReachable = true;
             darshanLinksTableReachable = true;
@@ -57,9 +69,11 @@ export const Route = createFileRoute("/api/debug/database")({
           }
 
           // 2. Check darshan_channels table
-          const { count: chanCount, error: chanErr } = await probeClient
-            .from("darshan_channels")
-            .select("slug", { count: "exact", head: true });
+          const {
+            data: chanRows,
+            count: chanCount,
+            error: chanErr,
+          } = await probeClient.from("darshan_channels").select("slug", { count: "exact" });
           if (!chanErr) {
             databaseReachable = true;
             darshanChannelsTableReachable = true;
@@ -74,6 +88,17 @@ export const Route = createFileRoute("/api/debug/database")({
           if (!logErr) {
             refreshLogTableReachable = true;
             refreshLogCount = logCount ?? 0;
+          }
+
+          const linkSlugsSet = new Set((linkRows ?? []).map((r: { slug: string }) => r.slug));
+          const chanSlugsSet = new Set((chanRows ?? []).map((r: { slug: string }) => r.slug));
+
+          for (const jl of jyotirlingas) {
+            mapping[jl.slug] = {
+              channelRow: chanSlugsSet.has(jl.slug),
+              primaryLinkRow: linkSlugsSet.has(jl.slug),
+              defaultLinkRow: linkSlugsSet.has(`${jl.slug}__default`),
+            };
           }
         } catch {
           databaseReachable = false;
@@ -103,6 +128,7 @@ export const Route = createFileRoute("/api/debug/database")({
               refreshLogTableReachable,
               refreshLogCount,
               cronHandlerPresent,
+              mapping,
             },
             null,
             2,
