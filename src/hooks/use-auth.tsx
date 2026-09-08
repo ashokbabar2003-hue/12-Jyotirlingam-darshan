@@ -29,6 +29,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const userIdPresent = Boolean(s?.user?.id);
       const origin = typeof window !== "undefined" ? window.location.origin : "ssr";
 
+      console.info("[Supabase Auth Event]", {
+        event,
+        hasSession,
+        hasUser,
+      });
+
       console.info("[Supabase Auth State]", {
         hasSession,
         event,
@@ -38,32 +44,38 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       });
 
       if (typeof window !== "undefined") {
-        let hasPersisted = false;
+        let hasAuthStorageEntry = false;
         try {
-          hasPersisted = Object.keys(localStorage).some(
+          hasAuthStorageEntry = Object.keys(localStorage).some(
             (k) => k.startsWith("sb-") && k.endsWith("-auth-token"),
           );
-        } catch (err) {
-          void err;
+        } catch {
+          hasAuthStorageEntry = false;
         }
-        console.info("[Supabase Persisted Session]", {
-          hasPersistedSession: hasPersisted,
+        console.info("[Supabase Storage]", {
+          hasAuthStorageEntry,
         });
       }
     };
 
-    const cleanHashIfSessionEstablished = (s: Session | null) => {
-      if (
-        s &&
-        typeof window !== "undefined" &&
-        window.location.hash &&
-        (window.location.hash.includes("access_token") ||
-          window.location.hash.includes("refresh_token"))
-      ) {
+    const cleanOAuthHashIfSessionEstablished = (s: Session | null) => {
+      if (typeof window === "undefined") return;
+      if (!s?.user) return;
+
+      const hash = window.location.hash;
+      if (!hash) return;
+
+      const isOAuthHash =
+        hash.includes("access_token") ||
+        hash.includes("refresh_token") ||
+        hash.includes("token_type");
+
+      if (isOAuthHash) {
         try {
-          window.history.replaceState(null, "", window.location.pathname + window.location.search);
-        } catch (err) {
-          void err;
+          const cleanUrl = window.location.pathname + window.location.search;
+          window.history.replaceState(window.history.state, "", cleanUrl);
+        } catch {
+          /* ignore */
         }
       }
     };
@@ -73,7 +85,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         logAuthState(event, s);
         setSession(s);
         setLoading(false);
-        cleanHashIfSessionEstablished(s);
+        if (s?.user) {
+          cleanOAuthHashIfSessionEstablished(s);
+        }
       });
       if (sub?.subscription) {
         unsubscribe = () => sub.subscription.unsubscribe();
@@ -89,7 +103,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         logAuthState("INITIAL_GET_SESSION", s);
         setSession(s);
         setLoading(false);
-        cleanHashIfSessionEstablished(s);
+        if (s?.user) {
+          cleanOAuthHashIfSessionEstablished(s);
+        }
       })
       .catch(() => {
         setLoading(false);

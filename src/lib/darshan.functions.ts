@@ -12,9 +12,7 @@ const SIGNED_TTL = 60 * 60 * 24 * 7; // 7 days
 function publicClient() {
   ensureServerEnv();
   const url =
-    process.env.SUPABASE_URL ||
-    process.env.VITE_SUPABASE_URL ||
-    "https://auth-offline.local";
+    process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL || "https://auth-offline.local";
   const key =
     process.env.SUPABASE_PUBLISHABLE_KEY ||
     process.env.VITE_SUPABASE_PUBLISHABLE_KEY ||

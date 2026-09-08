@@ -77,19 +77,11 @@ export function SmoothScrollProvider({ children }: SmoothScrollProviderProps) {
     return () => cancelAnimationFrame(rafId);
   }, [location.pathname]);
 
-  // Guarantee scroll position 0 and clear stale hash on initial page load at "/"
+  // Guarantee scroll position 0 on initial page load at "/" without altering the URL or hash
   useEffect(() => {
     if (typeof window === "undefined") return;
 
     if (window.location.pathname === "/") {
-      if (window.location.hash) {
-        try {
-          window.history.replaceState(null, "", "/");
-        } catch (e) {
-          /* ignore */
-        }
-      }
-
       // Scroll to top immediately
       window.scrollTo(0, 0);
       if (lenisRef.current) {

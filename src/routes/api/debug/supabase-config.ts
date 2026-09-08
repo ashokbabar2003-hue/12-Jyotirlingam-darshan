@@ -22,11 +22,20 @@ export const Route = createFileRoute("/api/debug/supabase-config")({
 
         // Detect runtime
         let runtime = "node";
-        if (typeof globalThis !== "undefined" && (globalThis as unknown as { WebSocketPair?: unknown }).WebSocketPair) {
+        if (
+          typeof globalThis !== "undefined" &&
+          (globalThis as unknown as { WebSocketPair?: unknown }).WebSocketPair
+        ) {
           runtime = "cloudflare";
         } else if (typeof process !== "undefined" && process.env?.CLOUDFLARE_WORKER) {
           runtime = "cloudflare";
-        } else if (typeof (globalThis as unknown as { navigator?: { userAgent?: string } }).navigator?.userAgent === "string" && (globalThis as unknown as { navigator: { userAgent: string } }).navigator.userAgent.includes("Cloudflare")) {
+        } else if (
+          typeof (globalThis as unknown as { navigator?: { userAgent?: string } }).navigator
+            ?.userAgent === "string" &&
+          (
+            globalThis as unknown as { navigator: { userAgent: string } }
+          ).navigator.userAgent.includes("Cloudflare")
+        ) {
           runtime = "cloudflare";
         }
 

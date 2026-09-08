@@ -107,6 +107,14 @@ function createSupabaseClient() {
   const { url, key } = getSupabaseEnv();
   logSupabaseRuntimeDiagnostic(url, key);
 
+  if (typeof window !== "undefined") {
+    console.info("[Supabase Client]", {
+      instanceCreated: true,
+      configured: Boolean(url && key),
+      origin: window.location.origin,
+    });
+  }
+
   if (!url || !key) {
     if (!warnedAboutMissingEnv && typeof window !== "undefined") {
       warnedAboutMissingEnv = true;
@@ -132,6 +140,7 @@ function createSupabaseClient() {
         storage: typeof window !== "undefined" ? localStorage : undefined,
         persistSession: false,
         autoRefreshToken: false,
+        detectSessionInUrl: false,
       },
     });
   }
@@ -145,30 +154,37 @@ function createSupabaseClient() {
       persistSession: true,
       autoRefreshToken: true,
       detectSessionInUrl: true,
+      flowType: "implicit",
     },
   });
 }
 
 let _supabase: ReturnType<typeof createSupabaseClient> | undefined;
 
+function getSupabaseClientInstance(): ReturnType<typeof createSupabaseClient> {
+  if (!_supabase) {
+    _supabase = createSupabaseClient();
+  } else {
+    // If config was injected after initial module evaluation, upgrade offline client with real credentials
+    const { url, key } = getSupabaseEnv();
+    if (
+      url &&
+      key &&
+      (_supabase as unknown as { supabaseUrl?: string })?.supabaseUrl ===
+        "https://auth-offline.local"
+    ) {
+      _supabase = createSupabaseClient();
+    }
+  }
+  return _supabase;
+}
+
 // Import the supabase client like this:
 // import { supabase } from "@/integrations/supabase/client";
 export const supabase = new Proxy({} as ReturnType<typeof createSupabaseClient>, {
-  get(_, prop, receiver) {
-    if (!_supabase || !_supabase.auth) {
-      _supabase = createSupabaseClient();
-    } else {
-      // If config was injected after initial module evaluation, recreate client with real credentials
-      const { url, key } = getSupabaseEnv();
-      if (
-        url &&
-        key &&
-        (_supabase as unknown as { supabaseUrl?: string })?.supabaseUrl ===
-          "https://auth-offline.local"
-      ) {
-        _supabase = createSupabaseClient();
-      }
-    }
-    return Reflect.get(_supabase, prop, receiver);
+  get(_, prop) {
+    const client = getSupabaseClientInstance();
+    const val = Reflect.get(client, prop);
+    return typeof val === "function" ? val.bind(client) : val;
   },
 });

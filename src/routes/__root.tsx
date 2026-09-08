@@ -78,7 +78,6 @@ export const Route = createRootRouteWithContext<{
   errorComponent: RootErrorComponent,
 });
 
-
 function RootErrorComponent({ error, reset }: { error: Error; reset: () => void }) {
   React.useEffect(() => {
     // If it's a dynamic module import failure (e.g. due to Vite dev server restart or network update),
@@ -184,7 +183,11 @@ function NotFoundComponent() {
 function RootComponent() {
   const context = Route.useRouteContext();
   const loaderData = Route.useLoaderData();
-  const publicConfig = loaderData?.publicConfig || (typeof getPublicSupabaseEnv === "function" ? getPublicSupabaseEnv() : { url: "", publishableKey: "" });
+  const publicConfig =
+    loaderData?.publicConfig ||
+    (typeof getPublicSupabaseEnv === "function"
+      ? getPublicSupabaseEnv()
+      : { url: "", publishableKey: "" });
 
   const hasConfig = Boolean(publicConfig?.url && publicConfig?.publishableKey);
 

@@ -28,7 +28,11 @@ function getAuthRedirectOrigin(): string {
   if (typeof window === "undefined") return PROD_AUTH_ORIGIN;
   const origin = window.location.origin;
   // If running on custom domain or local development, use current origin; default to canonical production domain
-  if (origin.includes("12jyotirlingadarshan.online") || origin.includes("localhost") || origin.includes("127.0.0.1")) {
+  if (
+    origin.includes("12jyotirlingadarshan.online") ||
+    origin.includes("localhost") ||
+    origin.includes("127.0.0.1")
+  ) {
     return origin;
   }
   return PROD_AUTH_ORIGIN;
@@ -292,11 +296,14 @@ function AuthPage() {
     e.preventDefault();
     const env = getSupabaseEnv();
     if (!env.url || !env.key) {
-      console.warn("[Auth Diagnostics] Missing Supabase configuration during email auth submission", {
-        hasUrl: Boolean(env.url),
-        hasKey: Boolean(env.key),
-        origin: typeof window !== "undefined" ? window.location.origin : "ssr",
-      });
+      console.warn(
+        "[Auth Diagnostics] Missing Supabase configuration during email auth submission",
+        {
+          hasUrl: Boolean(env.url),
+          hasKey: Boolean(env.key),
+          origin: typeof window !== "undefined" ? window.location.origin : "ssr",
+        },
+      );
       toast.error(t.authOfflineNotice);
       return;
     }
