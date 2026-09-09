@@ -82,6 +82,7 @@ export async function fetchHtmlWithMeta(
           "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8",
       },
       redirect: "follow",
+      signal: AbortSignal.timeout(7000),
     });
 
     if (res.status === 404) {
@@ -989,80 +990,94 @@ async function refreshAllLiveStreamsInternal(
       let outcome = p;
       const ch = effectiveChannels.find((c) => c.slug === p.slug);
 
-      if (p.status === "updated" && p.videoId) {
-        const ok = await isEmbeddableLive(p.videoId);
-        if (!ok) {
-          outcome = {
-            ...p,
-            status: "error",
-            newUrl: p.previousUrl,
-            message: "Video found but not embeddable. Previous link kept.",
-          };
-        } else {
-          const newUrl = `https://www.youtube.com/watch?v=${p.videoId}`;
-          let { data: updatedRows, error: upErr } = await sb
-            .from("darshan_links")
-            .upsert(
-              { slug: p.slug, youtube_url: newUrl, updated_at: new Date().toISOString() },
-              { onConflict: "slug" },
-            )
-            .select("slug, youtube_url");
-
-          if (upErr && sb !== supabaseAdmin) {
-            const adminRes = await supabaseAdmin
+      try {
+        if (p.status === "updated" && p.videoId) {
+          const ok = await isEmbeddableLive(p.videoId);
+          if (!ok) {
+            outcome = {
+              ...p,
+              status: "error",
+              newUrl: p.previousUrl,
+              message: "Video found but not embeddable. Previous link kept.",
+            };
+          } else {
+            const newUrl = `https://www.youtube.com/watch?v=${p.videoId}`;
+            let { data: updatedRows, error: upErr } = await sb
               .from("darshan_links")
               .upsert(
                 { slug: p.slug, youtube_url: newUrl, updated_at: new Date().toISOString() },
                 { onConflict: "slug" },
               )
               .select("slug, youtube_url");
-            updatedRows = adminRes.data;
-            upErr = adminRes.error;
-          }
 
-          const rowsAffected = updatedRows?.length ?? 0;
-          if (upErr || rowsAffected === 0) {
-            console.error("[Darshan Link Update Error]", {
-              shrine: p.slug,
-              targetFound: false,
-              rowsAffected,
-              result: "database_update_failed",
-              error: upErr?.message,
-            });
-            outcome = {
-              ...p,
-              status: "error",
-              newUrl: p.previousUrl,
-              message:
-                upErr?.message || "Database update affected 0 rows (no target row or RLS denied)",
-            };
-          } else {
-            console.log("[Darshan Link Update]", {
-              shrine: p.slug,
-              targetFound: true,
-              targetRowType: "primary",
-              previousVideoIdPresent: Boolean(p.previousUrl),
-              newVideoIdPresent: true,
-              rowsAffected,
-              result: "updated",
-            });
+            if (upErr && sb !== supabaseAdmin) {
+              const adminRes = await supabaseAdmin
+                .from("darshan_links")
+                .upsert(
+                  { slug: p.slug, youtube_url: newUrl, updated_at: new Date().toISOString() },
+                  { onConflict: "slug" },
+                )
+                .select("slug, youtube_url");
+              updatedRows = adminRes.data;
+              upErr = adminRes.error;
+            }
+
+            const rowsAffected = updatedRows?.length ?? 0;
+            if (upErr || rowsAffected === 0) {
+              console.error("[Darshan Link Update Error]", {
+                shrine: p.slug,
+                targetFound: false,
+                rowsAffected,
+                result: "database_update_failed",
+                error: upErr?.message,
+              });
+              outcome = {
+                ...p,
+                status: "error",
+                newUrl: p.previousUrl,
+                message:
+                  upErr?.message || "Database update affected 0 rows (no target row or RLS denied)",
+              };
+            } else {
+              console.log("[Darshan Link Update]", {
+                shrine: p.slug,
+                targetFound: true,
+                targetRowType: "primary",
+                previousVideoIdPresent: Boolean(p.previousUrl),
+                newVideoIdPresent: true,
+                rowsAffected,
+                result: "updated",
+              });
+            }
           }
+        } else if (p.status === "unchanged") {
+          console.log("[Darshan Link Unchanged]", {
+            shrine: p.slug,
+            targetFound: true,
+            targetRowType: "primary",
+            currentVideoIdPresent: Boolean(p.videoId),
+            result: "unchanged",
+          });
+        } else {
+          console.log("[Darshan Link Preserved]", {
+            shrine: p.slug,
+            status: p.status,
+            preservedUrl: p.previousUrl,
+            reason: p.telemetry?.reason,
+          });
         }
-      } else if (p.status === "unchanged") {
-        console.log("[Darshan Link Unchanged]", {
+      } catch (shrineDbErr) {
+        const errorMsg = shrineDbErr instanceof Error ? shrineDbErr.message : String(shrineDbErr);
+        console.error("[Darshan Link Update Exception]", {
           shrine: p.slug,
-          targetFound: true,
-          targetRowType: "primary",
-          currentVideoIdPresent: Boolean(p.videoId),
-          result: "unchanged",
+          error: errorMsg,
         });
-      } else {
-        console.log("[Darshan Link Preserved]", {
-          shrine: p.slug,
-          status: p.status,
-          preservedUrl: p.previousUrl,
-          reason: p.telemetry?.reason,
-        });
+        outcome = {
+          ...p,
+          status: "error",
+          newUrl: p.previousUrl,
+          message: `Database update exception: ${errorMsg}`,
+        };
       }
 
       try {

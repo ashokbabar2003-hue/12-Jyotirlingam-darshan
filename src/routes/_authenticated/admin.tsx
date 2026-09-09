@@ -949,6 +949,8 @@ function ChannelAutoRefreshManager() {
       const isSuccess = res.success ?? res.ok ?? true;
       const outcomesList = res.outcomes ?? [];
       const updated = res.updatedCount ?? outcomesList.filter((o) => o.status === "updated").length;
+      const unchanged =
+        res.unchangedCount ?? outcomesList.filter((o) => o.status === "unchanged").length;
       const noLive = res.noLiveCount ?? outcomesList.filter((o) => o.status === "no_live").length;
       const errors = res.errorCount ?? outcomesList.filter((o) => o.status === "error").length;
 
@@ -957,6 +959,7 @@ function ChannelAutoRefreshManager() {
         ok: isSuccess,
         durationMs,
         updatedCount: updated,
+        unchangedCount: unchanged,
         noLiveCount: noLive,
         errorCount: errors,
         logInserted: res.logInserted ?? true,
@@ -967,7 +970,7 @@ function ChannelAutoRefreshManager() {
       }
 
       toast.success(
-        `Refresh done — ${updated} updated, ${noLive} idle, ${errors} errors. Links with errors were kept as-is.`,
+        `Refresh done — ${updated} updated, ${unchanged} same, ${noLive} idle, ${errors} errors.`,
       );
 
       // Invalidate and immediately refetch all related data queries
