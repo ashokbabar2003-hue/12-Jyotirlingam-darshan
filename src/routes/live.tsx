@@ -160,7 +160,7 @@ function LivePage() {
                   </p>
                 </div>
                 <Link
-                  to="/jyotirlinga/$slug"
+                  to="/$slug"
                   params={{ slug: j.slug }}
                   className={cn(
                     "rounded-md bg-gradient-aarti px-2.5 py-1 text-[11px] font-semibold text-primary-foreground shadow-glow",

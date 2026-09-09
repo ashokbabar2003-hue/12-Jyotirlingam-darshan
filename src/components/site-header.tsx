@@ -522,7 +522,7 @@ export function SiteHeader() {
                             return (
                               <Link
                                 key={j.slug}
-                                to="/jyotirlinga/$slug"
+                                to="/$slug"
                                 params={{ slug: j.slug }}
                                 onClick={handleNavigationAction}
                                 className="flex items-center gap-2 rounded-lg border border-border/50 bg-card/60 p-2 text-left transition-all hover:border-primary/40 hover:bg-card active:scale-[0.98]"

@@ -439,7 +439,7 @@ function Dashboard() {
             return (
               <Link
                 key={j.slug}
-                to="/jyotirlinga/$slug"
+                to="/$slug"
                 params={{ slug: j.slug }}
                 className="group overflow-hidden rounded-xl border border-border/60 bg-card shadow-elegant transition-transform duration-300 hover:-translate-y-1"
               >

@@ -540,7 +540,7 @@ export function LiveDarshanSection({
 
                 <div className="flex items-center gap-3 w-full sm:w-auto justify-end">
                   <Link
-                    to="/jyotirlinga/$slug"
+                    to="/$slug"
                     params={{ slug: activeShrine.slug }}
                     className={cn(
                       "inline-flex items-center gap-2 rounded-lg bg-gradient-aarti px-4 py-2 text-xs sm:text-sm font-semibold text-primary-foreground shadow-glow transition-all duration-200 hover:brightness-105",
@@ -700,7 +700,7 @@ export function LiveDarshanSection({
                       </p>
                     </div>
                     <Link
-                      to="/jyotirlinga/$slug"
+                      to="/$slug"
                       params={{ slug: j.slug }}
                       className={cn(
                         "rounded-md bg-gradient-aarti px-2.5 py-1 text-[11px] font-semibold text-primary-foreground shadow-glow",
