@@ -914,6 +914,29 @@ export async function planRefresh(
 
 export type RefreshSource = "cron" | "manual";
 
+export const CANONICAL_SHRINE_SLUGS = [
+  "somnath",
+  "mallikarjuna",
+  "mahakaleshwar",
+  "omkareshwar",
+  "kedarnath",
+  "bhimashankar",
+  "kashi-vishwanath",
+  "trimbakeshwar",
+  "baidyanath",
+  "nageshwar",
+  "rameshwaram",
+  "grishneshwar",
+] as const;
+
+let activeRefreshPromise: Promise<{
+  outcomes: RefreshOutcome[];
+  logInserted: boolean;
+  logError: string | null;
+  startedAt: string;
+  finishedAt: string;
+}> | null = null;
+
 export async function refreshAllLiveStreams(
   source: RefreshSource = "manual",
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -934,33 +957,58 @@ async function refreshAllLiveStreamsInternal(
   startedAt: string;
   finishedAt: string;
 }> {
-  const startedAt = new Date();
-  const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-  const sb = supabaseClient ?? supabaseAdmin;
+  // If a refresh is already actively in-flight, await it to prevent concurrent write collisions
+  if (activeRefreshPromise) {
+    console.log("[Darshan Refresh] Awaiting currently active refresh in-flight...");
+    try {
+      return await activeRefreshPromise;
+    } catch {
+      /* fallback to starting a fresh run if previous errored */
+    }
+  }
 
-  // 1. Immediately create a refresh-run log record so a log is NEVER missing even if timeouts occur
-  const logId = crypto.randomUUID();
-  let logInserted = false;
-  let logError: string | null = null;
+  const runPromise = (async () => {
+    const startedAt = new Date();
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const sb = supabaseClient ?? supabaseAdmin;
 
-  const initialPayload = {
-    id: logId,
-    started_at: startedAt.toISOString(),
-    finished_at: startedAt.toISOString(),
-    source,
-    total: 0,
-    updated: 0,
-    unchanged: 0,
-    no_live: 0,
-    errors: 0,
-    outcomes: [],
-  };
+    // 1. Immediately create a refresh-run log record so a log is NEVER missing even if timeouts occur
+    const logId = crypto.randomUUID();
+    let logInserted = false;
+    let logError: string | null = null;
 
-  try {
-    const { error: insertErr } = await sb.from("darshan_refresh_logs").insert(initialPayload);
-    if (insertErr) {
-      logError = insertErr.message;
-      if (sb !== supabaseAdmin) {
+    const initialPayload = {
+      id: logId,
+      started_at: startedAt.toISOString(),
+      finished_at: startedAt.toISOString(),
+      source,
+      total: CANONICAL_SHRINE_SLUGS.length,
+      updated: 0,
+      unchanged: 0,
+      no_live: 0,
+      errors: 0,
+      outcomes: [],
+    };
+
+    try {
+      const { error: insertErr } = await sb.from("darshan_refresh_logs").insert(initialPayload);
+      if (insertErr) {
+        logError = insertErr.message;
+        if (sb !== supabaseAdmin) {
+          const { error: adminErr } = await supabaseAdmin
+            .from("darshan_refresh_logs")
+            .insert(initialPayload);
+          if (!adminErr) {
+            logInserted = true;
+            logError = null;
+          }
+        }
+      } else {
+        logInserted = true;
+      }
+    } catch (initErr) {
+      logError = initErr instanceof Error ? initErr.message : String(initErr);
+      try {
         const { error: adminErr } = await supabaseAdmin
           .from("darshan_refresh_logs")
           .insert(initialPayload);
@@ -968,262 +1016,303 @@ async function refreshAllLiveStreamsInternal(
           logInserted = true;
           logError = null;
         }
-      }
-    } else {
-      logInserted = true;
-    }
-  } catch (initErr) {
-    logError = initErr instanceof Error ? initErr.message : String(initErr);
-    try {
-      const { error: adminErr } = await supabaseAdmin
-        .from("darshan_refresh_logs")
-        .insert(initialPayload);
-      if (!adminErr) {
-        logInserted = true;
-        logError = null;
-      }
-    } catch {
-      /* ignore */
-    }
-  }
-
-  let dbChannels: PlanChannel[] = [];
-  const { data: channelsData, error: chanErr } = await sb
-    .from("darshan_channels")
-    .select("slug, channel_url, last_video_id");
-
-  if (chanErr) {
-    console.error("[Darshan Refresh Error]", {
-      stage: "database",
-      message: chanErr.message,
-    });
-    if (sb !== supabaseAdmin) {
-      const { data: adminChan } = await supabaseAdmin
-        .from("darshan_channels")
-        .select("slug, channel_url, last_video_id");
-      if (adminChan) dbChannels = adminChan;
-    }
-  } else if (channelsData) {
-    dbChannels = channelsData;
-  }
-
-  const channelMap = new Map<string, PlanChannel>();
-  for (const [slug, url] of Object.entries(DEFAULT_CHANNELS)) {
-    channelMap.set(slug, { slug, channel_url: url });
-  }
-  for (const ch of dbChannels) {
-    if (ch.channel_url !== undefined && ch.channel_url !== null) {
-      channelMap.set(ch.slug, {
-        slug: ch.slug,
-        channel_url: ch.channel_url.trim(),
-        last_video_id: ch.last_video_id,
-      });
-    }
-  }
-  const effectiveChannels = Array.from(channelMap.values());
-
-  const { data: links } = await sb.from("darshan_links").select("slug, youtube_url");
-  const currentBySlug = new Map(
-    (links ?? []).map((r: { slug: string; youtube_url: string | null }) => [r.slug, r.youtube_url]),
-  );
-
-  const { jyotirlingas } = await import("@/data/jyotirlingas");
-  const hintsBySlug = buildHintsFromCatalog(jyotirlingas);
-
-  const outcomes: RefreshOutcome[] = [];
-
-  const persistLog = async (finalOutcomes: RefreshOutcome[]) => {
-    const tally = {
-      updated: finalOutcomes.filter((o) => o.status === "updated").length,
-      unchanged: finalOutcomes.filter((o) => o.status === "unchanged").length,
-      no_live: finalOutcomes.filter((o) => o.status === "no_live").length,
-      errors: finalOutcomes.filter((o) => o.status === "error").length,
-    };
-    const now = new Date().toISOString();
-    const updatePayload = {
-      finished_at: now,
-      total: Math.max(finalOutcomes.length, effectiveChannels.length),
-      updated: tally.updated,
-      unchanged: tally.unchanged,
-      no_live: tally.no_live,
-      errors: tally.errors,
-      outcomes: finalOutcomes.map((o) => ({
-        slug: o.slug,
-        status: o.status,
-        videoId: o.videoId ?? null,
-        previous_url: o.previousUrl ?? null,
-        new_url: o.newUrl ?? null,
-        youtube_url: o.videoId ? `https://www.youtube.com/watch?v=${o.videoId}` : null,
-        message: o.message ?? null,
-        channelUrl: o.channelUrl,
-        checked_at: o.checkedAt ?? now,
-        telemetry: o.telemetry ?? null,
-      })),
-    };
-
-    try {
-      let { error: updateErr } = await sb
-        .from("darshan_refresh_logs")
-        .update(updatePayload)
-        .eq("id", logId);
-
-      if (updateErr && sb !== supabaseAdmin) {
-        const { error: adminErr } = await supabaseAdmin
-          .from("darshan_refresh_logs")
-          .update(updatePayload)
-          .eq("id", logId);
-        updateErr = adminErr;
-      }
-
-      if (updateErr) {
-        const fullRow = {
-          id: logId,
-          started_at: startedAt.toISOString(),
-          source,
-          ...updatePayload,
-        };
-        const { error: upsertErr } = await supabaseAdmin
-          .from("darshan_refresh_logs")
-          .upsert(fullRow, { onConflict: "id" });
-        if (!upsertErr) {
-          logInserted = true;
-          logError = null;
-        } else {
-          logError = upsertErr.message;
-        }
-      } else {
-        logInserted = true;
-        logError = null;
-      }
-    } catch (err) {
-      logError = err instanceof Error ? err.message : String(err);
-      try {
-        const fullRow = {
-          id: logId,
-          started_at: startedAt.toISOString(),
-          source,
-          ...updatePayload,
-        };
-        await supabaseAdmin.from("darshan_refresh_logs").upsert(fullRow, { onConflict: "id" });
-        logInserted = true;
-        logError = null;
       } catch {
         /* ignore */
       }
     }
-  };
 
-  try {
-    const planned = await planRefresh(effectiveChannels, currentBySlug, hintsBySlug, fetchHtml);
+    let dbChannels: PlanChannel[] = [];
+    const { data: channelsData, error: chanErr } = await sb
+      .from("darshan_channels")
+      .select("slug, channel_url, last_video_id");
 
-    for (const p of planned) {
-      let outcome = p;
-      const ch = effectiveChannels.find((c) => c.slug === p.slug);
+    if (chanErr) {
+      console.error("[Darshan Refresh Error]", {
+        stage: "database",
+        message: chanErr.message,
+      });
+      if (sb !== supabaseAdmin) {
+        const { data: adminChan } = await supabaseAdmin
+          .from("darshan_channels")
+          .select("slug, channel_url, last_video_id");
+        if (adminChan) dbChannels = adminChan;
+      }
+    } else if (channelsData) {
+      dbChannels = channelsData;
+    }
 
+    // Build effectiveChannels strictly covering all 12 canonical shrines
+    const channelMap = new Map<string, PlanChannel>();
+    for (const slug of CANONICAL_SHRINE_SLUGS) {
+      channelMap.set(slug, { slug, channel_url: DEFAULT_CHANNELS[slug] || "" });
+    }
+    for (const ch of dbChannels) {
+      if (
+        ch.slug &&
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        CANONICAL_SHRINE_SLUGS.includes(ch.slug as any) &&
+        ch.channel_url !== undefined &&
+        ch.channel_url !== null
+      ) {
+        channelMap.set(ch.slug, {
+          slug: ch.slug,
+          channel_url: ch.channel_url.trim(),
+          last_video_id: ch.last_video_id,
+        });
+      }
+    }
+    const effectiveChannels = CANONICAL_SHRINE_SLUGS.map((slug) => channelMap.get(slug)!);
+
+    const { data: links } = await sb.from("darshan_links").select("slug, youtube_url");
+    const currentBySlug = new Map(
+      (links ?? []).map((r: { slug: string; youtube_url: string | null }) => [
+        r.slug,
+        r.youtube_url,
+      ]),
+    );
+
+    const { jyotirlingas } = await import("@/data/jyotirlingas");
+    const hintsBySlug = buildHintsFromCatalog(jyotirlingas);
+
+    const outcomeBySlug = new Map<string, RefreshOutcome>();
+
+    const persistLog = async (finalOutcomes: RefreshOutcome[]) => {
+      const tally = {
+        updated: finalOutcomes.filter((o) => o.status === "updated").length,
+        unchanged: finalOutcomes.filter((o) => o.status === "unchanged").length,
+        no_live: finalOutcomes.filter((o) => o.status === "no_live").length,
+        errors: finalOutcomes.filter((o) => o.status === "error").length,
+      };
+      const now = new Date().toISOString();
+      const updatePayload = {
+        finished_at: now,
+        total: CANONICAL_SHRINE_SLUGS.length,
+        updated: tally.updated,
+        unchanged: tally.unchanged,
+        no_live: tally.no_live,
+        errors: tally.errors,
+        outcomes: finalOutcomes.map((o) => ({
+          slug: o.slug,
+          status: o.status,
+          videoId: o.videoId ?? null,
+          previous_url: o.previousUrl ?? null,
+          new_url: o.newUrl ?? null,
+          youtube_url: o.videoId ? `https://www.youtube.com/watch?v=${o.videoId}` : null,
+          message: o.message ?? null,
+          channelUrl: o.channelUrl,
+          checked_at: o.checkedAt ?? now,
+          telemetry: o.telemetry ?? null,
+        })),
+      };
+
+      let updateSucceeded = false;
+
+      // Strategy 1: Attempt direct in-place update on logId and check affected rows
       try {
-        if (p.status === "updated" && p.videoId) {
-          const ok = await isEmbeddableLive(p.videoId);
-          if (!ok) {
-            outcome = {
-              ...p,
-              status: "error",
-              newUrl: p.previousUrl,
-              message: "Video found but not embeddable. Previous link kept.",
-            };
-          } else {
-            const newUrl = `https://www.youtube.com/watch?v=${p.videoId}`;
-            let { data: updatedRows, error: upErr } = await sb
-              .from("darshan_links")
-              .upsert(
-                { slug: p.slug, youtube_url: newUrl, updated_at: new Date().toISOString() },
-                { onConflict: "slug" },
-              )
-              .select("slug, youtube_url");
+        const { data: updatedRows, error: updateErr } = await sb
+          .from("darshan_refresh_logs")
+          .update(updatePayload)
+          .eq("id", logId)
+          .select("id");
 
-            if (upErr && sb !== supabaseAdmin) {
-              const adminRes = await supabaseAdmin
+        if (!updateErr && updatedRows && updatedRows.length > 0) {
+          updateSucceeded = true;
+          logInserted = true;
+          logError = null;
+        }
+      } catch {
+        /* ignore */
+      }
+
+      // Strategy 2: Admin client update
+      if (!updateSucceeded && sb !== supabaseAdmin) {
+        try {
+          const { data: adminRows, error: adminErr } = await supabaseAdmin
+            .from("darshan_refresh_logs")
+            .update(updatePayload)
+            .eq("id", logId)
+            .select("id");
+
+          if (!adminErr && adminRows && adminRows.length > 0) {
+            updateSucceeded = true;
+            logInserted = true;
+            logError = null;
+          }
+        } catch {
+          /* ignore */
+        }
+      }
+
+      // Strategy 3: Upsert on logId
+      if (!updateSucceeded) {
+        try {
+          const fullRow = {
+            id: logId,
+            started_at: startedAt.toISOString(),
+            source,
+            ...updatePayload,
+          };
+          const { data: upsertRows, error: upsertErr } = await sb
+            .from("darshan_refresh_logs")
+            .upsert(fullRow, { onConflict: "id" })
+            .select("id");
+
+          if (!upsertErr && upsertRows && upsertRows.length > 0) {
+            updateSucceeded = true;
+            logInserted = true;
+            logError = null;
+          }
+        } catch {
+          /* ignore */
+        }
+      }
+
+      // Strategy 4: If UPDATE/UPSERT on existing row is restricted by database RLS,
+      // INSERT the completed record with a fresh ID (which uses the guaranteed INSERT grant)
+      if (!updateSucceeded) {
+        try {
+          const freshId = crypto.randomUUID();
+          const insertFinalPayload = {
+            id: freshId,
+            started_at: startedAt.toISOString(),
+            source,
+            ...updatePayload,
+          };
+          const { error: insFinalErr } = await sb
+            .from("darshan_refresh_logs")
+            .insert(insertFinalPayload);
+
+          if (!insFinalErr) {
+            updateSucceeded = true;
+            logInserted = true;
+            logError = null;
+            // Best-effort cleanup of initial placeholder row
+            await sb
+              .from("darshan_refresh_logs")
+              .delete()
+              .eq("id", logId)
+              .catch(() => {});
+          } else if (sb !== supabaseAdmin) {
+            const { error: insAdminErr } = await supabaseAdmin
+              .from("darshan_refresh_logs")
+              .insert(insertFinalPayload);
+            if (!insAdminErr) {
+              updateSucceeded = true;
+              logInserted = true;
+              logError = null;
+            } else {
+              logError = insAdminErr.message;
+            }
+          } else {
+            logError = insFinalErr.message;
+          }
+        } catch (finalFallbackErr) {
+          logError =
+            finalFallbackErr instanceof Error ? finalFallbackErr.message : String(finalFallbackErr);
+        }
+      }
+    };
+
+    try {
+      const planned = await planRefresh(effectiveChannels, currentBySlug, hintsBySlug, fetchHtml);
+
+      for (const p of planned) {
+        let outcome = p;
+        const ch = effectiveChannels.find((c) => c.slug === p.slug);
+
+        try {
+          if (p.status === "updated" && p.videoId) {
+            const ok = await isEmbeddableLive(p.videoId);
+            if (!ok) {
+              outcome = {
+                ...p,
+                status: "error",
+                newUrl: p.previousUrl,
+                message: "Video found but not embeddable. Previous link kept.",
+              };
+            } else {
+              const newUrl = `https://www.youtube.com/watch?v=${p.videoId}`;
+              let { data: updatedRows, error: upErr } = await sb
                 .from("darshan_links")
                 .upsert(
                   { slug: p.slug, youtube_url: newUrl, updated_at: new Date().toISOString() },
                   { onConflict: "slug" },
                 )
                 .select("slug, youtube_url");
-              updatedRows = adminRes.data;
-              upErr = adminRes.error;
-            }
 
-            const rowsAffected = updatedRows?.length ?? 0;
-            if (upErr || rowsAffected === 0) {
-              console.error("[Darshan Link Update Error]", {
-                shrine: p.slug,
-                targetFound: false,
-                rowsAffected,
-                result: "database_update_failed",
-                error: upErr?.message,
-              });
-              outcome = {
-                ...p,
-                status: "error",
-                newUrl: p.previousUrl,
-                message:
-                  upErr?.message || "Database update affected 0 rows (no target row or RLS denied)",
-              };
-            } else {
-              console.log("[Darshan Link Update]", {
-                shrine: p.slug,
-                targetFound: true,
-                targetRowType: "primary",
-                previousVideoIdPresent: Boolean(p.previousUrl),
-                newVideoIdPresent: true,
-                rowsAffected,
-                result: "updated",
-              });
+              if (upErr && sb !== supabaseAdmin) {
+                const adminRes = await supabaseAdmin
+                  .from("darshan_links")
+                  .upsert(
+                    { slug: p.slug, youtube_url: newUrl, updated_at: new Date().toISOString() },
+                    { onConflict: "slug" },
+                  )
+                  .select("slug, youtube_url");
+                updatedRows = adminRes.data;
+                upErr = adminRes.error;
+              }
+
+              const rowsAffected = updatedRows?.length ?? 0;
+              if (upErr || rowsAffected === 0) {
+                console.error("[Darshan Link Update Error]", {
+                  shrine: p.slug,
+                  targetFound: false,
+                  rowsAffected,
+                  result: "database_update_failed",
+                  error: upErr?.message,
+                });
+                outcome = {
+                  ...p,
+                  status: "error",
+                  newUrl: p.previousUrl,
+                  message:
+                    upErr?.message ||
+                    "Database update affected 0 rows (no target row or RLS denied)",
+                };
+              } else {
+                console.log("[Darshan Link Update]", {
+                  shrine: p.slug,
+                  targetFound: true,
+                  targetRowType: "primary",
+                  previousVideoIdPresent: Boolean(p.previousUrl),
+                  newVideoIdPresent: true,
+                  rowsAffected,
+                  result: "updated",
+                });
+              }
             }
+          } else if (p.status === "unchanged") {
+            console.log("[Darshan Link Unchanged]", {
+              shrine: p.slug,
+              targetFound: true,
+              targetRowType: "primary",
+              currentVideoIdPresent: Boolean(p.videoId),
+              result: "unchanged",
+            });
+          } else {
+            console.log("[Darshan Link Preserved]", {
+              shrine: p.slug,
+              status: p.status,
+              preservedUrl: p.previousUrl,
+              reason: p.telemetry?.reason,
+            });
           }
-        } else if (p.status === "unchanged") {
-          console.log("[Darshan Link Unchanged]", {
+        } catch (shrineDbErr) {
+          const errorMsg = shrineDbErr instanceof Error ? shrineDbErr.message : String(shrineDbErr);
+          console.error("[Darshan Link Update Exception]", {
             shrine: p.slug,
-            targetFound: true,
-            targetRowType: "primary",
-            currentVideoIdPresent: Boolean(p.videoId),
-            result: "unchanged",
+            error: errorMsg,
           });
-        } else {
-          console.log("[Darshan Link Preserved]", {
-            shrine: p.slug,
-            status: p.status,
-            preservedUrl: p.previousUrl,
-            reason: p.telemetry?.reason,
-          });
+          outcome = {
+            ...p,
+            status: "error",
+            newUrl: p.previousUrl,
+            message: `Database update exception: ${errorMsg}`,
+          };
         }
-      } catch (shrineDbErr) {
-        const errorMsg = shrineDbErr instanceof Error ? shrineDbErr.message : String(shrineDbErr);
-        console.error("[Darshan Link Update Exception]", {
-          shrine: p.slug,
-          error: errorMsg,
-        });
-        outcome = {
-          ...p,
-          status: "error",
-          newUrl: p.previousUrl,
-          message: `Database update exception: ${errorMsg}`,
-        };
-      }
 
-      try {
-        const { error: chanErr } = await sb.from("darshan_channels").upsert(
-          {
-            slug: p.slug,
-            channel_url: p.channelUrl,
-            last_checked: new Date().toISOString(),
-            last_status: outcome.status + (outcome.message ? `: ${outcome.message}` : ""),
-            last_video_id: outcome.videoId ?? ch?.last_video_id ?? null,
-            updated_at: new Date().toISOString(),
-          },
-          { onConflict: "slug" },
-        );
-        if (chanErr && sb !== supabaseAdmin) {
-          await supabaseAdmin.from("darshan_channels").upsert(
+        try {
+          const { error: chanErr } = await sb.from("darshan_channels").upsert(
             {
               slug: p.slug,
               channel_url: p.channelUrl,
@@ -1234,57 +1323,94 @@ async function refreshAllLiveStreamsInternal(
             },
             { onConflict: "slug" },
           );
+          if (chanErr && sb !== supabaseAdmin) {
+            await supabaseAdmin.from("darshan_channels").upsert(
+              {
+                slug: p.slug,
+                channel_url: p.channelUrl,
+                last_checked: new Date().toISOString(),
+                last_status: outcome.status + (outcome.message ? `: ${outcome.message}` : ""),
+                last_video_id: outcome.videoId ?? ch?.last_video_id ?? null,
+                updated_at: new Date().toISOString(),
+              },
+              { onConflict: "slug" },
+            );
+          }
+        } catch {
+          /* ignore channel metadata write failure */
         }
-      } catch {
-        /* ignore channel metadata write failure */
+        outcomeBySlug.set(outcome.slug, outcome);
       }
-      outcomes.push(outcome);
+    } catch (planErr) {
+      const errorMsg = planErr instanceof Error ? planErr.message : String(planErr);
+      console.error("[Darshan Refresh Fatal Error in Planning]", { error: errorMsg });
+      for (const ch of effectiveChannels) {
+        if (!outcomeBySlug.has(ch.slug)) {
+          outcomeBySlug.set(ch.slug, {
+            slug: ch.slug,
+            status: "error",
+            channelUrl: ch.channel_url,
+            message: `Refresh planning failed: ${errorMsg}`,
+            checkedAt: new Date().toISOString(),
+          });
+        }
+      }
     }
-  } catch (planErr) {
-    const errorMsg = planErr instanceof Error ? planErr.message : String(planErr);
-    console.error("[Darshan Refresh Fatal Error in Planning]", { error: errorMsg });
-    for (const ch of effectiveChannels) {
-      if (!outcomes.some((o) => o.slug === ch.slug)) {
-        outcomes.push({
-          slug: ch.slug,
+
+    // Ensure EVERY canonical slug has an outcome in outcomeBySlug
+    for (const slug of CANONICAL_SHRINE_SLUGS) {
+      if (!outcomeBySlug.has(slug)) {
+        outcomeBySlug.set(slug, {
+          slug,
+          channelUrl: channelMap.get(slug)?.channel_url || "",
           status: "error",
-          channelUrl: ch.channel_url,
-          message: `Refresh planning failed: ${errorMsg}`,
+          previousUrl: currentBySlug.get(slug) ?? null,
+          newUrl: currentBySlug.get(slug) ?? null,
+          message: "Shrine processing omitted unexpectedly; marked as error.",
           checkedAt: new Date().toISOString(),
         });
       }
     }
-  } finally {
+
+    const finalOutcomes = CANONICAL_SHRINE_SLUGS.map((slug) => outcomeBySlug.get(slug)!);
+
     // 2. Persist log outcome state incrementally and on completion/failure
-    await persistLog(outcomes);
+    await persistLog(finalOutcomes);
+
+    const finishedAt = new Date();
+    const tally = {
+      updated: finalOutcomes.filter((o) => o.status === "updated").length,
+      unchanged: finalOutcomes.filter((o) => o.status === "unchanged").length,
+      no_live: finalOutcomes.filter((o) => o.status === "no_live").length,
+      errors: finalOutcomes.filter((o) => o.status === "error").length,
+    };
+
+    console.log("[Darshan Refresh Completed]", {
+      source,
+      shrineCount: finalOutcomes.length,
+      updatedCount: tally.updated,
+      unchangedCount: tally.unchanged,
+      noLiveCount: tally.no_live,
+      failedCount: tally.errors,
+      logInserted,
+      logError,
+    });
+
+    return {
+      outcomes: finalOutcomes,
+      logInserted,
+      logError,
+      startedAt: startedAt.toISOString(),
+      finishedAt: finishedAt.toISOString(),
+    };
+  })();
+
+  activeRefreshPromise = runPromise;
+  try {
+    return await runPromise;
+  } finally {
+    activeRefreshPromise = null;
   }
-
-  const finishedAt = new Date();
-  const tally = {
-    updated: outcomes.filter((o) => o.status === "updated").length,
-    unchanged: outcomes.filter((o) => o.status === "unchanged").length,
-    no_live: outcomes.filter((o) => o.status === "no_live").length,
-    errors: outcomes.filter((o) => o.status === "error").length,
-  };
-
-  console.log("[Darshan Refresh Completed]", {
-    source,
-    shrineCount: outcomes.length,
-    updatedCount: tally.updated,
-    unchangedCount: tally.unchanged,
-    noLiveCount: tally.no_live,
-    failedCount: tally.errors,
-    logInserted,
-    logError,
-  });
-
-  return {
-    outcomes,
-    logInserted,
-    logError,
-    startedAt: startedAt.toISOString(),
-    finishedAt: finishedAt.toISOString(),
-  };
 }
 
 export interface RefreshExecutionSummary {

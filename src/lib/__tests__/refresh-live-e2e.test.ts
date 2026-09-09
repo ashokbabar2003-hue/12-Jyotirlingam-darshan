@@ -104,4 +104,50 @@ describe("end-to-end refresh: manual + auto share the planner", () => {
     // The shared generic must not have leaked into any shrine.
     expect(Object.values(byslug)).not.toContain(SHARED_GENERIC.id);
   });
+
+  it("verifies 12 canonical shrines invariant and error isolation in planning", async () => {
+    const { CANONICAL_SHRINE_SLUGS } = await import("@/lib/refresh-live.server");
+    expect(CANONICAL_SHRINE_SLUGS).toHaveLength(12);
+
+    const all12Channels: PlanChannel[] = CANONICAL_SHRINE_SLUGS.map((slug) => ({
+      slug,
+      channel_url:
+        slug === "bhimashankar"
+          ? "https://www.youtube.com/@Invalid404Channel"
+          : `https://www.youtube.com/@${slug}Official`,
+    }));
+
+    const mockFetcher: HtmlFetcher = async (url) => {
+      if (url.includes("Invalid404Channel")) {
+        return null;
+      }
+      return streamsPage([{ id: `VID_${url.slice(24, 30)}`, title: `Live Darshan` }]);
+    };
+
+    const fullCatalog = CANONICAL_SHRINE_SLUGS.map((slug) => ({
+      slug,
+      name: `${slug} Jyotirlinga`,
+    }));
+    const fullHints = buildHintsFromCatalog(fullCatalog);
+
+    const outcomes = await planRefresh(all12Channels, currentBySlug, fullHints, mockFetcher);
+
+    expect(outcomes).toHaveLength(12);
+    const outcomeSlugs = new Set(outcomes.map((o) => o.slug));
+    expect(outcomeSlugs.size).toBe(12);
+    for (const slug of CANONICAL_SHRINE_SLUGS) {
+      expect(outcomeSlugs.has(slug)).toBe(true);
+    }
+
+    const updated = outcomes.filter((o) => o.status === "updated").length;
+    const unchanged = outcomes.filter((o) => o.status === "unchanged").length;
+    const noLive = outcomes.filter((o) => o.status === "no_live").length;
+    const errors = outcomes.filter((o) => o.status === "error").length;
+
+    expect(updated + unchanged + noLive + errors).toBe(12);
+    // Bhimashankar (404) resulted in error, other 11 proceeded successfully
+    expect(errors).toBeGreaterThanOrEqual(1);
+    const bhim = outcomes.find((o) => o.slug === "bhimashankar");
+    expect(bhim?.status).toBe("error");
+  });
 });

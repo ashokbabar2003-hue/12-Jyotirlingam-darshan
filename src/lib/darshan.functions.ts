@@ -509,6 +509,7 @@ export const getRefreshLogs = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }): Promise<RefreshLogRow[]> => {
     await assertAdmin(context);
+    let rows: RefreshLogRow[] = [];
     const { data, error } = await context.supabase
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       .from("darshan_refresh_logs" as any)
@@ -516,7 +517,8 @@ export const getRefreshLogs = createServerFn({ method: "GET" })
         "id, started_at, finished_at, source, total, updated, unchanged, no_live, errors, outcomes",
       )
       .order("started_at", { ascending: false })
-      .limit(30);
+      .limit(40);
+
     if (error) {
       console.error("[getRefreshLogs database error]:", error.message);
       const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
@@ -527,8 +529,31 @@ export const getRefreshLogs = createServerFn({ method: "GET" })
           "id, started_at, finished_at, source, total, updated, unchanged, no_live, errors, outcomes",
         )
         .order("started_at", { ascending: false })
-        .limit(30);
-      return (adminData ?? []) as unknown as RefreshLogRow[];
+        .limit(40);
+      rows = (adminData ?? []) as unknown as RefreshLogRow[];
+    } else {
+      rows = (data ?? []) as unknown as RefreshLogRow[];
     }
-    return (data ?? []) as unknown as RefreshLogRow[];
+
+    // Cleanly normalize outcomes & filter out stale initial 0-outcome records if a finalized row exists
+    const normalized: RefreshLogRow[] = rows.map((r) => ({
+      ...r,
+      outcomes: Array.isArray(r.outcomes) ? r.outcomes : [],
+    }));
+
+    const finalizedTimestamps = normalized
+      .filter((r) => r.outcomes.length > 0 || r.updated + r.unchanged + r.no_live + r.errors > 0)
+      .map((r) => new Date(r.started_at).getTime());
+
+    // Deduplicate: if an empty running row is within 15 seconds of a finalized row, discard the redundant empty row
+    const filtered = normalized.filter((r) => {
+      const isEmpty =
+        r.outcomes.length === 0 && r.updated + r.unchanged + r.no_live + r.errors === 0;
+      if (!isEmpty) return true;
+      const t = new Date(r.started_at).getTime();
+      const hasFinalizedSibling = finalizedTimestamps.some((ft) => Math.abs(ft - t) < 15000);
+      return !hasFinalizedSibling;
+    });
+
+    return filtered.slice(0, 30);
   });

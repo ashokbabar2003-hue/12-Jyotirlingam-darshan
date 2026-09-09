@@ -18,6 +18,7 @@ import {
   ImageIcon,
   Layers,
   Video,
+  Loader2,
 } from "lucide-react";
 import { CreateInstagramPostDialog } from "@/components/CreateInstagramPostDialog";
 import { useEffect, useState } from "react";
@@ -531,6 +532,16 @@ function RefreshLogViewer() {
         {paged.map((row) => {
           const isOpen = open === row.id;
           const errored = row.errors > 0;
+          const isFresh = Date.now() - new Date(row.started_at).getTime() < 5 * 60 * 1000;
+          const isRunning =
+            (row.outcomes.length === 0 ||
+              row.updated + row.unchanged + row.no_live + row.errors === 0) &&
+            isFresh;
+          const isIncomplete =
+            (row.outcomes.length === 0 ||
+              row.updated + row.unchanged + row.no_live + row.errors === 0) &&
+            !isFresh;
+
           return (
             <div key={row.id} className="rounded-lg border border-border/60 bg-card p-3 text-sm">
               <button
@@ -552,18 +563,36 @@ function RefreshLogViewer() {
                     {new Date(row.started_at).toLocaleString()}
                   </span>
                 </div>
-                <div className="flex items-center gap-3 text-xs">
-                  <span className="text-emerald-400">{row.updated} updated</span>
-                  <span className="text-muted-foreground">{row.unchanged} same</span>
-                  <span className="text-amber-400">{row.no_live} idle</span>
-                  <span className={errored ? "text-destructive" : "text-muted-foreground"}>
-                    {row.errors} errors
-                  </span>
-                </div>
+                {isRunning ? (
+                  <div className="flex items-center gap-2 text-xs text-amber-400">
+                    <Loader2 className="size-3.5 animate-spin" />
+                    <span className="font-medium">In progress…</span>
+                  </div>
+                ) : isIncomplete ? (
+                  <div className="flex items-center gap-2 text-xs text-destructive">
+                    <span className="font-medium">Interrupted / Incomplete</span>
+                  </div>
+                ) : (
+                  <div className="flex items-center gap-3 text-xs">
+                    <span className="text-emerald-400">{row.updated} updated</span>
+                    <span className="text-muted-foreground">{row.unchanged} same</span>
+                    <span className="text-amber-400">{row.no_live} idle</span>
+                    <span className={errored ? "text-destructive" : "text-muted-foreground"}>
+                      {row.errors} errors
+                    </span>
+                  </div>
+                )}
               </button>
 
               {isOpen && (
                 <div className="mt-3 space-y-2 border-t border-border/60 pt-3">
+                  {row.outcomes.length === 0 && (
+                    <p className="py-1 text-xs italic text-muted-foreground">
+                      {isRunning
+                        ? "Refresh in progress — discovering active live streams across all 12 shrines…"
+                        : "No detailed outcomes recorded for this run."}
+                    </p>
+                  )}
                   {row.outcomes.map((o, i) => {
                     const changed =
                       o.status === "updated" &&
