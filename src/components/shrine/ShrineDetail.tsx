@@ -5,6 +5,7 @@ import { Link } from "@tanstack/react-router";
 import { ArrowLeft, MapPin, Play, Images, BookHeart } from "lucide-react";
 import { type Jyotirlinga, getLocalized } from "@/data/jyotirlingas";
 import { getApprovedGallery, getApprovedStories, getDarshanLinks } from "@/lib/darshan.functions";
+import { resolveShrineStreams } from "@/lib/darshan-precedence";
 import { validateYoutubeUrl } from "@/lib/youtube";
 import { DarshanTile } from "@/components/darshan-tile";
 import { StotramCompanion } from "@/components/stotram-companion";
@@ -94,17 +95,10 @@ export function ShrineDetail({ jl }: { jl: Jyotirlinga }) {
     staleTime: 60_000,
   });
 
-  const liveRaw = links.data?.[jl.slug] ?? jl.youtubeUrl;
-  const defaultRaw = links.data?.[`${jl.slug}__default`] ?? jl.defaultYoutubeUrl;
-  const liveCheck = validateYoutubeUrl(liveRaw, { autoplay: true, mute: true, loop: true });
-  const defaultCheck = validateYoutubeUrl(defaultRaw, {
-    autoplay: true,
-    mute: true,
-    loop: true,
-  });
-  const liveUrl = liveCheck.ok ? liveCheck.embedUrl : null;
-  const defaultUrl = defaultCheck.ok ? defaultCheck.embedUrl : null;
-  const hasAnyEmbed = !!(liveUrl || defaultUrl);
+  const resolved = resolveShrineStreams(jl, links.data);
+  const liveUrl = resolved.liveUrl;
+  const defaultUrl = resolved.defaultUrl;
+  const hasAnyEmbed = Boolean(liveUrl || defaultUrl);
 
   const loc = getLocalized(jl, lang);
   const { name: displayName, location: displayLocation, state: displayState } = loc;
@@ -191,6 +185,7 @@ export function ShrineDetail({ jl }: { jl: Jyotirlinga }) {
                 defaultUrl={defaultUrl}
                 fallbackImage={jl.image}
                 shrineName={displayName}
+                priority={true}
               />
             </div>
           </section>

@@ -317,14 +317,48 @@ export const getDarshanLinks = createServerFn({ method: "GET" }).handler(async (
     }
     const sb = publicClient();
     const { data, error } = await sb.from("darshan_links").select("slug, youtube_url");
-    if (error || !data) return map;
+    if (error || !data) {
+      if (error) {
+        console.warn(
+          "[getDarshanLinks public client error, falling back to admin]:",
+          error.message,
+        );
+      }
+      const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+      const { data: adminData, error: adminErr } = await supabaseAdmin
+        .from("darshan_links")
+        .select("slug, youtube_url");
+      if (!adminErr && adminData) {
+        for (const row of adminData) {
+          if (row.slug && row.youtube_url) {
+            map[row.slug.trim()] = row.youtube_url.trim();
+          }
+        }
+      }
+      return map;
+    }
     for (const row of data) {
       if (row.slug && row.youtube_url) {
-        map[row.slug] = row.youtube_url;
+        map[row.slug.trim()] = row.youtube_url.trim();
       }
     }
-  } catch {
-    // Fail-safe: return empty map so caller seamlessly falls back to default shrine stream URLs
+  } catch (err) {
+    console.error("[getDarshanLinks exception, falling back to admin]:", err);
+    try {
+      const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+      const { data: adminData } = await supabaseAdmin
+        .from("darshan_links")
+        .select("slug, youtube_url");
+      if (adminData) {
+        for (const row of adminData) {
+          if (row.slug && row.youtube_url) {
+            map[row.slug.trim()] = row.youtube_url.trim();
+          }
+        }
+      }
+    } catch {
+      // Fail-safe: return whatever was collected
+    }
   }
   return map;
 });

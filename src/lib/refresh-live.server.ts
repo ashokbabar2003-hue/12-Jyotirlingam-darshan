@@ -938,6 +938,55 @@ async function refreshAllLiveStreamsInternal(
   const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
   const sb = supabaseClient ?? supabaseAdmin;
 
+  // 1. Immediately create a refresh-run log record so a log is NEVER missing even if timeouts occur
+  const logId = crypto.randomUUID();
+  let logInserted = false;
+  let logError: string | null = null;
+
+  const initialPayload = {
+    id: logId,
+    started_at: startedAt.toISOString(),
+    finished_at: startedAt.toISOString(),
+    source,
+    total: 0,
+    updated: 0,
+    unchanged: 0,
+    no_live: 0,
+    errors: 0,
+    outcomes: [],
+  };
+
+  try {
+    const { error: insertErr } = await sb.from("darshan_refresh_logs").insert(initialPayload);
+    if (insertErr) {
+      logError = insertErr.message;
+      if (sb !== supabaseAdmin) {
+        const { error: adminErr } = await supabaseAdmin
+          .from("darshan_refresh_logs")
+          .insert(initialPayload);
+        if (!adminErr) {
+          logInserted = true;
+          logError = null;
+        }
+      }
+    } else {
+      logInserted = true;
+    }
+  } catch (initErr) {
+    logError = initErr instanceof Error ? initErr.message : String(initErr);
+    try {
+      const { error: adminErr } = await supabaseAdmin
+        .from("darshan_refresh_logs")
+        .insert(initialPayload);
+      if (!adminErr) {
+        logInserted = true;
+        logError = null;
+      }
+    } catch {
+      /* ignore */
+    }
+  }
+
   let dbChannels: PlanChannel[] = [];
   const { data: channelsData, error: chanErr } = await sb
     .from("darshan_channels")
@@ -982,6 +1031,87 @@ async function refreshAllLiveStreamsInternal(
   const hintsBySlug = buildHintsFromCatalog(jyotirlingas);
 
   const outcomes: RefreshOutcome[] = [];
+
+  const persistLog = async (finalOutcomes: RefreshOutcome[]) => {
+    const tally = {
+      updated: finalOutcomes.filter((o) => o.status === "updated").length,
+      unchanged: finalOutcomes.filter((o) => o.status === "unchanged").length,
+      no_live: finalOutcomes.filter((o) => o.status === "no_live").length,
+      errors: finalOutcomes.filter((o) => o.status === "error").length,
+    };
+    const now = new Date().toISOString();
+    const updatePayload = {
+      finished_at: now,
+      total: Math.max(finalOutcomes.length, effectiveChannels.length),
+      updated: tally.updated,
+      unchanged: tally.unchanged,
+      no_live: tally.no_live,
+      errors: tally.errors,
+      outcomes: finalOutcomes.map((o) => ({
+        slug: o.slug,
+        status: o.status,
+        videoId: o.videoId ?? null,
+        previous_url: o.previousUrl ?? null,
+        new_url: o.newUrl ?? null,
+        youtube_url: o.videoId ? `https://www.youtube.com/watch?v=${o.videoId}` : null,
+        message: o.message ?? null,
+        channelUrl: o.channelUrl,
+        checked_at: o.checkedAt ?? now,
+        telemetry: o.telemetry ?? null,
+      })),
+    };
+
+    try {
+      let { error: updateErr } = await sb
+        .from("darshan_refresh_logs")
+        .update(updatePayload)
+        .eq("id", logId);
+
+      if (updateErr && sb !== supabaseAdmin) {
+        const { error: adminErr } = await supabaseAdmin
+          .from("darshan_refresh_logs")
+          .update(updatePayload)
+          .eq("id", logId);
+        updateErr = adminErr;
+      }
+
+      if (updateErr) {
+        const fullRow = {
+          id: logId,
+          started_at: startedAt.toISOString(),
+          source,
+          ...updatePayload,
+        };
+        const { error: upsertErr } = await supabaseAdmin
+          .from("darshan_refresh_logs")
+          .upsert(fullRow, { onConflict: "id" });
+        if (!upsertErr) {
+          logInserted = true;
+          logError = null;
+        } else {
+          logError = upsertErr.message;
+        }
+      } else {
+        logInserted = true;
+        logError = null;
+      }
+    } catch (err) {
+      logError = err instanceof Error ? err.message : String(err);
+      try {
+        const fullRow = {
+          id: logId,
+          started_at: startedAt.toISOString(),
+          source,
+          ...updatePayload,
+        };
+        await supabaseAdmin.from("darshan_refresh_logs").upsert(fullRow, { onConflict: "id" });
+        logInserted = true;
+        logError = null;
+      } catch {
+        /* ignore */
+      }
+    }
+  };
 
   try {
     const planned = await planRefresh(effectiveChannels, currentBySlug, hintsBySlug, fetchHtml);
@@ -1124,6 +1254,9 @@ async function refreshAllLiveStreamsInternal(
         });
       }
     }
+  } finally {
+    // 2. Persist log outcome state incrementally and on completion/failure
+    await persistLog(outcomes);
   }
 
   const finishedAt = new Date();
@@ -1133,68 +1266,6 @@ async function refreshAllLiveStreamsInternal(
     no_live: outcomes.filter((o) => o.status === "no_live").length,
     errors: outcomes.filter((o) => o.status === "error").length,
   };
-
-  const logPayload = {
-    started_at: startedAt.toISOString(),
-    finished_at: finishedAt.toISOString(),
-    source,
-    total: outcomes.length,
-    updated: tally.updated,
-    unchanged: tally.unchanged,
-    no_live: tally.no_live,
-    errors: tally.errors,
-    outcomes: outcomes.map((o) => ({
-      slug: o.slug,
-      status: o.status,
-      videoId: o.videoId ?? null,
-      previous_url: o.previousUrl ?? null,
-      new_url: o.newUrl ?? null,
-      youtube_url: o.videoId ? `https://www.youtube.com/watch?v=${o.videoId}` : null,
-      message: o.message ?? null,
-      channelUrl: o.channelUrl,
-      checked_at: o.checkedAt ?? new Date().toISOString(),
-      telemetry: o.telemetry ?? null,
-    })),
-  };
-
-  let logInserted = false;
-  let logError: string | null = null;
-  try {
-    const { error: insertErr } = await sb.from("darshan_refresh_logs").insert(logPayload);
-    if (insertErr) {
-      logError = insertErr.message;
-      console.error("[Darshan Refresh Log Insert Error]", {
-        code: (insertErr as { code?: string }).code ?? "UNKNOWN",
-        message: insertErr.message,
-        details: (insertErr as { details?: string }).details ?? null,
-        hint: (insertErr as { hint?: string }).hint ?? null,
-      });
-      if (sb !== supabaseAdmin) {
-        const { error: adminLogErr } = await supabaseAdmin
-          .from("darshan_refresh_logs")
-          .insert(logPayload);
-        if (!adminLogErr) {
-          logInserted = true;
-          logError = null;
-        } else {
-          logError = adminLogErr.message;
-          console.error("[Darshan Refresh Admin Log Insert Error]", {
-            code: (adminLogErr as { code?: string }).code ?? "UNKNOWN",
-            message: adminLogErr.message,
-            details: (adminLogErr as { details?: string }).details ?? null,
-            hint: (adminLogErr as { hint?: string }).hint ?? null,
-          });
-        }
-      }
-    } else {
-      logInserted = true;
-    }
-  } catch (err) {
-    logError = err instanceof Error ? err.message : String(err);
-    console.error("[Darshan Refresh Log Insert Exception]", {
-      message: logError,
-    });
-  }
 
   console.log("[Darshan Refresh Completed]", {
     source,
@@ -1245,8 +1316,8 @@ export async function refreshAllLiveStreamsDetailed(
   const errorCount = outcomes.filter((o) => o.status === "error").length;
 
   return {
-    success: true,
-    ok: true,
+    success: result.logInserted,
+    ok: result.logInserted && errorCount === 0,
     source,
     startedAt: result.startedAt,
     finishedAt: result.finishedAt,

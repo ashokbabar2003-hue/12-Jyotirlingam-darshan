@@ -1,9 +1,10 @@
-import { useState, useMemo, useRef } from "react";
+import { useState, useMemo, useRef, useCallback } from "react";
 import { Link } from "@tanstack/react-router";
 import { Play, Radio, Check, MapPin, Sparkles, ArrowRight, Grid, Eye } from "lucide-react";
 import { useGSAP, gsap, prefersReducedMotion } from "@/hooks/use-gsap";
 import { jyotirlingas, getLocalized, type Jyotirlinga } from "@/data/jyotirlingas";
 import { validateYoutubeUrl } from "@/lib/youtube";
+import { resolveAllShrineStreams } from "@/lib/darshan-precedence";
 import { cn } from "@/lib/utils";
 import { DarshanTile, type DarshanStatus } from "@/components/darshan-tile";
 import { toLocalDigits, displayFontClassFor, type Lang } from "@/hooks/use-language";
@@ -199,31 +200,21 @@ export function LiveDarshanSection({
     return jyotirlingas.find((j) => j.slug === activeSlug) || jyotirlingas[0];
   }, [activeSlug]);
 
-  const liveCount = Object.values(statuses).filter((s) => s === "live").length;
-
-  // Compute live & default URLs for all shrines
+  // Compute live & default URLs for all shrines using canonical precedence
   const shrineUrls = useMemo(() => {
-    const map: Record<string, { liveUrl: string | null; defaultUrl: string | null }> = {};
-    for (const j of jyotirlingas) {
-      const liveRaw = linksData?.[j.slug] ?? j.youtubeUrl;
-      const defaultRaw = linksData?.[defaultKey(j.slug)] ?? j.defaultYoutubeUrl;
-      const liveCheck = validateYoutubeUrl(liveRaw, {
-        autoplay: true,
-        mute: true,
-        loop: true,
-      });
-      const defaultCheck = validateYoutubeUrl(defaultRaw, {
-        autoplay: true,
-        mute: true,
-        loop: true,
-      });
-      map[j.slug] = {
-        liveUrl: liveCheck.ok ? liveCheck.embedUrl : null,
-        defaultUrl: defaultCheck.ok ? defaultCheck.embedUrl : null,
-      };
-    }
-    return map;
+    return resolveAllShrineStreams(jyotirlingas, linksData);
   }, [linksData]);
+
+  const getEffectiveStatus = useCallback(
+    (slug: string): DarshanStatus => {
+      return statuses[slug] ?? shrineUrls[slug]?.status ?? "none";
+    },
+    [statuses, shrineUrls],
+  );
+
+  const liveCount = useMemo(() => {
+    return jyotirlingas.filter((j) => getEffectiveStatus(j.slug) === "live").length;
+  }, [getEffectiveStatus]);
 
   // Entrance & scroll choreography
   useGSAP(
@@ -321,7 +312,7 @@ export function LiveDarshanSection({
   );
 
   const activeLoc = getLocalized(activeShrine, lang);
-  const activeStatus = statuses[activeShrine.slug] ?? "recorded";
+  const activeStatus = getEffectiveStatus(activeShrine.slug);
   const activeUrls = shrineUrls[activeShrine.slug] ?? { liveUrl: null, defaultUrl: null };
   const ls = LIVE_SECTION_STRINGS[lang] ?? LIVE_SECTION_STRINGS.en;
 
@@ -475,6 +466,7 @@ export function LiveDarshanSection({
                   defaultUrl={activeUrls.defaultUrl}
                   fallbackImage={activeShrine.image}
                   shrineName={activeLoc.name}
+                  priority={true}
                   onStatusChange={(s) => setStatus(activeShrine.slug, s)}
                 />
 
@@ -577,7 +569,7 @@ export function LiveDarshanSection({
               <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-2.5">
                 {jyotirlingas.map((j) => {
                   const isActive = j.slug === activeSlug;
-                  const isLive = statuses[j.slug] === "live";
+                  const isLive = getEffectiveStatus(j.slug) === "live";
                   const loc = getLocalized(j, lang);
                   const isSelected = selected.includes(j.slug);
 
@@ -641,7 +633,7 @@ export function LiveDarshanSection({
             {jyotirlingas.map((j) => {
               const urls = shrineUrls[j.slug] ?? { liveUrl: null, defaultUrl: null };
               const loc = getLocalized(j, lang);
-              const isLive = statuses[j.slug] === "live";
+              const isLive = getEffectiveStatus(j.slug) === "live";
               const isSelected = selected.includes(j.slug);
               if (liveOnly && !isLive) return null;
 

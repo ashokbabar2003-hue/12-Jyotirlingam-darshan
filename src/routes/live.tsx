@@ -2,11 +2,11 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { MapPin, ArrowLeft, Radio } from "lucide-react";
-import { useCallback, useState } from "react";
+import { useCallback, useState, useMemo } from "react";
 import { z } from "zod";
 import { jyotirlingas, getLocalized } from "@/data/jyotirlingas";
 import { getDarshanLinks } from "@/lib/darshan.functions";
-import { validateYoutubeUrl } from "@/lib/youtube";
+import { resolveAllShrineStreams } from "@/lib/darshan-precedence";
 import { DarshanTile, type DarshanStatus } from "@/components/darshan-tile";
 import { useLanguage, toLocalDigits } from "@/hooks/use-language";
 import { cn } from "@/lib/utils";
@@ -14,10 +14,6 @@ import { cn } from "@/lib/utils";
 const searchSchema = z.object({
   slugs: z.string().optional(),
 });
-
-function defaultKey(slug: string) {
-  return `${slug}__default`;
-}
 
 export const Route = createFileRoute("/live")({
   validateSearch: searchSchema,
@@ -56,7 +52,20 @@ function LivePage() {
   const list = selectedSlugs.length
     ? jyotirlingas.filter((j) => selectedSlugs.includes(j.slug))
     : jyotirlingas;
-  const liveCount = list.filter((j) => statuses[j.slug] === "live").length;
+  const resolvedStreams = useMemo(() => {
+    return resolveAllShrineStreams(list, links.data);
+  }, [list, links.data]);
+
+  const getEffectiveStatus = useCallback(
+    (slug: string): DarshanStatus => {
+      return statuses[slug] ?? resolvedStreams[slug]?.status ?? "none";
+    },
+    [statuses, resolvedStreams],
+  );
+
+  const liveCount = useMemo(() => {
+    return list.filter((j) => getEffectiveStatus(j.slug) === "live").length;
+  }, [list, getEffectiveStatus]);
 
   const gridCols =
     list.length === 1
@@ -107,22 +116,10 @@ function LivePage() {
       </div>
       <div className={cn("grid gap-4", gridCols)}>
         {list.map((j) => {
-          const liveRaw = links.data?.[j.slug] ?? j.youtubeUrl;
-          const defaultRaw = links.data?.[defaultKey(j.slug)] ?? j.defaultYoutubeUrl;
-          const liveCheck = validateYoutubeUrl(liveRaw, {
-            autoplay: true,
-            mute: true,
-            loop: true,
-          });
-          const defaultCheck = validateYoutubeUrl(defaultRaw, {
-            autoplay: true,
-            mute: true,
-            loop: true,
-          });
-          const liveUrl = liveCheck.ok ? liveCheck.embedUrl : null;
-          const defaultUrl = defaultCheck.ok ? defaultCheck.embedUrl : null;
+          const resolved = resolvedStreams[j.slug] ?? { liveUrl: null, defaultUrl: null };
           const loc = getLocalized(j, lang);
-          const hidden = liveOnly && statuses[j.slug] !== "live";
+          const isLive = getEffectiveStatus(j.slug) === "live";
+          const hidden = liveOnly && !isLive;
           return (
             <div
               key={j.slug}
@@ -133,8 +130,8 @@ function LivePage() {
             >
               <DarshanTile
                 title={`${j.name} live darshan`}
-                liveUrl={liveUrl}
-                defaultUrl={defaultUrl}
+                liveUrl={resolved.liveUrl}
+                defaultUrl={resolved.defaultUrl}
                 fallbackImage={j.image}
                 shrineName={loc.name}
                 onStatusChange={(s) => setStatus(j.slug, s)}

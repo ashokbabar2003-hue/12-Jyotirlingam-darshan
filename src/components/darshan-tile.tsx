@@ -18,6 +18,7 @@ export function DarshanTile({
   fallbackImage,
   shrineName,
   className,
+  priority = false,
   onStatusChange,
 }: {
   title: string;
@@ -26,6 +27,7 @@ export function DarshanTile({
   fallbackImage?: string;
   shrineName?: string;
   className?: string;
+  priority?: boolean;
   onStatusChange?: (status: DarshanStatus) => void;
 }) {
   const iframeRef = useRef<HTMLIFrameElement | null>(null);
@@ -35,7 +37,7 @@ export function DarshanTile({
   useEffect(() => {
     setUsingFallback(false);
     setStreamError(false);
-  }, [liveUrl]);
+  }, [liveUrl, defaultUrl]);
 
   const initialSrc = liveUrl ?? defaultUrl;
   const status: DarshanStatus = streamError
@@ -83,9 +85,7 @@ export function DarshanTile({
       iframe?.contentWindow?.postMessage(JSON.stringify({ event: "listening", id: title }), "*");
     }
 
-    let onloadFired = false;
     const onLoad = () => {
-      onloadFired = true;
       addListener();
       setTimeout(addListener, 500);
       setTimeout(addListener, 1500);
@@ -102,13 +102,25 @@ export function DarshanTile({
       } catch {
         return;
       }
-      if (data?.event === "onError" || data?.info?.errorCode != null) {
-        if (!usingFallback && liveUrl && defaultUrl) {
-          setUsingFallback(true);
-        } else {
-          setStreamError(true);
+
+      // ONLY trigger fallback if YouTube explicitly reports an unrecoverable embed failure
+      // Fatal codes: 2 (invalid param), 5 (HTML5 error), 100 (not found/removed), 101/150 (embedding disallowed)
+      if (data?.event === "onError") {
+        const rawCode =
+          typeof data?.info === "number"
+            ? data.info
+            : typeof data?.data === "number"
+              ? data.data
+              : Number(data?.info);
+        if ([2, 5, 100, 101, 150].includes(rawCode)) {
+          if (!usingFallback && liveUrl && defaultUrl) {
+            setUsingFallback(true);
+          } else {
+            setStreamError(true);
+          }
         }
       }
+
       const state = data?.event === "onStateChange" ? data?.info : data?.info?.playerState;
       if (state === 0) {
         try {
@@ -120,16 +132,9 @@ export function DarshanTile({
     }
     window.addEventListener("message", handler);
 
-    const safety = window.setTimeout(() => {
-      if (!onloadFired && liveUrl && defaultUrl && !usingFallback) {
-        setUsingFallback(true);
-      }
-    }, 8000);
-
     return () => {
       iframe.removeEventListener("load", onLoad);
       window.removeEventListener("message", handler);
-      window.clearTimeout(safety);
       try {
         post("stopVideo");
       } catch {
@@ -169,17 +174,17 @@ export function DarshanTile({
             allow="accelerometer; autoplay; encrypted-media; gyroscope; picture-in-picture"
             allowFullScreen
             referrerPolicy="strict-origin-when-cross-origin"
-            loading="lazy"
+            loading={priority ? "eager" : "lazy"}
             className="absolute inset-0 size-full"
           />
-          {usingFallback ? (
-            <span className="pointer-events-none absolute left-2.5 top-2.5 z-10 inline-flex items-center gap-1 rounded bg-black/75 px-2 py-0.5 text-[10px] font-semibold text-white/90 backdrop-blur-xs border border-white/10">
-              Recorded Darshan
-            </span>
-          ) : liveUrl ? (
+          {status === "live" ? (
             <span className="pointer-events-none absolute left-2.5 top-2.5 z-10 inline-flex items-center gap-1.5 rounded bg-red-600/95 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-white shadow-sm">
               <span className="size-1.5 rounded-full bg-white animate-pulse" />
               Live
+            </span>
+          ) : status === "recorded" ? (
+            <span className="pointer-events-none absolute left-2.5 top-2.5 z-10 inline-flex items-center gap-1 rounded bg-black/75 px-2 py-0.5 text-[10px] font-semibold text-white/90 backdrop-blur-xs border border-white/10">
+              Recorded Darshan
             </span>
           ) : null}
         </>
