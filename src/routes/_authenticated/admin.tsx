@@ -532,15 +532,11 @@ function RefreshLogViewer() {
         {paged.map((row) => {
           const isOpen = open === row.id;
           const errored = row.errors > 0;
-          const isFresh = Date.now() - new Date(row.started_at).getTime() < 5 * 60 * 1000;
-          const isRunning =
-            (row.outcomes.length === 0 ||
-              row.updated + row.unchanged + row.no_live + row.errors === 0) &&
-            isFresh;
+          const isRunning = row.status === "running";
           const isIncomplete =
+            row.status === "failed" &&
             (row.outcomes.length === 0 ||
-              row.updated + row.unchanged + row.no_live + row.errors === 0) &&
-            !isFresh;
+              row.updated + row.unchanged + row.no_live + row.errors === 0);
 
           return (
             <div key={row.id} className="rounded-lg border border-border/60 bg-card p-3 text-sm">

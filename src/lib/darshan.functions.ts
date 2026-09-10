@@ -492,6 +492,7 @@ export interface RefreshLogRow {
   unchanged: number;
   no_live: number;
   errors: number;
+  status: "running" | "completed" | "failed";
   outcomes: Array<{
     slug: string;
     status: string;
@@ -509,7 +510,7 @@ export const getRefreshLogs = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }): Promise<RefreshLogRow[]> => {
     await assertAdmin(context);
-    let rows: RefreshLogRow[] = [];
+    let rows: Array<Omit<RefreshLogRow, "status">> = [];
     const { data, error } = await context.supabase
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       .from("darshan_refresh_logs" as any)
@@ -530,22 +531,39 @@ export const getRefreshLogs = createServerFn({ method: "GET" })
         )
         .order("started_at", { ascending: false })
         .limit(40);
-      rows = (adminData ?? []) as unknown as RefreshLogRow[];
+      rows = (adminData ?? []) as unknown as Array<Omit<RefreshLogRow, "status">>;
     } else {
-      rows = (data ?? []) as unknown as RefreshLogRow[];
+      rows = (data ?? []) as unknown as Array<Omit<RefreshLogRow, "status">>;
     }
 
-    // Cleanly normalize outcomes & filter out stale initial 0-outcome records if a finalized row exists
-    const normalized: RefreshLogRow[] = rows.map((r) => ({
-      ...r,
-      outcomes: Array.isArray(r.outcomes) ? r.outcomes : [],
-    }));
+    // Cleanly normalize outcomes & assign unambiguous lifecycle status
+    const normalized: RefreshLogRow[] = rows.map((r) => {
+      const outcomes = Array.isArray(r.outcomes) ? r.outcomes : [];
+      const sum = r.updated + r.unchanged + r.no_live + r.errors;
+      const ageMs = Date.now() - new Date(r.started_at).getTime();
+
+      let status: "running" | "completed" | "failed" = "completed";
+      if (outcomes.length === 0 && sum === 0) {
+        // Empty initial record: if fresh (< 3 mins), still in-flight
+        status = ageMs < 3 * 60 * 1000 ? "running" : "failed";
+      } else if (r.errors === 12 && outcomes.length === 12) {
+        status = "failed";
+      } else {
+        status = "completed";
+      }
+
+      return {
+        ...r,
+        status,
+        outcomes,
+      };
+    });
 
     const finalizedTimestamps = normalized
-      .filter((r) => r.outcomes.length > 0 || r.updated + r.unchanged + r.no_live + r.errors > 0)
+      .filter((r) => r.status === "completed" || r.outcomes.length > 0)
       .map((r) => new Date(r.started_at).getTime());
 
-    // Deduplicate: if an empty running row is within 15 seconds of a finalized row, discard the redundant empty row
+    // Deduplicate: if an empty running placeholder is near a finalized row, discard it
     const filtered = normalized.filter((r) => {
       const isEmpty =
         r.outcomes.length === 0 && r.updated + r.unchanged + r.no_live + r.errors === 0;
