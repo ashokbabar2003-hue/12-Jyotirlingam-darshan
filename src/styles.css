@@ -33,7 +33,7 @@
   --font-en: "Inter", ui-sans-serif, system-ui, sans-serif;
   --font-devanagari: "Yatra One", "Noto Serif Devanagari", "Mukta", serif;
   --font-hindi: "Yatra One", "Noto Serif Devanagari", "Mukta", serif;
-  --font-marathi: "Yatra One", "Tiro Devanagari Marathi", "Mukta", serif;
+  --font-marathi: "Yatra One", "Noto Serif Devanagari", "Mukta", serif;
   --font-gujarati: "Noto Sans Gujarati", sans-serif;
   --font-telugu: "Noto Sans Telugu", sans-serif;
   --font-tamil: "Noto Sans Tamil", sans-serif;
@@ -229,8 +229,8 @@ html[lang="en"] {
 
 html[data-lang="mr"],
 html[lang="mr"] {
-  --font-active-sans: "Yatra One", "Tiro Devanagari Marathi", "Mukta", serif;
-  --font-active-display: "Yatra One", "Tiro Devanagari Marathi", "Mukta", serif;
+  --font-active-sans: "Yatra One", "Noto Serif Devanagari", "Mukta", serif;
+  --font-active-display: "Yatra One", "Noto Serif Devanagari", "Mukta", serif;
 }
 
 html[data-lang="hi"],
@@ -343,7 +343,6 @@ html[lang="ta"] {
   }
   .font-marathi {
     font-family: var(--font-marathi);
-    letter-spacing: 0.005em;
   }
   .font-gujarati {
     font-family: "Noto Sans Gujarati", sans-serif !important;
