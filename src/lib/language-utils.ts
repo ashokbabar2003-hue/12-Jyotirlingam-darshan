@@ -31,9 +31,9 @@ export function getLanguageOptionFontClass(code: Lang | string): string {
 export function getLanguageOptionStyle(code: Lang | string): React.CSSProperties {
   switch (code) {
     case "hi":
-      return { fontFamily: '"Yatra One", serif' };
+      return { fontFamily: '"Yatra One", "Noto Serif Devanagari", "Mukta", serif' };
     case "mr":
-      return { fontFamily: '"Yatra One", serif' };
+      return { fontFamily: '"Yatra One", "Tiro Devanagari Marathi", "Mukta", serif' };
     case "gu":
       return { fontFamily: '"Noto Sans Gujarati", sans-serif' };
     case "te":

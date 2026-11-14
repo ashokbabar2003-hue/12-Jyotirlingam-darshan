@@ -46,33 +46,6 @@ export const Route = createRootRouteWithContext<{
         "Sacred portal for 12 Jyotirlingas darshan, live streams, devotional stotrams, chants, and stories.",
     },
   ],
-  links: () => [
-    {
-      rel: "preconnect",
-      href: "https://fonts.googleapis.com",
-    },
-    {
-      rel: "preconnect",
-      href: "https://fonts.gstatic.com",
-      crossOrigin: "anonymous",
-    },
-    {
-      rel: "preload",
-      as: "font",
-      type: "font/woff2",
-      href: "/fonts/yatra-one-devanagari.woff2",
-      crossOrigin: "anonymous",
-    },
-    {
-      rel: "preload",
-      as: "style",
-      href: "https://fonts.googleapis.com/css2?family=Cinzel:wght@500;600;700;800&family=Inter:wght@300;400;500;600;700;800&family=Tiro+Devanagari+Marathi&family=Mukta:wght@300;400;500;600;700;800&family=Noto+Sans+Gujarati:wght@300;400;500;600;700&family=Noto+Sans+Tamil:wght@300;400;500;600;700&family=Noto+Sans+Telugu:wght@300;400;500;600;700&family=Noto+Serif+Devanagari:wght@400;500;600;700;800&family=Yatra+One&display=swap",
-    },
-    {
-      rel: "stylesheet",
-      href: "https://fonts.googleapis.com/css2?family=Cinzel:wght@500;600;700;800&family=Inter:wght@300;400;500;600;700;800&family=Tiro+Devanagari+Marathi&family=Mukta:wght@300;400;500;600;700;800&family=Noto+Sans+Gujarati:wght@300;400;500;600;700&family=Noto+Sans+Tamil:wght@300;400;500;600;700&family=Noto+Sans+Telugu:wght@300;400;500;600;700&family=Noto+Serif+Devanagari:wght@400;500;600;700;800&family=Yatra+One&display=swap",
-    },
-  ],
   component: RootComponent,
   notFoundComponent: NotFoundComponent,
   errorComponent: RootErrorComponent,
