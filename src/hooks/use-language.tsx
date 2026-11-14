@@ -17,7 +17,7 @@ export const LANGUAGES: {
   displayFontClass: string;
 }[] = [
   { code: "en", label: "English", fontClass: "font-en", displayFontClass: "font-display" },
-  { code: "mr", label: "मराठी", fontClass: "font-marathi", displayFontClass: "font-marathi" },
+  { code: "mr", label: "मराठी", fontClass: "font-hindi", displayFontClass: "font-hindi" },
   { code: "hi", label: "हिन्दी", fontClass: "font-hindi", displayFontClass: "font-hindi" },
   { code: "gu", label: "ગુજરાતી", fontClass: "font-gujarati", displayFontClass: "font-gujarati" },
   { code: "te", label: "తెలుగు", fontClass: "font-telugu", displayFontClass: "font-telugu" },
@@ -117,7 +117,7 @@ export function LanguageProvider({ children }: { children: ReactNode }) {
 
       if (document.fonts) {
         const fontQueries: Record<Lang, string> = {
-          mr: '16px "Noto Serif Devanagari"',
+          mr: '16px "Yatra One"',
           hi: '16px "Yatra One"',
           en: '16px "Inter"',
           gu: '16px "Noto Sans Gujarati"',

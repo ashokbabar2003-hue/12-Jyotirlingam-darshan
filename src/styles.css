@@ -156,7 +156,7 @@
   --font-en: "Inter", ui-sans-serif, system-ui, sans-serif;
   --font-devanagari: "Yatra One", serif;
   --font-hindi: "Yatra One", serif;
-  --font-marathi: "Noto Serif Devanagari", serif;
+  --font-marathi: "Yatra One", serif;
   --font-gujarati: "Noto Sans Gujarati", sans-serif;
   --font-telugu: "Noto Sans Telugu", sans-serif;
   --font-tamil: "Noto Sans Tamil", sans-serif;
@@ -352,8 +352,8 @@ html[lang="en"] {
 
 html[data-lang="mr"],
 html[lang="mr"] {
-  --font-active-sans: "Noto Serif Devanagari", serif;
-  --font-active-display: "Noto Serif Devanagari", serif;
+  --font-active-sans: "Yatra One", serif;
+  --font-active-display: "Yatra One", serif;
 }
 
 html[data-lang="hi"],
@@ -526,7 +526,8 @@ html[lang="hi"] label {
     font-synthesis: none;
   }
   .font-marathi {
-    font-family: "Noto Serif Devanagari", serif !important;
+    font-family: "Yatra One", serif !important;
+    font-weight: 400;
     font-synthesis: none;
   }
   .font-gujarati {
