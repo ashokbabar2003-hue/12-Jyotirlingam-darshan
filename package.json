@@ -11,7 +11,9 @@
     "start": "node .output/server/index.mjs",
     "lint": "eslint .",
     "format": "prettier --write .",
-    "test": "vitest run"
+    "test": "vitest run",
+    "deploy": "npm run build && wrangler deploy",
+    "cf-typegen": "wrangler types"
   },
   "dependencies": {
     "@google/genai": "^2.11.0",
@@ -94,6 +96,8 @@
     "typescript": "^5.8.3",
     "typescript-eslint": "^8.56.1",
     "vite": "^8.0.16",
-    "vitest": "^4.1.9"
+    "vitest": "^4.1.9",
+    "@cloudflare/vite-plugin": "^1.69.1",
+    "wrangler": "^4.160.0"
   }
 }
