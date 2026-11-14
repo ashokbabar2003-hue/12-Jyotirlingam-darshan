@@ -28,7 +28,7 @@ export function HeroAarti({ t, lang, isEn, fontClass }: HeroAartiProps) {
   const taglineRef = useRef<HTMLParagraphElement | null>(null);
   const titleRef = useRef<HTMLHeadingElement | null>(null);
   const descRef = useRef<HTMLParagraphElement | null>(null);
-  const ctaRef = useRef<HTMLAnchorElement | null>(null);
+  const ctaRef = useRef<HTMLDivElement | null>(null);
   const scrollIndicatorRef = useRef<HTMLDivElement | null>(null);
 
   useGSAP(
@@ -286,23 +286,36 @@ export function HeroAarti({ t, lang, isEn, fontClass }: HeroAartiProps) {
         <p
           ref={descRef}
           className={cn(
-            "mt-3 max-w-2xl text-xs sm:text-base leading-relaxed text-muted-foreground sm:mt-6 sm:text-lg sm:leading-relaxed",
+            "mt-3 max-w-2xl text-sm leading-relaxed text-muted-foreground sm:mt-6 sm:text-lg sm:leading-relaxed",
             fontClass,
           )}
         >
           {t.heroDesc}
         </p>
 
-        <a
+        <div
           ref={ctaRef}
-          href="#live-darshan"
-          className={cn(
-            "mt-5 inline-flex min-h-[44px] items-center justify-center rounded-md bg-gradient-aarti px-6 py-2.5 sm:px-8 sm:py-3.5 text-sm font-semibold text-primary-foreground shadow-glow transition-all duration-300 hover:opacity-95 hover:shadow-lg focus:outline-none focus:ring-2 focus:ring-primary/50 sm:mt-8",
-            !isEn && cn("text-base", fontClass),
-          )}
+          className="mt-5 flex w-full flex-col items-stretch justify-center gap-3 sm:mt-8 sm:w-auto sm:flex-row sm:items-center"
         >
-          {t.cta}
-        </a>
+          <a
+            href="#live-darshan"
+            className={cn(
+              "inline-flex min-h-12 items-center justify-center rounded-lg bg-gradient-aarti px-6 py-3 text-sm font-semibold text-primary-foreground shadow-glow transition-all duration-300 hover:opacity-95 hover:shadow-lg focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/60 sm:min-w-52 sm:px-8",
+              !isEn && cn("text-base", fontClass),
+            )}
+          >
+            {t.cta}
+          </a>
+          <a
+            href="#shrines"
+            className={cn(
+              "inline-flex min-h-12 items-center justify-center rounded-lg border border-primary/45 bg-background/35 px-6 py-3 text-sm font-semibold text-foreground backdrop-blur-sm transition-all duration-300 hover:border-primary/75 hover:bg-primary/10 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/60 sm:min-w-52",
+              !isEn && cn("text-base", fontClass),
+            )}
+          >
+            {t.explore}
+          </a>
+        </div>
 
         {/* Subtle scroll guide indicator */}
         <div
