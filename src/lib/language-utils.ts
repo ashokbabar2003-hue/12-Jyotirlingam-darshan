@@ -33,7 +33,7 @@ export function getLanguageOptionStyle(code: Lang | string): React.CSSProperties
     case "hi":
       return { fontFamily: '"Yatra One", serif' };
     case "mr":
-      return { fontFamily: '"Yatra One", serif' };
+      return { fontFamily: '"Yatra One Marathi", "Yatra One", serif' };
     case "gu":
       return { fontFamily: '"Noto Sans Gujarati", sans-serif' };
     case "te":

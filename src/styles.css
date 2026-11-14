@@ -7,6 +7,17 @@
  * Canonical Yatra One Font Face (Local woff2 with CDN fallback)
  * ========================================================================== */
 
+/* Patched Yatra One face with Marathi-specific OpenType shaping.
+ * Kept under a CSS alias so Hindi continues using the existing, verified font file.
+ */
+@font-face {
+  font-family: "Yatra One Marathi";
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url("/fonts/yatra-one-marathi.ttf") format("truetype");
+}
+
 /* devanagari */
 @font-face {
   font-family: "Yatra One";
@@ -352,8 +363,8 @@ html[lang="en"] {
 
 html[data-lang="mr"],
 html[lang="mr"] {
-  --font-active-sans: "Yatra One", serif;
-  --font-active-display: "Yatra One", serif;
+  --font-active-sans: "Yatra One Marathi", "Yatra One", serif;
+  --font-active-display: "Yatra One Marathi", "Yatra One", serif;
 }
 
 html[data-lang="hi"],
@@ -526,7 +537,7 @@ html[lang="hi"] label {
     font-synthesis: none;
   }
   .font-marathi {
-    font-family: "Yatra One", serif !important;
+    font-family: "Yatra One Marathi", "Yatra One", serif !important;
     font-weight: 400;
     font-synthesis: none;
   }
