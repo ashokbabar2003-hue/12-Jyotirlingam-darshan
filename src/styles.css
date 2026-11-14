@@ -1,6 +1,6 @@
 @import "tailwindcss" source(none);
 @import "tw-animate-css";
-@import url("https://fonts.googleapis.com/css2?family=Cinzel:wght@500;600;700;800&family=Inter:wght@300;400;500;600;700;800&family=Noto+Sans+Gujarati:wght@300;400;500;600;700&family=Noto+Sans+Tamil:wght@300;400;500;600;700&family=Noto+Sans+Telugu:wght@300;400;500;600;700&family=Noto+Serif+Devanagari:wght@400;500;600;700;800&family=Yatra+One&display=swap");
+@import url("https://fonts.googleapis.com/css2?family=Cinzel:wght@500;600;700;800&family=Inter:wght@300;400;500;600;700;800&family=Tiro+Devanagari+Marathi&family=Mukta:wght@300;400;500;600;700;800&family=Noto+Sans+Gujarati:wght@300;400;500;600;700&family=Noto+Sans+Tamil:wght@300;400;500;600;700&family=Noto+Sans+Telugu:wght@300;400;500;600;700&family=Noto+Serif+Devanagari:wght@400;500;600;700;800&family=Yatra+One&display=swap");
 @source "../src";
 
 /* ==========================================================================
@@ -526,8 +526,8 @@ html[lang="hi"] label {
     font-synthesis: none;
   }
   .font-marathi {
-    font-family: var(--font-marathi) !important;
-    font-synthesis: none;
+    font-family: var(--font-marathi);
+    letter-spacing: 0.005em;
   }
   .font-gujarati {
     font-family: "Noto Sans Gujarati", sans-serif !important;
