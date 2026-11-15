@@ -7,23 +7,70 @@ import {
   useState,
   type ReactNode,
 } from "react";
+import type { Lang } from "@/hooks/use-language";
 
 export type Season = "vasanta" | "grishma" | "varsha" | "sharad" | "hemanta" | "shishira";
 export type SeasonMode = "auto" | Season;
 
-export const SEASONS: {
+export interface SeasonOption {
   code: Season;
   label: string;
+  labelMr: string;
   english: string;
   description: string;
-}[] = [
-  { code: "vasanta", label: "वसन्त", english: "Spring", description: "Blossoming pink & saffron" },
-  { code: "grishma", label: "ग्रीष्म", english: "Summer", description: "Warm amber & sun-gold" },
-  { code: "varsha", label: "वर्षा", english: "Monsoon", description: "Cool teal & rain-blue" },
-  { code: "sharad", label: "शरद्", english: "Autumn", description: "Harvest copper & moonlight" },
-  { code: "hemanta", label: "हेमन्त", english: "Pre-winter", description: "Deep violet & ember" },
-  { code: "shishira", label: "शिशिर", english: "Winter", description: "Cold indigo & frost" },
+}
+
+export const SEASONS: SeasonOption[] = [
+  {
+    code: "vasanta",
+    label: "वसन्त",
+    labelMr: "वसंत",
+    english: "Spring",
+    description: "Blossoming pink & saffron",
+  },
+  {
+    code: "grishma",
+    label: "ग्रीष्म",
+    labelMr: "ग्रीष्म",
+    english: "Summer",
+    description: "Warm amber & sun-gold",
+  },
+  {
+    code: "varsha",
+    label: "वर्षा",
+    labelMr: "वर्षा",
+    english: "Monsoon",
+    description: "Cool teal & rain-blue",
+  },
+  {
+    code: "sharad",
+    label: "शरद्",
+    labelMr: "शरद",
+    english: "Autumn",
+    description: "Harvest copper & moonlight",
+  },
+  {
+    code: "hemanta",
+    label: "हेमन्त",
+    labelMr: "हेमंत",
+    english: "Pre-winter",
+    description: "Deep violet & ember",
+  },
+  {
+    code: "shishira",
+    label: "शिशिर",
+    labelMr: "शिशिर",
+    english: "Winter",
+    description: "Cold indigo & frost",
+  },
 ];
+
+export function seasonLabelFor(
+  season: { label: string; labelMr?: string },
+  lang: Lang | string,
+): string {
+  return lang === "mr" ? (season.labelMr ?? season.label) : season.label;
+}
 
 /** Detect Ritu from a month (0-11). Approximate Hindu 6-season calendar. */
 export function detectSeason(date = new Date()): Season {
