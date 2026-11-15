@@ -3,6 +3,15 @@
 @import "tw-animate-css";
 @source "../src";
 
+/* Marathi-specific Yatra One font with corrected OpenType shaping. */
+@font-face {
+  font-family: "Yatra One Marathi";
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url("/fonts/yatra-one-marathi.ttf") format("truetype");
+}
+
 @custom-variant dark (&:is(.dark *));
 
 /*
@@ -33,7 +42,7 @@
   --font-en: "Inter", ui-sans-serif, system-ui, sans-serif;
   --font-devanagari: "Yatra One", "Noto Serif Devanagari", "Mukta", serif;
   --font-hindi: "Yatra One", "Noto Serif Devanagari", "Mukta", serif;
-  --font-marathi: "Yatra One", "Noto Serif Devanagari", "Mukta", serif;
+  --font-marathi: "Yatra One Marathi", "Yatra One", serif;
   --font-gujarati: "Noto Sans Gujarati", sans-serif;
   --font-telugu: "Noto Sans Telugu", sans-serif;
   --font-tamil: "Noto Sans Tamil", sans-serif;
@@ -229,8 +238,8 @@ html[lang="en"] {
 
 html[data-lang="mr"],
 html[lang="mr"] {
-  --font-active-sans: "Yatra One", "Noto Serif Devanagari", "Mukta", serif;
-  --font-active-display: "Yatra One", "Noto Serif Devanagari", "Mukta", serif;
+  --font-active-sans: "Yatra One Marathi", "Yatra One", serif;
+  --font-active-display: "Yatra One Marathi", "Yatra One", serif;
 }
 
 html[data-lang="hi"],
@@ -343,6 +352,16 @@ html[lang="ta"] {
   }
   .font-marathi {
     font-family: var(--font-marathi);
+  }
+
+  /* The shared heading class must resolve to the Marathi face only in Marathi UI. */
+  html[data-lang="mr"] .font-hindi,
+  html[lang="mr"] .font-hindi,
+  html[data-lang="mr"] .font-devanagari,
+  html[lang="mr"] .font-devanagari {
+    font-family: "Yatra One Marathi", "Yatra One", serif !important;
+    font-weight: 400;
+    font-synthesis: none;
   }
   .font-gujarati {
     font-family: "Noto Sans Gujarati", sans-serif !important;
