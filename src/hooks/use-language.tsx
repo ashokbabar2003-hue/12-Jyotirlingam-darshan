@@ -17,7 +17,7 @@ export const LANGUAGES: {
   displayFontClass: string;
 }[] = [
   { code: "en", label: "English", fontClass: "font-en", displayFontClass: "font-display" },
-  { code: "mr", label: "मराठी", fontClass: "font-hindi", displayFontClass: "font-hindi" },
+  { code: "mr", label: "मराठी", fontClass: "font-marathi", displayFontClass: "font-marathi" },
   { code: "hi", label: "हिन्दी", fontClass: "font-hindi", displayFontClass: "font-hindi" },
   { code: "gu", label: "ગુજરાતી", fontClass: "font-gujarati", displayFontClass: "font-gujarati" },
   { code: "te", label: "తెలుగు", fontClass: "font-telugu", displayFontClass: "font-telugu" },
