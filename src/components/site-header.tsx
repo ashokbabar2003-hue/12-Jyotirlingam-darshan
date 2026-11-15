@@ -21,7 +21,7 @@ import {
 } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
 import { useLanguage, type Lang, LANGUAGES } from "@/hooks/use-language";
-import { useSeason, SEASONS, type SeasonMode } from "@/hooks/use-season";
+import { useSeason, SEASONS, seasonLabelFor, type SeasonMode } from "@/hooks/use-season";
 import { useAudioChant } from "@/hooks/use-audio-chant";
 import { useLenis } from "@/hooks/use-lenis";
 import { LanguageSelector } from "@/components/LanguageSelector";
@@ -322,7 +322,7 @@ export function SiteHeader() {
                 className="inline-flex shrink-0 items-center gap-1 sm:gap-1.5 rounded-full border border-border/60 bg-card/70 px-2 sm:px-2.5 py-1.5 text-xs font-semibold text-foreground transition-colors hover:bg-card"
               >
                 <Leaf className="size-3.5 shrink-0 text-primary" />
-                <span className="hidden font-devanagari sm:inline">{currentSeason.label}</span>
+                <span className="hidden font-devanagari sm:inline">{seasonLabelFor(currentSeason, lang)}</span>
               </button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="min-w-[14rem]">
@@ -350,7 +350,7 @@ export function SiteHeader() {
                   className="cursor-pointer text-sm"
                 >
                   <span className="flex-1">
-                    <span className="font-devanagari">{s.label}</span>
+                    <span className="font-devanagari">{seasonLabelFor(s, lang)}</span>
                     <span className="ml-2 text-xs text-muted-foreground">
                       {s.english} · {s.description}
                     </span>
@@ -739,7 +739,7 @@ export function SiteHeader() {
                         <span className="text-[11px] text-muted-foreground">
                           Current:{" "}
                           <span className="font-devanagari font-semibold text-primary">
-                            {currentSeason.label}
+                            {seasonLabelFor(currentSeason, lang)}
                           </span>{" "}
                           ({currentSeason.english})
                         </span>
@@ -789,7 +789,7 @@ export function SiteHeader() {
                               )}
                             >
                               <div className="flex items-center justify-between w-full">
-                                <span className="font-devanagari font-semibold">{s.label}</span>
+                                <span className="font-devanagari font-semibold">{seasonLabelFor(s, lang)}</span>
                                 {isSelected && <Check className="size-3 text-primary" />}
                               </div>
                               <span className="text-[10px] text-muted-foreground truncate">
