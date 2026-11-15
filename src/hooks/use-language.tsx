@@ -117,7 +117,7 @@ export function LanguageProvider({ children }: { children: ReactNode }) {
 
       if (document.fonts) {
         const fontQueries: Record<Lang, string> = {
-          mr: '16px "Yatra One"',
+          mr: '16px "Yatra One Marathi"',
           hi: '16px "Yatra One"',
           en: '16px "Inter"',
           gu: '16px "Noto Sans Gujarati"',
