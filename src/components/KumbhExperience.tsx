@@ -6,6 +6,7 @@ import { cn } from "@/lib/utils";
 import templeImg from "@/assets/jl-trimbakeshwar.jpg";
 import fallbackImg from "@/assets/hero-aarti.jpg";
 import "./kumbh-experience.css";
+import { useGSAP, gsap, prefersReducedMotion } from "@/hooks/use-gsap";
 
 const MEDIA = {
   ramkund: "https://commons.wikimedia.org/wiki/Special:Redirect/file/Ramkund%20Nashik.jpg?width=1200",
@@ -30,6 +31,69 @@ function Photo({ src, alt, className = "" }: { src: string; alt: string; classNa
   const [failed, setFailed] = useState(false);
   return <img src={failed ? fallbackImg : src} onError={() => setFailed(true)} alt={alt} loading="lazy" className={cn("size-full object-cover", className)} />;
 }
+
+function KumbhSnanScene({ event, previous, index, label, fontClass }: {
+  event: typeof EVENTS[number]; previous?: typeof EVENTS[number]; index: number; label: string; fontClass: string;
+}) {
+  const sectionRef = useRef<HTMLElement | null>(null);
+  const stageRef = useRef<HTMLDivElement | null>(null);
+  const fromRef = useRef<HTMLDivElement | null>(null);
+  const toRef = useRef<HTMLDivElement | null>(null);
+  const textRef = useRef<HTMLDivElement | null>(null);
+  const progressRef = useRef<HTMLDivElement | null>(null);
+  useGSAP(() => {
+    const section = sectionRef.current;
+    const stage = stageRef.current;
+    const to = toRef.current;
+    const from = fromRef.current;
+    const copy = textRef.current;
+    const progress = progressRef.current;
+    if (!section || !stage || !to || !copy || !progress) return;
+    if (prefersReducedMotion()) {
+      gsap.set([to, copy], { opacity: 1, clearProps: "transform" });
+      if (from) gsap.set(from, { opacity: 0 });
+      gsap.set(progress, { scaleX: 1 });
+      return;
+    }
+    const mobile = window.innerWidth < 768;
+    gsap.set(to, { opacity: 0.15, scale: 1.13, filter: "brightness(0.45)" });
+    if (from) gsap.set(from, { opacity: 1, scale: 1 });
+    gsap.set(copy, { opacity: 0, y: 30 });
+    gsap.set(progress, { scaleX: 0, transformOrigin: "left center" });
+    const timeline = gsap.timeline({
+      scrollTrigger: {
+        trigger: section,
+        start: mobile ? "top 70%" : "top top",
+        end: mobile ? "bottom 25%" : "+=85%",
+        scrub: mobile ? 0.45 : 0.75,
+        pin: mobile ? false : stage,
+        anticipatePin: 1,
+        invalidateOnRefresh: true,
+      },
+    });
+    timeline.to(to, { opacity: 1, scale: 1, filter: "brightness(1)", duration: 0.72, ease: "power1.inOut" }, 0.06);
+    if (from) timeline.to(from, { opacity: 0, scale: 1.08, duration: 0.62, ease: "power1.inOut" }, 0.04);
+    timeline.to(copy, { opacity: 1, y: 0, duration: 0.45, ease: "power2.out" }, 0.22);
+    timeline.to(progress, { scaleX: 1, duration: 1, ease: "none" }, 0);
+  }, { dependencies: [index, label] });
+  return <section ref={sectionRef} aria-label={label} className="relative min-h-[75vh] md:min-h-[90vh]">
+    <div ref={stageRef} className="relative flex min-h-[75vh] items-end overflow-hidden border-y border-primary/20 bg-background md:min-h-[90vh] md:items-center">
+      {previous && <div ref={fromRef} className="absolute inset-0"><Photo src={previous.img} alt="" className="absolute inset-0" /></div>}
+      <div ref={toRef} className="absolute inset-0"><Photo src={event.img} alt={"Historical Kumbh pilgrimage photograph: "+event.location} className="absolute inset-0" /></div>
+      <div className="absolute inset-0 bg-gradient-to-t from-background via-background/50 to-background/20 md:bg-gradient-to-r md:from-background/95 md:via-background/55 md:to-transparent" />
+      <div className="pointer-events-none absolute inset-x-0 top-0 z-10 h-1 bg-primary/15"><div ref={progressRef} className="h-full w-full bg-primary" /></div>
+      <div ref={textRef} className="relative z-10 mx-auto w-full max-w-6xl px-5 pb-16 pt-24 sm:px-10 md:py-24">
+        <div className="max-w-2xl rounded-2xl border border-primary/25 bg-background/65 p-6 shadow-2xl backdrop-blur-md sm:p-9">
+          <p className="mb-5 text-sm font-semibold tracking-widest text-primary">{String(index+1).padStart(2,"0")} / 05 · {event.location}</p>
+          <time dateTime={event.date} className="inline-flex items-center gap-2 text-sm font-semibold text-primary"><CalendarDays className="size-5" />{event.dateText}</time>
+          <h3 className={cn("mt-4 text-3xl leading-snug text-foreground sm:text-5xl",fontClass)}>{label}</h3>
+          <div className="mt-6 flex items-center gap-2 text-xs text-muted-foreground"><Flame className="size-4 text-primary" />{index === 4 ? "Kushavarta · Trimbakeshwar" : index === 3 ? "Ramkund · Nashik" : "Simhastha Kumbh Mela 2027"}</div>
+        </div>
+      </div>
+    </div>
+  </section>;
+}
+
 export function KumbhExperience() {
   const { lang, fontClass } = useLanguage();
   const t = COPY[lang === "mr" || lang === "hi" ? lang : "en"];
@@ -81,15 +145,9 @@ export function KumbhExperience() {
     </section>
     <section id="snan-dates" aria-labelledby="kumbh-dates-title" className="scroll-mt-28">
       <div className="kumbh-reveal text-center"><Flame className="mx-auto mb-3 size-8 text-primary" /><h2 id="kumbh-dates-title" className={cn("text-3xl sm:text-4xl", fontClass)}>{t.calendar}</h2></div>
-      <ol className="relative mx-auto mt-12 max-w-5xl before:absolute before:bottom-10 before:left-4 before:top-4 before:w-px before:bg-gradient-to-b before:from-primary before:via-primary/70 before:to-transparent sm:before:left-1/2">
-        {EVENTS.map((event, i) => <li key={event.date} className={cn("kumbh-reveal relative mb-10 flex items-center pl-10 sm:w-[calc(50%+1px)] sm:pl-0", i % 2 ? "sm:ml-auto sm:pl-10" : "sm:pr-10")}>
-          <span className={cn("absolute left-[10px] top-8 z-10 size-3 rounded-full border-2 border-primary bg-background shadow-[0_0_20px_rgba(234,179,8,0.65)]", i % 2 ? "sm:left-[-7px]" : "sm:left-auto sm:right-[-7px]")} />
-          <article className="group w-full overflow-hidden rounded-2xl border border-primary/25 bg-card shadow-lg transition-transform duration-500 hover:-translate-y-1 hover:border-primary/60">
-            <div className="relative h-40 overflow-hidden sm:h-48"><Photo src={event.img} alt={"Historical photograph of "+event.location} className="transition-transform duration-700 group-hover:scale-110" /><div className="absolute inset-0 bg-gradient-to-t from-background/80 to-transparent" /><span className="absolute bottom-3 left-4 inline-flex items-center gap-1 text-xs font-semibold text-foreground"><MapPin className="size-3" />{event.location}</span></div>
-            <div className="p-5"><time dateTime={event.date} className="text-sm font-bold tracking-wide text-primary"><CalendarDays className="mr-2 inline size-4" />{event.dateText}</time><h3 className={cn("mt-3 text-xl leading-snug text-foreground", fontClass)}>{event.label[langIndex]}</h3></div>
-          </article>
-        </li>)}
-      </ol>
+      <div className="relative left-1/2 mt-10 w-screen -translate-x-1/2">
+        {EVENTS.map((event, i) => <KumbhSnanScene key={event.date} event={event} previous={i > 0 ? EVENTS[i-1] : undefined} index={i} label={event.label[langIndex]} fontClass={fontClass} />)}
+      </div>
       <p className={cn("mx-auto max-w-3xl text-center text-sm text-muted-foreground", fontClass)}>{t.warning}</p>
       <div className="mt-5 text-center"><a href="https://simhasthamahakumbh.maharashtra.gov.in/#snan" target="_blank" rel="noopener noreferrer" className={cn("inline-flex min-h-11 items-center gap-2 font-semibold text-primary hover:underline", fontClass)}>{t.official}<ArrowUpRight className="size-4" /></a></div>
     </section>
