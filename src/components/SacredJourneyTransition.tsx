@@ -14,6 +14,14 @@ interface SacredJourneyTransitionProps {
   ritual?: "flag" | "procession" | "river" | "temple" | "closing";
 }
 
+const JOURNEY_WORDS = {
+  en: { traversed: "Traversed", approaching: "Approaching destination", departing: "Departing", near: "Approaching" },
+  mr: { traversed: "प्रवास", approaching: "पुढील तीर्थस्थान", departing: "प्रस्थान", near: "आगमन" },
+  hi: { traversed: "यात्रा", approaching: "अगला तीर्थस्थल", departing: "प्रस्थान", near: "आगमन" },
+  gu: { traversed: "યાત્રા", approaching: "આગળનું તીર્થસ્થળ", departing: "પ્રસ્થાન", near: "આગમન" },
+  te: { traversed: "యాత్ర", approaching: "తదుపరి తీర్థస్థలం", departing: "ప్రస్థానం", near: "ఆగమనం" },
+  ta: { traversed: "பயணம்", approaching: "அடுத்த திருத்தலம்", departing: "புறப்பாடு", near: "வருகை" },
+} as const;
 export function SacredJourneyTransition({
   transition,
   lang,
@@ -45,6 +53,7 @@ export function SacredJourneyTransition({
   const footerTrackerRef = useRef<HTMLDivElement | null>(null);
   const progressTextRef = useRef<HTMLSpanElement | null>(null);
 
+  const words = JOURNEY_WORDS[lang];
   const fromNumberDisplay = toLocalDigits(transition.fromIndex, lang);
   const toNumberDisplay = toLocalDigits(transition.toIndex, lang);
 
@@ -82,7 +91,7 @@ export function SacredJourneyTransition({
         if (progressLine) gsap.set(progressLine, { scaleX: 1 });
         if (stageRayLine) gsap.set(stageRayLine, { scaleX: 1 });
         if (progressTextRef.current) {
-          progressTextRef.current.textContent = `100% ${isEn ? "Traversed" : "प्रवास"}`;
+          progressTextRef.current.textContent = `${toLocalDigits(100, lang)}% ${words.traversed}`;
         }
         return;
       }
@@ -149,7 +158,7 @@ export function SacredJourneyTransition({
           onUpdate: (self) => {
             if (progressTextRef.current) {
               const pct = Math.round(self.progress * 100);
-              progressTextRef.current.textContent = `${pct}% ${isEn ? "Traversed" : "प्रवास"}`;
+              progressTextRef.current.textContent = `${toLocalDigits(pct, lang)}% ${words.traversed}`;
             }
           },
         },
@@ -507,7 +516,7 @@ export function SacredJourneyTransition({
               ref={destinationPreviewRef}
               className="mt-3 flex items-center gap-2 text-xs sm:text-sm font-semibold text-white/90"
             >
-              <span className="text-accent/90">{isEn ? "Approaching Sanctuary" : "समीप धाम"}:</span>
+              <span className="text-accent/90">{words.approaching}:</span>
               <span
                 className={cn(
                   "text-white font-bold",
@@ -529,7 +538,7 @@ export function SacredJourneyTransition({
             >
               <div className="flex items-center gap-1.5 text-[10px] font-mono font-semibold uppercase tracking-wider text-primary/90">
                 <span className="inline-block size-1.5 rounded-full bg-primary/80 animate-pulse" />
-                <span>{isEn ? "Departing" : "प्रस्थान"}</span>
+                <span>{words.departing}</span>
                 <span className="text-muted-foreground">#{fromNumberDisplay}</span>
               </div>
               <span
@@ -554,7 +563,7 @@ export function SacredJourneyTransition({
             >
               <div className="flex items-center gap-1.5 text-[10px] font-mono font-semibold uppercase tracking-wider text-accent">
                 <span className="text-muted-foreground">#{toNumberDisplay}</span>
-                <span>{isEn ? "Approaching" : "समीप"}</span>
+                <span>{words.near}</span>
                 <span className="inline-block size-1.5 rounded-full bg-accent animate-pulse" />
               </div>
               <span
@@ -593,7 +602,7 @@ export function SacredJourneyTransition({
               ref={progressTextRef}
               className="text-[10px] uppercase tracking-widest text-muted-foreground/70 shrink-0 px-2"
             >
-              0% {isEn ? "Traversed" : "प्रवास"}
+              {toLocalDigits(0, lang)}% {words.traversed}
             </span>
             <span
               className={cn(
