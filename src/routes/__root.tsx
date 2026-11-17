@@ -72,18 +72,6 @@ export const Route = createRootRouteWithContext<{
       crossOrigin: "anonymous",
     },
     {
-      rel: "preload",
-      as: "font",
-      type: "font/woff2",
-      href: "/fonts/yatra-one-devanagari.woff2",
-      crossOrigin: "anonymous",
-    },
-    {
-      rel: "preload",
-      as: "style",
-      href: "https://fonts.googleapis.com/css2?family=Cinzel:wght@500;600;700;800&family=Inter:wght@300;400;500;600;700;800&family=Noto+Sans+Gujarati:wght@300;400;500;600;700&family=Noto+Sans+Tamil:wght@300;400;500;600;700&family=Noto+Sans+Telugu:wght@300;400;500;600;700&family=Noto+Serif+Devanagari:wght@400;500;600;700;800&family=Yatra+One&display=swap",
-    },
-    {
       rel: "stylesheet",
       href: "https://fonts.googleapis.com/css2?family=Cinzel:wght@500;600;700;800&family=Inter:wght@300;400;500;600;700;800&family=Noto+Sans+Gujarati:wght@300;400;500;600;700&family=Noto+Sans+Tamil:wght@300;400;500;600;700&family=Noto+Sans+Telugu:wght@300;400;500;600;700&family=Noto+Serif+Devanagari:wght@400;500;600;700;800&family=Yatra+One&display=swap",
     },
@@ -214,6 +202,11 @@ function RootComponent() {
       <head suppressHydrationWarning>
         <meta charSet="utf-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+        {initialLang === "mr" || initialLang === "hi" ? (
+          <link rel="preload" as="font" type="font/ttf" href="/fonts/yatra-one-marathi.ttf" crossOrigin="anonymous" />
+        ) : initialLang === "en" ? (
+          <link rel="preload" as="font" type="font/woff2" href="/fonts/yatra-one-latin.woff2" crossOrigin="anonymous" />
+        ) : null}
         <HeadContent />
         <script
           dangerouslySetInnerHTML={{

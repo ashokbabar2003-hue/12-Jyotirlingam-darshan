@@ -83,7 +83,7 @@ export function HeroAarti({ t, lang, isEn, fontClass }: HeroAartiProps) {
           {
             opacity: 0.55,
             scale: 1.05,
-            duration: 2.2,
+            duration: 1.25,
             ease: "power1.inOut",
           },
           0,
@@ -92,7 +92,7 @@ export function HeroAarti({ t, lang, isEn, fontClass }: HeroAartiProps) {
           overlay,
           {
             opacity: 0.6,
-            duration: 2.0,
+            duration: 1.2,
             ease: "power1.inOut",
           },
           0,
@@ -103,10 +103,10 @@ export function HeroAarti({ t, lang, isEn, fontClass }: HeroAartiProps) {
           {
             opacity: 1,
             y: 0,
-            duration: 1.4,
+            duration: 0.555,
             ease: "power2.out",
           },
-          0.6,
+          0.25,
         )
         // Step 4: Tagline & Primary Sacred Title (1.2s)
         .to(
@@ -114,20 +114,20 @@ export function HeroAarti({ t, lang, isEn, fontClass }: HeroAartiProps) {
           {
             opacity: 1,
             y: 0,
-            duration: 1.0,
+            duration: 0.65,
             ease: "power2.out",
           },
-          1.0,
+          0.45,
         )
         .to(
           title,
           {
             opacity: 1,
             y: 0,
-            duration: 1.4,
+            duration: 0.85,
             ease: "power3.out",
           },
-          1.2,
+          0.55,
         )
         // Step 5: Supporting Scripture & Description (0.9s)
         .to(
@@ -135,10 +135,10 @@ export function HeroAarti({ t, lang, isEn, fontClass }: HeroAartiProps) {
           {
             opacity: 1,
             y: 0,
-            duration: 1.1,
+            duration: 0.7,
             ease: "power2.out",
           },
-          1.6,
+          0.7,
         )
         // Step 6: CTA button (0.7s)
         .to(
@@ -146,10 +146,10 @@ export function HeroAarti({ t, lang, isEn, fontClass }: HeroAartiProps) {
           {
             opacity: 1,
             y: 0,
-            duration: 0.9,
+            duration: 0.6,
             ease: "power2.out",
           },
-          1.9,
+          0.85,
         )
         // Step 7: Subtle Scroll Indicator (0.6s)
         .to(
@@ -160,7 +160,7 @@ export function HeroAarti({ t, lang, isEn, fontClass }: HeroAartiProps) {
             duration: 0.8,
             ease: "power2.out",
           },
-          2.2,
+          1.0,
         );
 
       // 3. Scroll Choreography (Parallax and Fade Transition)
