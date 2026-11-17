@@ -244,8 +244,8 @@ html[lang="mr"] {
 
 html[data-lang="hi"],
 html[lang="hi"] {
-  --font-active-sans: "Yatra One", "Noto Serif Devanagari", "Mukta", serif;
-  --font-active-display: "Yatra One", "Noto Serif Devanagari", "Mukta", serif;
+  --font-active-sans: "Yatra One Marathi", "Yatra One", serif;
+  --font-active-display: "Yatra One Marathi", "Yatra One", serif;
 }
 
 html[data-lang="gu"],
@@ -352,6 +352,16 @@ html[lang="ta"] {
   }
   .font-marathi {
     font-family: var(--font-marathi);
+  }
+
+  /* Corrected local Devanagari font for Hindi, matching verified staging. */
+  html[data-lang="hi"] .font-hindi,
+  html[lang="hi"] .font-hindi,
+  html[data-lang="hi"] .font-devanagari,
+  html[lang="hi"] .font-devanagari {
+    font-family: "Yatra One Marathi", "Yatra One", serif !important;
+    font-weight: 400;
+    font-synthesis: none;
   }
 
   /* The shared heading class must resolve to the Marathi face only in Marathi UI. */
