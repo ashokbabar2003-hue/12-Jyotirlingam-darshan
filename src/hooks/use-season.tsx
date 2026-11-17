@@ -94,20 +94,17 @@ interface SeasonContextValue {
 const SeasonContext = createContext<SeasonContextValue | null>(null);
 const STORAGE_KEY = "prakruti-mode";
 
-export function SeasonProvider({ children }: { children: ReactNode }) {
-  const [mode, setModeState] = useState<SeasonMode>("auto");
+export function SeasonProvider({ children, initialMode = "auto" }: { children: ReactNode; initialMode?: SeasonMode }) {
+  const [mode, setModeState] = useState<SeasonMode>(initialMode);
 
+  // Mirror the server-selected mode; do not override SSR with stale storage.
   useEffect(() => {
-    try {
-      const saved = localStorage.getItem(STORAGE_KEY) as SeasonMode | null;
-      if (saved) setModeState(saved);
-    } catch {
-      /* ignore */
-    }
-  }, []);
+    try { localStorage.setItem(STORAGE_KEY, mode); } catch { /* optional storage */ }
+  }, [mode]);
 
   const setMode = useCallback((m: SeasonMode) => {
     setModeState(m);
+    if (typeof document !== "undefined") document.cookie = `prakruti-mode=${m}; Path=/; Max-Age=31536000; SameSite=Lax`;
     try {
       localStorage.setItem(STORAGE_KEY, m);
     } catch {

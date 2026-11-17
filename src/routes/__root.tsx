@@ -14,7 +14,7 @@ import * as React from "react";
 import "@/styles.css";
 import { AuthProvider } from "@/hooks/use-auth";
 import { LanguageProvider, useLanguage } from "@/hooks/use-language";
-import { SeasonProvider } from "@/hooks/use-season";
+import { SeasonProvider, detectSeason, type SeasonMode } from "@/hooks/use-season";
 import { AudioChantProvider } from "@/hooks/use-audio-chant";
 import { SmoothScrollProvider } from "@/components/animation/SmoothScrollProvider";
 import { Compass, Home, RefreshCw } from "lucide-react";
@@ -32,16 +32,24 @@ const getInitialLanguage = createServerFn({ method: "GET" }).handler(async () =>
   return (["en", "mr", "hi", "gu", "te", "ta"].includes(lang ?? "") ? lang : "en") as Lang;
 });
 
+const getInitialSeason = createServerFn({ method: "GET" }).handler(async () => {
+  const value = getCookie("prakruti-mode");
+  return (["auto", "vasanta", "grishma", "varsha", "sharad", "hemanta", "shishira"].includes(value ?? "") ? value : "auto") as SeasonMode;
+});
+
 export const Route = createRootRouteWithContext<{
   queryClient: QueryClient;
 }>()({
   loader: async () => {
-    try {
-      const [config, initialLang] = await Promise.all([fetchPublicSupabaseConfig(), getInitialLanguage()]);
-      return { publicConfig: config, initialLang };
-    } catch {
-      return { publicConfig: { url: "", publishableKey: "" }, initialLang: "en" as Lang };
-    }
+    // A configuration fetch failure must not reset the user's language or theme.
+    const [configResult, languageResult, seasonResult] = await Promise.allSettled([
+      fetchPublicSupabaseConfig(), getInitialLanguage(), getInitialSeason(),
+    ]);
+    return {
+      publicConfig: configResult.status === "fulfilled" ? configResult.value : { url: "", publishableKey: "" },
+      initialLang: languageResult.status === "fulfilled" ? languageResult.value : "en" as Lang,
+      initialSeasonMode: seasonResult.status === "fulfilled" ? seasonResult.value : "auto" as SeasonMode,
+    };
   },
   meta: () => [
     {
@@ -198,9 +206,11 @@ function RootComponent() {
 
   const hasConfig = Boolean(publicConfig?.url && publicConfig?.publishableKey);
   const initialLang = loaderData?.initialLang ?? "en";
+  const initialSeasonMode = loaderData?.initialSeasonMode ?? "auto";
+  const initialSeason = initialSeasonMode === "auto" ? detectSeason() : initialSeasonMode;
 
   return (
-    <html lang={initialLang} data-lang={initialLang} suppressHydrationWarning>
+    <html lang={initialLang} data-lang={initialLang} data-season={initialSeason} suppressHydrationWarning>
       <head suppressHydrationWarning>
         <meta charSet="utf-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
@@ -217,7 +227,7 @@ function RootComponent() {
         <QueryClientProvider client={context.queryClient}>
           <AuthProvider>
             <LanguageProvider initialLang={initialLang}>
-              <SeasonProvider>
+              <SeasonProvider initialMode={initialSeasonMode}>
                 <AudioChantProvider>
                   <SmoothScrollProvider>
                     <div className="flex min-h-screen flex-col bg-background text-foreground">
