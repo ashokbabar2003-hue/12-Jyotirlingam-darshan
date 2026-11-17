@@ -369,8 +369,8 @@ html[lang="mr"] {
 
 html[data-lang="hi"],
 html[lang="hi"] {
-  --font-active-sans: "Yatra One", serif;
-  --font-active-display: "Yatra One", serif;
+  --font-active-sans: "Yatra One Marathi", "Yatra One", serif;
+  --font-active-display: "Yatra One Marathi", "Yatra One", serif;
 }
 
 html[data-lang="gu"],
@@ -550,6 +550,15 @@ html[lang="hi"] label {
   .font-tamil {
     font-family: "Noto Sans Tamil", sans-serif !important;
   }
+}
+
+/* Staging experiment: use the corrected local Devanagari face for Hindi too.
+ * Marathi styles and production remain unchanged. */
+html[data-lang="hi"] .font-hindi,
+html[lang="hi"] .font-hindi,
+html[data-lang="hi"] .font-devanagari,
+html[lang="hi"] .font-devanagari {
+  font-family: "Yatra One Marathi", "Yatra One", serif !important;
 }
 
 @keyframes diya-flicker {
