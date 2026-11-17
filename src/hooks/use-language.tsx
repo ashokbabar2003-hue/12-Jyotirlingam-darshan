@@ -62,14 +62,14 @@ const LanguageContext = createContext<LanguageContextValue | null>(null);
 
 const STORAGE_KEY = "lang";
 
-export function LanguageProvider({ children }: { children: ReactNode }) {
-  const [lang, setLangState] = useState<Lang>("en");
+export function LanguageProvider({ children, initialLang = "en" }: { children: ReactNode; initialLang?: Lang }) {
+  const [lang, setLangState] = useState<Lang>(initialLang);
 
   useEffect(() => {
     try {
       const saved = localStorage.getItem(STORAGE_KEY) as Lang | null;
       if (saved && LANGUAGES.some((l) => l.code === saved)) {
-        setLangState(saved);
+        if (saved !== initialLang) setLangState(saved);
         if (typeof document !== "undefined") {
           document.documentElement.lang = saved;
           document.documentElement.setAttribute("data-lang", saved);
@@ -78,12 +78,13 @@ export function LanguageProvider({ children }: { children: ReactNode }) {
     } catch {
       /* ignore */
     }
-  }, []);
+  }, [initialLang]);
 
   const setLang = useCallback((l: Lang) => {
     setLangState(l);
     try {
       localStorage.setItem(STORAGE_KEY, l);
+      document.cookie = `lang=${l}; Path=/; Max-Age=31536000; SameSite=Lax`;
       if (typeof document !== "undefined") {
         document.documentElement.lang = l;
         document.documentElement.setAttribute("data-lang", l);

@@ -7,6 +7,8 @@ import {
   Link,
 } from "@tanstack/react-router";
 import { createServerFn } from "@tanstack/react-start";
+import { getCookie } from "@tanstack/react-start/server";
+import type { Lang } from "@/hooks/use-language";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import * as React from "react";
 import "@/styles.css";
@@ -25,15 +27,20 @@ const fetchPublicSupabaseConfig = createServerFn({ method: "GET" }).handler(asyn
   return getPublicSupabaseEnv();
 });
 
+const getInitialLanguage = createServerFn({ method: "GET" }).handler(async () => {
+  const lang = getCookie("lang");
+  return (["en", "mr", "hi", "gu", "te", "ta"].includes(lang ?? "") ? lang : "en") as Lang;
+});
+
 export const Route = createRootRouteWithContext<{
   queryClient: QueryClient;
 }>()({
   loader: async () => {
     try {
-      const config = await fetchPublicSupabaseConfig();
-      return { publicConfig: config };
+      const [config, initialLang] = await Promise.all([fetchPublicSupabaseConfig(), getInitialLanguage()]);
+      return { publicConfig: config, initialLang };
     } catch {
-      return { publicConfig: { url: "", publishableKey: "" } };
+      return { publicConfig: { url: "", publishableKey: "" }, initialLang: "en" as Lang };
     }
   },
   meta: () => [
@@ -190,9 +197,10 @@ function RootComponent() {
       : { url: "", publishableKey: "" });
 
   const hasConfig = Boolean(publicConfig?.url && publicConfig?.publishableKey);
+  const initialLang = loaderData?.initialLang ?? "en";
 
   return (
-    <html lang="en" suppressHydrationWarning>
+    <html lang={initialLang} data-lang={initialLang} suppressHydrationWarning>
       <head suppressHydrationWarning>
         <meta charSet="utf-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
@@ -208,7 +216,7 @@ function RootComponent() {
       <body suppressHydrationWarning>
         <QueryClientProvider client={context.queryClient}>
           <AuthProvider>
-            <LanguageProvider>
+            <LanguageProvider initialLang={initialLang}>
               <SeasonProvider>
                 <AudioChantProvider>
                   <SmoothScrollProvider>
