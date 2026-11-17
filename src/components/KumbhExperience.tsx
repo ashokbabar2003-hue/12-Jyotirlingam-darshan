@@ -17,14 +17,14 @@ const MEDIA = {
 };
 const PHOTO_CREDITS = "Historical photographs: Wikimedia Commons contributors (2014–2025), CC BY-SA 4.0. These are not photographs of the 2027 event.";
 const EVENTS = [
-  { date: "2026-10-31", dateText: "31 OCT 2026", time: "12:02 PM", img: MEDIA.kushavarta, location: "Nashik–Trimbakeshwar", label: ["Dhwajarohan (Flag Hoisting)","ध्वजारोहण (ध्वजवंदन)","ध्वजारोहण (ध्वज फहराना)"], description: "Dhwaj Parv, Jupiter’s entry into Leo, and commencement of Simhastha Mahakumbh." },
+  { date: "2026-10-31", dateText: "31 OCT 2026", time: "12:02 PM", img: MEDIA.ramkund, location: "Nashik–Trimbakeshwar", label: ["Dhwajarohan (Flag Hoisting)","ध्वजारोहण (ध्वजवंदन)","ध्वजारोहण (ध्वज फहराना)"], description: "Dhwaj Parv, Jupiter’s entry into Leo, and commencement of Simhastha Mahakumbh." },
   { date: "2027-06-15", dateText: "15 JUN 2027", time: "All Day", img: MEDIA.ramkund, location: "Nashik–Trimbakeshwar", label: ["Major Mela Period Begins","मुख्य मेळा कालावधी सुरू","मुख्य मेला अवधि शुरू"], description: "The official major Mela period begins." },
   { date: "2027-07-29", dateText: "29 JUL 2027", time: "To be notified", img: MEDIA.mela, location: "Nashik", label: ["Nagar Pradakshina","नगर प्रदक्षिणा","नगर प्रदक्षिणा"], description: "The traditional procession around Nashik before the Amrut Snans." },
   { date: "2027-08-02", dateText: "02 AUG 2027", time: "All Day", img: MEDIA.pilgrims, location: "Nashik–Trimbakeshwar", label: ["First Amrut Snan","पहिले अमृत स्नान","पहला अमृत स्नान"], description: "The first sacred bathing day of Simhastha Mahakumbh." },
   { date: "2027-08-31", dateText: "31 AUG 2027", time: "All Day", img: MEDIA.mela, location: "Nashik–Trimbakeshwar", label: ["Second Amrut Snan","दुसरे अमृत स्नान","दूसरा अमृत स्नान"], description: "The second sacred bathing day of Simhastha Mahakumbh." },
   { date: "2027-09-11", dateText: "11 SEP 2027", time: "All Day", img: MEDIA.ramkund, location: "Ramtirth, Nashik", label: ["Third Amrut Snan","तिसरे अमृत स्नान","तीसरा अमृत स्नान"], description: "The third sacred bathing day of Simhastha Mahakumbh at Ramtirth, Nashik." },
   { date: "2027-09-12", dateText: "12 SEP 2027", time: "All Day", img: MEDIA.kushavarta, location: "Kushavarta Tirth, Trimbakeshwar", label: ["Third Amrut Snan","तिसरे अमृत स्नान","तीसरा अमृत स्नान"], description: "The third sacred bathing day of Simhastha Mahakumbh at Kushavarta Tirth, Trimbakeshwar." },
-  { date: "2028-07-24", dateText: "24 JUL 2028", time: "3:36 PM", img: MEDIA.pilgrims, location: "Nashik–Trimbakeshwar", label: ["Dhwajavatarana (Flag Lowering)","ध्वजावतरण (ध्वज उतरवणे)","ध्वजावतरण (ध्वज उतारना)"], description: "Lowering of the flag, marking the conclusion of Simhastha Mahakumbh." },
+  { date: "2028-07-24", dateText: "24 JUL 2028", time: "3:36 PM", img: MEDIA.kushavarta, location: "Nashik–Trimbakeshwar", label: ["Dhwajavatarana (Flag Lowering)","ध्वजावतरण (ध्वज उतरवणे)","ध्वजावतरण (ध्वज उतारना)"], description: "Lowering of the flag, marking the conclusion of Simhastha Mahakumbh." },
 ];
 const COPY = {
   en: { what: "What is the Kumbh Mela?", watch: "Explore the story", journey: "A journey of faith", steps: ["A sacred gathering","The holy rivers","A living tradition"], details: ["Pilgrims come together in a shared celebration of faith and spiritual renewal.","Ritual bathing in sacred waters is a central part of the pilgrimage.","At Nashik and Trimbakeshwar, Simhastha connects the Godavari with generations of devotion."], calendar: "The sacred Snan journey", locations: "Two sacred destinations", nashik: "Nashik · Ramkund", nashikDesc: "The Godavari ghats in Panchavati are a gathering place for pilgrims.", trimbak: "Trimbakeshwar · Kushavarta", trimbakDesc: "The sacred tank near Trimbakeshwar Jyotirlinga is another important bathing site.", temple: "Explore Trimbakeshwar", official: "Verify the official schedule", warning: "Historical images are illustrative; dates and arrangements may change." },
@@ -150,7 +150,7 @@ export function KumbhExperience() {
             toImage: EVENTS[i + 1].img,
             label: lang === "mr" ? "सिंहस्थ स्नानयात्रा" : lang === "hi" ? "सिंहस्थ स्नान यात्रा" : "Sacred Simhastha Journey",
             subtitle: localDate(event.date, lang) + " → " + localDate(EVENTS[i + 1].date, lang),
-            spiritualEssence: lang === "mr" ? "गोदावरीच्या तीरावर श्रद्धेचा संगम" : lang === "hi" ? "गोदावरी के तट पर आस्था का संगम" : "A sacred journey along the Godavari",
+            spiritualEssence: i === 0 ? (lang === "mr" ? "ध्वजारोहणातून सिंहस्थ पर्वाची सुरुवात" : lang === "hi" ? "ध्वजारोहण से सिंहस्थ पर्व का आरंभ" : "The ceremonial flag marks the sacred beginning") : i === 1 ? (lang === "mr" ? "नगर प्रदक्षिणेची पवित्र परंपरा" : lang === "hi" ? "नगर प्रदक्षिणा की पवित्र परंपरा" : "A traditional procession of faith") : i === 6 ? (lang === "mr" ? "सिंहस्थ पर्वाची सांगता" : lang === "hi" ? "सिंहस्थ पर्व का समापन" : "The ceremonial conclusion of Simhastha") : (lang === "mr" ? "गोदावरीच्या पवित्र जलात अमृत स्नान" : lang === "hi" ? "गोदावरी के पवित्र जल में अमृत स्नान" : "Sacred bathing in the Godavari"),
           } : null;
           return <div key={event.date} className="relative">
 
@@ -176,7 +176,7 @@ export function KumbhExperience() {
                 </div>
               </div>
             </section>
-            {transition && <SacredJourneyTransition transition={transition} lang={lang} isEn={lang === "en"} fontClass={fontClass} />}
+            {transition && <SacredJourneyTransition transition={transition} lang={lang} isEn={lang === "en"} fontClass={fontClass} ritual={i === 0 ? "flag" : i === 1 ? "procession" : i >= 3 && i <= 5 ? "river" : i === 6 ? "closing" : "temple"} />}
           </div>;
         })}
       </div>
