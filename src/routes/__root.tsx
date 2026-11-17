@@ -209,7 +209,7 @@ function RootComponent() {
           dangerouslySetInnerHTML={{
             __html: `(function(){try{${
               hasConfig ? `window.__PUBLIC_SUPABASE_CONFIG__=${JSON.stringify(publicConfig)};` : ""
-            }var l=localStorage.getItem('lang');if(l&&['en','mr','hi','gu','te','ta'].indexOf(l)>-1){document.documentElement.setAttribute('data-lang',l);document.documentElement.lang=l;}}catch(e){}})();`,
+            }/* Language and theme are rendered from the server cookie. */}catch(e){}})();`,
           }}
         />
       </head>

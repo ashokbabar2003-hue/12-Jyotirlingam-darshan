@@ -65,32 +65,27 @@ const STORAGE_KEY = "lang";
 export function LanguageProvider({ children, initialLang = "en" }: { children: ReactNode; initialLang?: Lang }) {
   const [lang, setLangState] = useState<Lang>(initialLang);
 
+  // The server cookie is authoritative. Never overwrite it with stale localStorage
+  // during hydration or client-side route revalidation.
   useEffect(() => {
     try {
-      const saved = localStorage.getItem(STORAGE_KEY) as Lang | null;
-      if (saved && LANGUAGES.some((l) => l.code === saved)) {
-        if (saved !== initialLang) setLangState(saved);
-        if (typeof document !== "undefined") {
-          document.documentElement.lang = saved;
-          document.documentElement.setAttribute("data-lang", saved);
-        }
-      }
+      localStorage.setItem(STORAGE_KEY, lang);
     } catch {
-      /* ignore */
+      /* Storage may be disabled; the cookie still preserves the preference. */
     }
-  }, [initialLang]);
+  }, [lang]);
 
   const setLang = useCallback((l: Lang) => {
     setLangState(l);
+    if (typeof document !== "undefined") {
+      document.cookie = `lang=${l}; Path=/; Max-Age=31536000; SameSite=Lax`;
+      document.documentElement.lang = l;
+      document.documentElement.setAttribute("data-lang", l);
+    }
     try {
       localStorage.setItem(STORAGE_KEY, l);
-      document.cookie = `lang=${l}; Path=/; Max-Age=31536000; SameSite=Lax`;
-      if (typeof document !== "undefined") {
-        document.documentElement.lang = l;
-        document.documentElement.setAttribute("data-lang", l);
-      }
     } catch {
-      /* ignore */
+      /* Cookie remains the source of truth if storage is unavailable. */
     }
   }, []);
 
