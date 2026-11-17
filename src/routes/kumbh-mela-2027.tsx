@@ -1,7 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { ArrowLeft, ArrowUpRight, CalendarDays, Clock3, Flame, ShieldCheck } from "lucide-react";
-import { useLanguage, type Lang } from "@/hooks/use-language";
+import { useLanguage, toLocalDigits, type Lang } from "@/hooks/use-language";
 import { KUMBH_TEXT } from "@/components/KumbhFeature";
 import { KumbhExperience } from "@/components/KumbhExperience";
 import { cn } from "@/lib/utils";
@@ -73,7 +73,7 @@ function KumbhPage() {
             <div className="grid grid-cols-4 gap-2 sm:gap-3" aria-live="off">
               {[x.days, x.hours, x.minutes, x.seconds].map((label, i) => (
                 <div key={label} className="min-w-0 rounded-xl border border-primary/25 bg-background/70 px-2 py-3 text-center sm:min-w-20 sm:px-4">
-                  <span className="block text-xl font-bold tabular-nums text-foreground sm:text-3xl">{parts ? String(parts[i]).padStart(2, "0") : "–"}</span>
+                  <span className={cn("block text-xl font-bold tabular-nums text-foreground sm:text-3xl", fontClass)}>{parts ? toLocalDigits(String(parts[i]).padStart(2, "0"), lang) : "–"}</span>
                   <span className={cn("mt-1 block text-xs text-muted-foreground", fontClass)}>{label}</span>
                 </div>
               ))}
