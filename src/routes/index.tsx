@@ -8,6 +8,7 @@ import { getDarshanLinks } from "@/lib/darshan.functions";
 import { type DarshanStatus } from "@/components/darshan-tile";
 import { useLanguage, type Lang } from "@/hooks/use-language";
 import { HeroAarti } from "@/components/HeroAarti";
+import { KumbhFeature } from "@/components/KumbhFeature";
 import { LiveDarshanSection } from "@/components/LiveDarshanSection";
 import { PilgrimageJourney } from "@/components/PilgrimageJourney";
 import heroImg from "@/assets/hero-aarti.jpg";
@@ -169,6 +170,9 @@ function Index() {
     <div className="relative w-full overflow-hidden bg-background">
       {/* 1. ARRIVAL: Hero Aarti Sacred Awakening */}
       <HeroAarti t={t} lang={lang} isEn={isEn} fontClass={fontClass} />
+
+      {/* Special pilgrimage feature: Simhastha Kumbh Mela 2027 */}
+      <KumbhFeature />
 
       {/* 2. DARSHAN: Living Sanctum Live Darshan & Editorial Bridge */}
       <LiveDarshanSection
