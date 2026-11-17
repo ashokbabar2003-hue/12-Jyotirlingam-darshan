@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { Link } from "@tanstack/react-router";
 import { ArrowUpRight, CalendarDays, ChevronLeft, ChevronRight, Flame, MapPin, Mountain, Play, Waves } from "lucide-react";
-import { useLanguage } from "@/hooks/use-language";
+import { useLanguage, toLocalDigits } from "@/hooks/use-language";
 import { cn } from "@/lib/utils";
 import templeImg from "@/assets/jl-trimbakeshwar.jpg";
 import fallbackImg from "@/assets/hero-aarti.jpg";
@@ -32,6 +32,35 @@ const COPY = {
   hi: { what: "कुंभ मेला क्या है?", watch: "कहानी देखें", journey: "आस्था की यात्रा", steps: ["आस्था का महासंगम","पवित्र नदियाँ","जीवंत परंपरा"], details: ["श्रद्धालु आध्यात्मिक शुद्धि और आस्था के लिए एकत्र होते हैं।","पवित्र जल में स्नान इस तीर्थयात्रा का महत्वपूर्ण अंग है।","नाशिक–त्र्यंबकेश्वर में सिंहस्थ गोदावरी को भक्ति की परंपरा से जोड़ता है।"], calendar: "पवित्र स्नान यात्रा", locations: "दो पवित्र तीर्थस्थल", nashik: "नाशिक · रामकुंड", nashikDesc: "पंचवटी के गोदावरी घाट श्रद्धालुओं के लिए प्रमुख तीर्थस्थल हैं।", trimbak: "त्र्यंबकेश्वर · कुशावर्त", trimbakDesc: "त्र्यंबकेश्वर ज्योतिर्लिंग के पास स्थित पवित्र कुंड एक महत्वपूर्ण स्नान स्थल है।", temple: "त्र्यंबकेश्वर दर्शन", official: "आधिकारिक कार्यक्रम देखें", warning: "तस्वीरें पिछले वर्षों की हैं; तिथियाँ और व्यवस्थाएँ बदल सकती हैं।" },
 };
 
+const KUMBH_UI = {
+  en: { pause: "Pause", previous: "Previous scene", next: "Next scene", historic: "Historical pilgrimage photograph", state: "Maharashtra", journey: "Sacred Simhastha Journey", source: "Official event photo gallery", photoNote: "Historical photographs are illustrative and may not show the named ceremony." },
+  mr: { pause: "थांबवा", previous: "मागील दृश्य", next: "पुढील दृश्य", historic: "तीर्थयात्रेचे ऐतिहासिक छायाचित्र", state: "महाराष्ट्र", journey: "सिंहस्थ स्नानयात्रा", source: "अधिकृत छायाचित्र दालन", photoNote: "ऐतिहासिक छायाचित्रे प्रातिनिधिक आहेत; ती संबंधित सोहळ्याची असतीलच असे नाही." },
+  hi: { pause: "रोकें", previous: "पिछला दृश्य", next: "अगला दृश्य", historic: "तीर्थयात्रा का ऐतिहासिक चित्र", state: "महाराष्ट्र", journey: "सिंहस्थ स्नान यात्रा", source: "आधिकारिक चित्र दीर्घा", photoNote: "ऐतिहासिक चित्र उदाहरण के लिए हैं; वे संबंधित समारोह के नहीं भी हो सकते हैं।" },
+  gu: { pause: "થોભાવો", previous: "પાછલું દૃશ્ય", next: "આગળનું દૃશ્ય", historic: "યાત્રાનું ઐતિહાસિક ચિત્ર", state: "મહારાષ્ટ્ર", journey: "પવિત્ર સિંહસ્થ યાત્રા", source: "સત્તાવાર ચિત્ર ગેલેરી", photoNote: "ઐતિહાસિક તસવીરો ઉદાહરણરૂપ છે; તે દર્શાવેલી વિધિની જ હોય તે જરૂરી નથી." },
+  te: { pause: "ఆపండి", previous: "మునుపటి దృశ్యం", next: "తదుపరి దృశ్యం", historic: "యాత్ర చారిత్రక చిత్రం", state: "మహారాష్ట్ర", journey: "పవిత్ర సింహస్థ యాత్ర", source: "అధికారిక చిత్ర గ్యాలరీ", photoNote: "చారిత్రక చిత్రాలు సూచన కోసం మాత్రమే; అవి పేర్కొన్న వేడుకకు చెందినవి కాకపోవచ్చు." },
+  ta: { pause: "நிறுத்து", previous: "முந்தைய காட்சி", next: "அடுத்த காட்சி", historic: "யாத்திரையின் வரலாற்றுப் படம்", state: "மகாராஷ்டிரா", journey: "புனித சிம்ஹஸ்த பயணம்", source: "அதிகாரப்பூர்வ படத் தொகுப்பு", photoNote: "வரலாற்றுப் படங்கள் எடுத்துக்காட்டுகளே; அவை குறிப்பிட்ட நிகழ்வைச் சேர்ந்ததாக இருக்க வேண்டியதில்லை." },
+} as const;
+const KUMBH_PLACES = {
+  en: ["Nashik–Trimbakeshwar", "Nashik", "Ramtirth, Nashik", "Kushavarta Tirth, Trimbakeshwar"],
+  mr: ["नाशिक–त्र्यंबकेश्वर", "नाशिक", "रामतीर्थ, नाशिक", "कुशावर्त तीर्थ, त्र्यंबकेश्वर"],
+  hi: ["नाशिक–त्र्यंबकेश्वर", "नाशिक", "रामतीर्थ, नाशिक", "कुशावर्त तीर्थ, त्र्यंबकेश्वर"],
+  gu: ["નાશિક–ત્ર્યંબકેશ્વર", "નાશિક", "રામતીર્થ, નાશિક", "કુશાવર્ત તીર્થ, ત્ર્યંબકેશ્વર"],
+  te: ["నాసిక్–త్ర్యంబకేశ్వర్", "నాసిక్", "రామతీర్థం, నాసిక్", "కుశావర్త తీర్థం, త్ర్యంబకేశ్వర్"],
+  ta: ["நாசிக்–திரிம்பகேஷ்வர்", "நாசிக்", "ராமதீர்த்தம், நாசிக்", "குஷாவர்த்த தீர்த்தம், திரிம்பகேஷ்வர்"],
+} as const;
+const KUMBH_DESCRIPTIONS = {
+  en: ["Flag hoisting marks the beginning of Simhastha Mahakumbh.", "The major Mela period begins.", "The traditional city circumambulation precedes the Amrut Snan.", "The first sacred bathing day.", "The second sacred bathing day.", "The third sacred bathing day at Ramtirth, Nashik.", "The third sacred bathing day at Kushavarta Tirth, Trimbakeshwar.", "Flag lowering marks the conclusion of Simhastha Mahakumbh."],
+  mr: ["ध्वजारोहणाने सिंहस्थ महाकुंभाची सुरुवात होते.", "मुख्य मेळा कालावधी सुरू होतो.", "अमृत स्नानापूर्वी पारंपरिक नगर प्रदक्षिणा होते.", "पहिला पवित्र अमृत स्नान दिवस.", "दुसरा पवित्र अमृत स्नान दिवस.", "रामतीर्थ, नाशिक येथे तिसरा अमृत स्नान दिवस.", "कुशावर्त तीर्थ, त्र्यंबकेश्वर येथे तिसरा अमृत स्नान दिवस.", "ध्वजावतरणाने सिंहस्थ महाकुंभाची सांगता होते."],
+  hi: ["ध्वजारोहण से सिंहस्थ महाकुंभ का आरंभ होता है।", "मुख्य मेला अवधि आरंभ होती है।", "अमृत स्नान से पहले पारंपरिक नगर प्रदक्षिणा होती है।", "पहला पवित्र अमृत स्नान दिवस।", "दूसरा पवित्र अमृत स्नान दिवस।", "रामतीर्थ, नाशिक में तीसरा अमृत स्नान दिवस।", "कुशावर्त तीर्थ, त्र्यंबकेश्वर में तीसरा अमृत स्नान दिवस।", "ध्वजावतरण के साथ सिंहस्थ महाकुंभ का समापन होता है।"],
+  gu: ["ધ્વજારોહણથી સિંહસ્થ મહાકુંભનો પ્રારંભ થાય છે.", "મુખ્ય મેળાનો સમય શરૂ થાય છે.", "અમૃત સ્નાન પહેલાં પરંપરાગત નગર પ્રદક્ષિણા થાય છે.", "પ્રથમ પવિત્ર અમૃત સ્નાન દિવસ.", "બીજો પવિત્ર અમૃત સ્નાન દિવસ.", "રામતીર્થ, નાશિક ખાતે ત્રીજો અમૃત સ્નાન દિવસ.", "કુશાવર્ત તીર્થ, ત્ર્યંબકેશ્વર ખાતે ત્રીજો અમૃત સ્નાન દિવસ.", "ધ્વજ ઉતારવાથી સિંહસ્થ મહાકુંભનું સમાપન થાય છે."],
+  te: ["ధ్వజారోహణంతో సింహస్థ మహాకుంభం ప్రారంభమవుతుంది.", "ప్రధాన మేళా కాలం ప్రారంభమవుతుంది.", "అమృత స్నానానికి ముందు సంప్రదాయ నగర ప్రదక్షిణ జరుగుతుంది.", "మొదటి పవిత్ర అమృత స్నాన దినం.", "రెండవ పవిత్ర అమృత స్నాన దినం.", "నాసిక్ రామతీర్థంలో మూడవ అమృత స్నాన దినం.", "త్ర్యంబకేశ్వర్ కుశావర్త తీర్థంలో మూడవ అమృత స్నాన దినం.", "ధ్వజావతరణంతో సింహస్థ మహాకుంభం ముగుస్తుంది."],
+  ta: ["கொடியேற்றத்துடன் சிம்ஹஸ்த மகாகும்பம் தொடங்குகிறது.", "முக்கிய விழாக்காலம் தொடங்குகிறது.", "அமிர்த நீராடலுக்கு முன் பாரம்பரிய நகர வலம் நடைபெறும்.", "முதல் புனித அமிர்த நீராடல் நாள்.", "இரண்டாம் புனித அமிர்த நீராடல் நாள்.", "நாசிக் ராமதீர்த்தத்தில் மூன்றாம் அமிர்த நீராடல் நாள்.", "திரிம்பகேஷ்வர் குஷாவர்த்த தீர்த்தத்தில் மூன்றாம் அமிர்த நீராடல் நாள்.", "கொடியிறக்கத்துடன் சிம்ஹஸ்த மகாகும்பம் நிறைவடைகிறது."],
+} as const;
+function eventPlace(location: string, lang: keyof typeof KUMBH_PLACES) {
+  const index = KUMBH_PLACES.en.indexOf(location as typeof KUMBH_PLACES.en[number]);
+  return index < 0 ? location : KUMBH_PLACES[lang][index];
+}
+function essence(index: number, lang: keyof typeof KUMBH_DESCRIPTIONS) { return KUMBH_DESCRIPTIONS[lang][index + 1]; }
 const DATE_LOCALES = { en: "en-IN", mr: "mr-IN-u-nu-deva", hi: "hi-IN-u-nu-deva", gu: "gu-IN-u-nu-gujr", te: "te-IN-u-nu-telu", ta: "ta-IN-u-nu-taml" } as const;
 const EVENT_TRANSLATIONS = {
   gu: ["ધ્વજારોહણ (ધ્વજ ફરકાવવો)", "મુખ્ય મેળાનો સમય શરૂ", "નગર પ્રદક્ષિણા", "પ્રથમ અમૃત સ્નાન", "બીજું અમૃત સ્નાન", "ત્રીજું અમૃત સ્નાન", "ત્રીજું અમૃત સ્નાન", "ધ્વજાવતરણ (ધ્વજ ઉતારવો)"],
@@ -85,6 +114,7 @@ function Photo({ src, alt, className = "" }: { src: string; alt: string; classNa
 export function KumbhExperience() {
   const { lang, fontClass } = useLanguage();
   const t = COPY[lang === "mr" || lang === "hi" ? lang : "en"];
+  const ui = KUMBH_UI[lang];
   const langIndex = lang === "mr" ? 1 : lang === "hi" ? 2 : 0;
   const [scene, setScene] = useState(0);
   const [playing, setPlaying] = useState(false);
@@ -112,8 +142,8 @@ export function KumbhExperience() {
           <Photo key={scene} src={storyImages[scene]} alt="Historic photograph of the Nashik Kumbh pilgrimage" className="kumbh-story-photo absolute inset-0" />
           <div className="absolute inset-0 bg-gradient-to-t from-background/90 via-transparent to-background/10" />
           <div className="absolute bottom-5 left-5 flex items-center gap-3">
-            <button type="button" onClick={() => setPlaying(p => !p)} className="inline-flex min-h-11 items-center gap-2 rounded-full border border-primary/60 bg-background/80 px-4 text-sm font-semibold text-foreground backdrop-blur-md"><Play className="size-4 text-primary" />{playing ? "Pause" : t.watch}</button>
-            <span className="text-xs text-foreground/80">{scene + 1} / 3</span>
+            <button type="button" onClick={() => setPlaying(p => !p)} className="inline-flex min-h-11 items-center gap-2 rounded-full border border-primary/60 bg-background/80 px-4 text-sm font-semibold text-foreground backdrop-blur-md"><Play className="size-4 text-primary" />{playing ? ui.pause : t.watch}</button>
+            <span className="text-xs text-foreground/80">{toLocalDigits(scene + 1, lang)} / {toLocalDigits(3, lang)}</span>
           </div>
         </div>
         <div className="flex flex-col justify-center p-6 sm:p-10">
@@ -124,9 +154,9 @@ export function KumbhExperience() {
             <p className={cn("mt-4 text-base leading-relaxed text-muted-foreground", fontClass)}>{t.details[scene]}</p>
           </div>
           <div className="mt-9 flex items-center gap-3">
-            <button type="button" aria-label="Previous story scene" onClick={() => setScene(s => (s + 2) % 3)} className="grid size-11 place-items-center rounded-full border border-primary/40 hover:bg-primary/10"><ChevronLeft className="size-5" /></button>
+            <button type="button" aria-label={ui.previous} onClick={() => setScene(s => (s + 2) % 3)} className="grid size-11 place-items-center rounded-full border border-primary/40 hover:bg-primary/10"><ChevronLeft className="size-5" /></button>
             {t.steps.map((step, i) => <button key={step} type="button" aria-label={step} aria-current={scene === i ? "step" : undefined} onClick={() => setScene(i)} className={cn("h-2 rounded-full transition-all duration-500", scene === i ? "w-12 bg-primary" : "w-5 bg-primary/25")} />)}
-            <button type="button" aria-label="Next story scene" onClick={() => setScene(s => (s + 1) % 3)} className="grid size-11 place-items-center rounded-full border border-primary/40 hover:bg-primary/10"><ChevronRight className="size-5" /></button>
+            <button type="button" aria-label={ui.next} onClick={() => setScene(s => (s + 1) % 3)} className="grid size-11 place-items-center rounded-full border border-primary/40 hover:bg-primary/10"><ChevronRight className="size-5" /></button>
           </div>
         </div>
       </div>
@@ -142,15 +172,15 @@ export function KumbhExperience() {
             toIndex: i + 2,
             fromName: localEventLabel(event, i, lang),
             toName: localEventLabel(EVENTS[i + 1], i + 1, lang),
-            fromLocation: event.location,
-            toLocation: EVENTS[i + 1].location,
-            fromState: "Maharashtra",
-            toState: "Maharashtra",
+            fromLocation: eventPlace(event.location, lang),
+            toLocation: eventPlace(EVENTS[i + 1].location, lang),
+            fromState: ui.state,
+            toState: ui.state,
             fromImage: event.img,
             toImage: EVENTS[i + 1].img,
-            label: lang === "mr" ? "सिंहस्थ स्नानयात्रा" : lang === "hi" ? "सिंहस्थ स्नान यात्रा" : "Sacred Simhastha Journey",
+            label: ui.journey,
             subtitle: localDate(event.date, lang) + " → " + localDate(EVENTS[i + 1].date, lang),
-            spiritualEssence: i === 0 ? (lang === "mr" ? "ध्वजारोहणातून सिंहस्थ पर्वाची सुरुवात" : lang === "hi" ? "ध्वजारोहण से सिंहस्थ पर्व का आरंभ" : "The ceremonial flag marks the sacred beginning") : i === 1 ? (lang === "mr" ? "नगर प्रदक्षिणेची पवित्र परंपरा" : lang === "hi" ? "नगर प्रदक्षिणा की पवित्र परंपरा" : "A traditional procession of faith") : i === 6 ? (lang === "mr" ? "सिंहस्थ पर्वाची सांगता" : lang === "hi" ? "सिंहस्थ पर्व का समापन" : "The ceremonial conclusion of Simhastha") : (lang === "mr" ? "गोदावरीच्या पवित्र जलात अमृत स्नान" : lang === "hi" ? "गोदावरी के पवित्र जल में अमृत स्नान" : "Sacred bathing in the Godavari"),
+            spiritualEssence: essence(i, lang),
           } : null;
           return <div key={event.date} className="relative">
 
@@ -167,11 +197,11 @@ export function KumbhExperience() {
                 <div className="flex flex-col justify-center p-6 sm:p-9">
                   <h3 className={cn("text-2xl leading-relaxed text-foreground sm:text-3xl", lang === "mr" || lang === "hi" ? "kumbh-devanagari" : fontClass)}>{localEventLabel(event, i, lang)}</h3>
                   <p className={cn("mt-4 inline-flex w-fit items-center gap-2 rounded-full border border-primary/40 px-4 py-2 text-sm font-semibold text-primary", lang === "mr" || lang === "hi" ? "kumbh-devanagari" : fontClass)}><CalendarDays className="size-4 shrink-0" />{localEventTime(event.time, lang)}</p>
-                  <p className="mt-5 text-sm leading-relaxed text-muted-foreground">{event.description}</p>
-                  <p className="mt-5 flex items-center gap-2 text-sm text-muted-foreground"><MapPin className="size-4 shrink-0 text-primary" />{event.location}</p>
+                  <p className="mt-5 text-sm leading-relaxed text-muted-foreground">{KUMBH_DESCRIPTIONS[lang][i]}</p>
+                  <p className="mt-5 flex items-center gap-2 text-sm text-muted-foreground"><MapPin className="size-4 shrink-0 text-primary" />{eventPlace(event.location, lang)}</p>
                 </div>
                 <div className="relative min-h-60 overflow-hidden md:min-h-80">
-                  <Photo src={event.img} alt={"Historical pilgrimage photograph of " + event.location} className="absolute inset-0 transition-transform duration-700 hover:scale-105" />
+                  <Photo src={event.img} alt={ui.historic + ": " + eventPlace(event.location, lang)} className="absolute inset-0 transition-transform duration-700 hover:scale-105" />
                   <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-background/45 to-transparent" />
                 </div>
               </div>
