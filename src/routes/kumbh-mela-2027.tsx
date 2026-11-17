@@ -1,6 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
-import { ArrowLeft, ArrowUpRight, CalendarDays, Clock3, Flame, MapPin, Navigation, ShieldCheck, Sparkles, Waves } from "lucide-react";
+import { ArrowLeft, ArrowUpRight, CalendarDays, Clock3, Flame, MapPin, ShieldCheck, Sparkles } from "lucide-react";
 import { useLanguage, type Lang } from "@/hooks/use-language";
 import { KUMBH_TEXT } from "@/components/KumbhFeature";
 import { cn } from "@/lib/utils";
