@@ -6,7 +6,8 @@ import { cn } from "@/lib/utils";
 import templeImg from "@/assets/jl-trimbakeshwar.jpg";
 import fallbackImg from "@/assets/hero-aarti.jpg";
 import "./kumbh-experience.css";
-import { useGSAP, gsap, prefersReducedMotion } from "@/hooks/use-gsap";
+import { SacredJourneyTransition } from "@/components/SacredJourneyTransition";
+import type { SacredJourneyTransitionData } from "@/data/transitions";
 
 const MEDIA = {
   ramkund: "https://commons.wikimedia.org/wiki/Special:Redirect/file/Ramkund%20Nashik.jpg?width=1200",
@@ -30,68 +31,6 @@ const COPY = {
 function Photo({ src, alt, className = "" }: { src: string; alt: string; className?: string }) {
   const [failed, setFailed] = useState(false);
   return <img src={failed ? fallbackImg : src} onError={() => setFailed(true)} alt={alt} loading="lazy" className={cn("size-full object-cover", className)} />;
-}
-
-function KumbhSnanScene({ event, previous, index, label, fontClass }: {
-  event: typeof EVENTS[number]; previous?: typeof EVENTS[number]; index: number; label: string; fontClass: string;
-}) {
-  const sectionRef = useRef<HTMLElement | null>(null);
-  const stageRef = useRef<HTMLDivElement | null>(null);
-  const fromRef = useRef<HTMLDivElement | null>(null);
-  const toRef = useRef<HTMLDivElement | null>(null);
-  const textRef = useRef<HTMLDivElement | null>(null);
-  const progressRef = useRef<HTMLDivElement | null>(null);
-  useGSAP(() => {
-    const section = sectionRef.current;
-    const stage = stageRef.current;
-    const to = toRef.current;
-    const from = fromRef.current;
-    const copy = textRef.current;
-    const progress = progressRef.current;
-    if (!section || !stage || !to || !copy || !progress) return;
-    if (prefersReducedMotion()) {
-      gsap.set([to, copy], { opacity: 1, clearProps: "transform" });
-      if (from) gsap.set(from, { opacity: 0 });
-      gsap.set(progress, { scaleX: 1 });
-      return;
-    }
-    const mobile = window.innerWidth < 768;
-    gsap.set(to, { opacity: 0.15, scale: 1.13, filter: "brightness(0.45)" });
-    if (from) gsap.set(from, { opacity: 1, scale: 1 });
-    gsap.set(copy, { opacity: 0, y: 30 });
-    gsap.set(progress, { scaleX: 0, transformOrigin: "left center" });
-    const timeline = gsap.timeline({
-      scrollTrigger: {
-        trigger: section,
-        start: mobile ? "top 70%" : "top top",
-        end: mobile ? "bottom 25%" : "+=85%",
-        scrub: mobile ? 0.45 : 0.75,
-        pin: mobile ? false : stage,
-        anticipatePin: 1,
-        invalidateOnRefresh: true,
-      },
-    });
-    timeline.to(to, { opacity: 1, scale: 1, filter: "brightness(1)", duration: 0.72, ease: "power1.inOut" }, 0.06);
-    if (from) timeline.to(from, { opacity: 0, scale: 1.08, duration: 0.62, ease: "power1.inOut" }, 0.04);
-    timeline.to(copy, { opacity: 1, y: 0, duration: 0.45, ease: "power2.out" }, 0.22);
-    timeline.to(progress, { scaleX: 1, duration: 1, ease: "none" }, 0);
-  }, { dependencies: [index, label] });
-  return <section ref={sectionRef} aria-label={label} className="relative min-h-[75vh] md:min-h-[90vh]">
-    <div ref={stageRef} className="relative flex min-h-[75vh] items-end overflow-hidden border-y border-primary/20 bg-background md:min-h-[90vh] md:items-center">
-      {previous && <div ref={fromRef} className="absolute inset-0"><Photo src={previous.img} alt="" className="absolute inset-0" /></div>}
-      <div ref={toRef} className="absolute inset-0"><Photo src={event.img} alt={"Historical Kumbh pilgrimage photograph: "+event.location} className="absolute inset-0" /></div>
-      <div className="absolute inset-0 bg-gradient-to-t from-background via-background/50 to-background/20 md:bg-gradient-to-r md:from-background/95 md:via-background/55 md:to-transparent" />
-      <div className="pointer-events-none absolute inset-x-0 top-0 z-10 h-1 bg-primary/15"><div ref={progressRef} className="h-full w-full bg-primary" /></div>
-      <div ref={textRef} className="relative z-10 mx-auto w-full max-w-6xl px-5 pb-16 pt-24 sm:px-10 md:py-24">
-        <div className="max-w-2xl rounded-2xl border border-primary/25 bg-background/65 p-6 shadow-2xl backdrop-blur-md sm:p-9">
-          <p className="mb-5 text-sm font-semibold tracking-widest text-primary">{String(index+1).padStart(2,"0")} / 05 · {event.location}</p>
-          <time dateTime={event.date} className="inline-flex items-center gap-2 text-sm font-semibold text-primary"><CalendarDays className="size-5" />{event.dateText}</time>
-          <h3 className={cn("mt-4 text-3xl leading-snug text-foreground sm:text-5xl",fontClass)}>{label}</h3>
-          <div className="mt-6 flex items-center gap-2 text-xs text-muted-foreground"><Flame className="size-4 text-primary" />{index === 4 ? "Kushavarta · Trimbakeshwar" : index === 3 ? "Ramkund · Nashik" : "Simhastha Kumbh Mela 2027"}</div>
-        </div>
-      </div>
-    </div>
-  </section>;
 }
 
 export function KumbhExperience() {
@@ -146,7 +85,39 @@ export function KumbhExperience() {
     <section id="snan-dates" aria-labelledby="kumbh-dates-title" className="scroll-mt-28">
       <div className="kumbh-reveal text-center"><Flame className="mx-auto mb-3 size-8 text-primary" /><h2 id="kumbh-dates-title" className={cn("text-3xl sm:text-4xl", fontClass)}>{t.calendar}</h2></div>
       <div className="relative left-1/2 mt-10 w-screen -translate-x-1/2">
-        {EVENTS.map((event, i) => <KumbhSnanScene key={event.date} event={event} previous={i > 0 ? EVENTS[i-1] : undefined} index={i} label={event.label[langIndex]} fontClass={fontClass} />)}
+        {EVENTS.map((event, i) => {
+          const transition: SacredJourneyTransitionData | null = i < EVENTS.length - 1 ? {
+            fromSlug: "kumbh-" + event.date,
+            toSlug: "kumbh-" + EVENTS[i + 1].date,
+            fromIndex: i + 1,
+            toIndex: i + 2,
+            fromName: event.label[langIndex],
+            toName: EVENTS[i + 1].label[langIndex],
+            fromLocation: event.location,
+            toLocation: EVENTS[i + 1].location,
+            fromState: "Maharashtra",
+            toState: "Maharashtra",
+            fromImage: event.img,
+            toImage: EVENTS[i + 1].img,
+            label: lang === "mr" ? "सिंहस्थ स्नानयात्रा" : lang === "hi" ? "सिंहस्थ स्नान यात्रा" : "Sacred Simhastha Journey",
+            subtitle: event.dateText + " → " + EVENTS[i + 1].dateText,
+            spiritualEssence: lang === "mr" ? "गोदावरीच्या तीरावर श्रद्धेचा संगम" : lang === "hi" ? "गोदावरी के तट पर आस्था का संगम" : "A sacred journey along the Godavari",
+          } : null;
+          return <div key={event.date} className="relative">
+            <section className="relative mx-auto max-w-5xl px-4 py-12 sm:py-20" aria-label={event.label[langIndex]}>
+              <div className="grid items-center gap-6 overflow-hidden rounded-3xl border border-primary/30 bg-card shadow-xl md:grid-cols-2">
+                <div className="h-64 overflow-hidden sm:h-80"><Photo src={event.img} alt={"Historical pilgrimage photograph of " + event.location} className="transition-transform duration-700 hover:scale-105" /></div>
+                <div className="p-6 sm:p-9">
+                  <span className="text-sm font-semibold text-primary">{String(i + 1).padStart(2, "0")} / 05</span>
+                  <time dateTime={event.date} className="mt-4 flex items-center gap-2 text-sm font-semibold text-primary"><CalendarDays className="size-4" />{event.dateText}</time>
+                  <h3 className={cn("mt-4 text-2xl leading-snug text-foreground sm:text-4xl", fontClass)}>{event.label[langIndex]}</h3>
+                  <p className="mt-4 flex items-center gap-2 text-sm text-muted-foreground"><MapPin className="size-4 text-primary" />{event.location}</p>
+                </div>
+              </div>
+            </section>
+            {transition && <SacredJourneyTransition transition={transition} lang={lang} isEn={lang === "en"} fontClass={fontClass} />}
+          </div>;
+        })}
       </div>
       <p className={cn("mx-auto max-w-3xl text-center text-sm text-muted-foreground", fontClass)}>{t.warning}</p>
       <div className="mt-5 text-center"><a href="https://simhasthamahakumbh.maharashtra.gov.in/#snan" target="_blank" rel="noopener noreferrer" className={cn("inline-flex min-h-11 items-center gap-2 font-semibold text-primary hover:underline", fontClass)}>{t.official}<ArrowUpRight className="size-4" /></a></div>
