@@ -103,7 +103,7 @@ export function HeroAarti({ t, lang, isEn, fontClass }: HeroAartiProps) {
           {
             opacity: 1,
             y: 0,
-            duration: 0.555,
+            duration: 0.85,
             ease: "power2.out",
           },
           0.25,
