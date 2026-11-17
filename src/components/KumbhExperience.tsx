@@ -31,6 +31,52 @@ const COPY = {
   mr: { what: "कुंभमेळा म्हणजे काय?", watch: "ही कथा अनुभवा", journey: "श्रद्धेची यात्रा", steps: ["श्रद्धेचा महासंगम","पवित्र नद्यांचे महत्त्व","जिवंत परंपरा"], details: ["आध्यात्मिक शुद्धी आणि श्रद्धेसाठी भाविक एकत्र येतात.","पवित्र जलात स्नान करणे हा या तीर्थयात्रेचा महत्त्वाचा भाग आहे.","नाशिक–त्र्यंबकेश्वर येथे सिंहस्थ गोदावरीला भक्तीच्या परंपरेशी जोडतो."], calendar: "पवित्र स्नानयात्रा", locations: "दोन पवित्र तीर्थक्षेत्रे", nashik: "नाशिक · रामकुंड", nashikDesc: "पंचवटीतील गोदावरी घाट भाविकांचे महत्त्वाचे तीर्थस्थान आहे.", trimbak: "त्र्यंबकेश्वर · कुशावर्त", trimbakDesc: "त्र्यंबकेश्वर ज्योतिर्लिंगाजवळील पवित्र कुंड हे आणखी एक स्नानस्थळ आहे.", temple: "त्र्यंबकेश्वर दर्शन", official: "अधिकृत कार्यक्रम तपासा", warning: "छायाचित्रे मागील वर्षांतील आहेत; तारखा आणि व्यवस्था बदलू शकतात." },
   hi: { what: "कुंभ मेला क्या है?", watch: "कहानी देखें", journey: "आस्था की यात्रा", steps: ["आस्था का महासंगम","पवित्र नदियाँ","जीवंत परंपरा"], details: ["श्रद्धालु आध्यात्मिक शुद्धि और आस्था के लिए एकत्र होते हैं।","पवित्र जल में स्नान इस तीर्थयात्रा का महत्वपूर्ण अंग है।","नाशिक–त्र्यंबकेश्वर में सिंहस्थ गोदावरी को भक्ति की परंपरा से जोड़ता है।"], calendar: "पवित्र स्नान यात्रा", locations: "दो पवित्र तीर्थस्थल", nashik: "नाशिक · रामकुंड", nashikDesc: "पंचवटी के गोदावरी घाट श्रद्धालुओं के लिए प्रमुख तीर्थस्थल हैं।", trimbak: "त्र्यंबकेश्वर · कुशावर्त", trimbakDesc: "त्र्यंबकेश्वर ज्योतिर्लिंग के पास स्थित पवित्र कुंड एक महत्वपूर्ण स्नान स्थल है।", temple: "त्र्यंबकेश्वर दर्शन", official: "आधिकारिक कार्यक्रम देखें", warning: "तस्वीरें पिछले वर्षों की हैं; तिथियाँ और व्यवस्थाएँ बदल सकती हैं।" },
 };
+
+const DATE_LOCALES = { en: "en-IN", mr: "mr-IN-u-nu-deva", hi: "hi-IN-u-nu-deva", gu: "gu-IN-u-nu-gujr", te: "te-IN-u-nu-telu", ta: "ta-IN-u-nu-taml" } as const;
+const EVENT_TRANSLATIONS = {
+  gu: ["ધ્વજારોહણ (ધ્વજ ફરકાવવો)", "મુખ્ય મેળાનો સમય શરૂ", "નગર પ્રદક્ષિણા", "પ્રથમ અમૃત સ્નાન", "બીજું અમૃત સ્નાન", "ત્રીજું અમૃત સ્નાન", "ત્રીજું અમૃત સ્નાન", "ધ્વજાવતરણ (ધ્વજ ઉતારવો)"],
+  te: ["ధ్వజారోహణం", "ప్రధాన మేళా ప్రారంభం", "నగర ప్రదక్షిణ", "మొదటి అమృత స్నానం", "రెండవ అమృత స్నానం", "మూడవ అమృత స్నానం", "మూడవ అమృత స్నానం", "ధ్వజావతరణం"],
+  ta: ["கொடியேற்றம்", "முக்கிய விழாக்காலம் தொடக்கம்", "நகர வலம்", "முதல் அமிர்த நீராடல்", "இரண்டாம் அமிர்த நீராடல்", "மூன்றாம் அமிர்த நீராடல்", "மூன்றாம் அமிர்த நீராடல்", "கொடியிறக்கம்"],
+} as const;
+const TIME_TRANSLATIONS = {
+  en: { all: "All Day", pending: "To be notified", afternoon: "PM" },
+  mr: { all: "संपूर्ण दिवस", pending: "वेळ जाहीर होणे बाकी", afternoon: "दुपारी" },
+  hi: { all: "पूरा दिन", pending: "समय घोषित होना बाकी", afternoon: "दोपहर" },
+  gu: { all: "આખો દિવસ", pending: "સમય જાહેર થવાનો બાકી", afternoon: "બપોરે" },
+  te: { all: "రోజంతా", pending: "సమయం ప్రకటించాల్సి ఉంది", afternoon: "మధ్యాహ్నం" },
+  ta: { all: "நாள் முழுவதும்", pending: "நேரம் அறிவிக்கப்படவில்லை", afternoon: "பிற்பகல்" },
+} as const;
+function localDate(iso: string, lang: keyof typeof DATE_LOCALES) {
+  const [year, month, day] = iso.split("-").map(Number);
+  return new Intl.DateTimeFormat(DATE_LOCALES[lang], { day: "numeric", month: "long", year: "numeric", timeZone: "UTC" }).format(new Date(Date.UTC(year, month - 1, day)));
+}
+function localDateParts(iso: string, lang: keyof typeof DATE_LOCALES) {
+  const [year, month, day] = iso.split("-").map(Number);
+  const date = new Date(Date.UTC(year, month - 1, day));
+  const locale = DATE_LOCALES[lang];
+  const number = new Intl.NumberFormat(locale, { useGrouping: false });
+  return {
+    weekday: new Intl.DateTimeFormat(locale, { weekday: "long", timeZone: "UTC" }).format(date),
+    day: number.format(day),
+    monthYear: new Intl.DateTimeFormat(locale, { month: "long", year: "numeric", timeZone: "UTC" }).format(date),
+  };
+}
+function localEventTime(time: string, lang: keyof typeof TIME_TRANSLATIONS) {
+  const t = TIME_TRANSLATIONS[lang];
+  if (time === "All Day") return t.all;
+  if (time === "To be notified") return t.pending;
+  const [hour, minute] = time.split(":");
+  const localized = new Intl.NumberFormat(DATE_LOCALES[lang], { minimumIntegerDigits: 2, useGrouping: false });
+  const mins = Number(minute.slice(0, 2));
+  return lang === "en" ? time : t.afternoon + " " + localized.format(Number(hour)) + ":" + localized.format(mins);
+}
+function localEventLabel(event: typeof EVENTS[number], index: number, lang: keyof typeof DATE_LOCALES) {
+  if (lang === "mr") return event.label[1];
+  if (lang === "hi") return event.label[2];
+  if (lang === "gu" || lang === "te" || lang === "ta") return EVENT_TRANSLATIONS[lang][index];
+  return event.label[0];
+}
+
 function Photo({ src, alt, className = "" }: { src: string; alt: string; className?: string }) {
   const [failed, setFailed] = useState(false);
   return <img src={failed ? fallbackImg : src} onError={() => setFailed(true)} alt={alt} loading="lazy" className={cn("size-full object-cover", className)} />;
@@ -94,8 +140,8 @@ export function KumbhExperience() {
             toSlug: "kumbh-" + EVENTS[i + 1].date,
             fromIndex: i + 1,
             toIndex: i + 2,
-            fromName: event.label[langIndex],
-            toName: EVENTS[i + 1].label[langIndex],
+            fromName: localEventLabel(event, i, lang),
+            toName: localEventLabel(EVENTS[i + 1], i + 1, lang),
             fromLocation: event.location,
             toLocation: EVENTS[i + 1].location,
             fromState: "Maharashtra",
@@ -103,20 +149,30 @@ export function KumbhExperience() {
             fromImage: event.img,
             toImage: EVENTS[i + 1].img,
             label: lang === "mr" ? "सिंहस्थ स्नानयात्रा" : lang === "hi" ? "सिंहस्थ स्नान यात्रा" : "Sacred Simhastha Journey",
-            subtitle: event.dateText + " → " + EVENTS[i + 1].dateText,
+            subtitle: localDate(event.date, lang) + " → " + localDate(EVENTS[i + 1].date, lang),
             spiritualEssence: lang === "mr" ? "गोदावरीच्या तीरावर श्रद्धेचा संगम" : lang === "hi" ? "गोदावरी के तट पर आस्था का संगम" : "A sacred journey along the Godavari",
           } : null;
           return <div key={event.date} className="relative">
-            <section className="relative mx-auto max-w-5xl px-4 py-12 sm:py-20" aria-label={event.label[langIndex]}>
-              <div className="grid items-center gap-6 overflow-hidden rounded-3xl border border-primary/30 bg-card shadow-xl md:grid-cols-2">
-                <div className="h-64 overflow-hidden sm:h-80"><Photo src={event.img} alt={"Historical pilgrimage photograph of " + event.location} className="transition-transform duration-700 hover:scale-105" /></div>
-                <div className="p-6 sm:p-9">
-                  <span className="text-sm font-semibold text-primary">{String(i + 1).padStart(2, "0")} / {String(EVENTS.length).padStart(2, "0")}</span>
-                  <time dateTime={event.date} className="mt-4 flex items-center gap-2 text-sm font-semibold text-primary"><CalendarDays className="size-4" />{event.dateText}</time>
-                  <h3 className={cn("mt-4 text-2xl leading-snug text-foreground sm:text-4xl", fontClass)}>{event.label[langIndex]}</h3>
-                  <p className="mt-3 text-sm font-medium text-primary">{event.time}</p>
-                  <p className="mt-3 text-sm leading-relaxed text-muted-foreground">{event.description}</p>
-                  <p className="mt-4 flex items-center gap-2 text-sm text-muted-foreground"><MapPin className="size-4 text-primary" />{event.location}</p>
+
+            <section className="kumbh-calendar-event relative mx-auto max-w-6xl px-4 py-10 sm:py-16" aria-label={localEventLabel(event, i, lang)}>
+              <div className="grid overflow-hidden rounded-3xl border border-primary/35 bg-card/95 shadow-2xl md:grid-cols-[minmax(220px,0.85fr)_minmax(280px,1.3fr)_minmax(260px,1.3fr)]">
+                <div className="flex flex-col items-center justify-center border-b border-primary/30 bg-gradient-to-br from-primary/20 via-card to-card p-7 text-center md:border-b-0 md:border-r md:border-primary/30">
+                  <span className="text-sm font-semibold tracking-wider text-primary">{new Intl.NumberFormat(DATE_LOCALES[lang], { minimumIntegerDigits: 2 }).format(i + 1)} / {new Intl.NumberFormat(DATE_LOCALES[lang], { minimumIntegerDigits: 2 }).format(EVENTS.length)}</span>
+                  <time dateTime={event.date} className={cn("mt-4 flex flex-col items-center text-primary", lang === "mr" || lang === "hi" ? "kumbh-devanagari" : fontClass)}>
+                    <span className="text-lg font-semibold">{localDateParts(event.date, lang).weekday}</span>
+                    <span className="my-2 text-7xl font-bold leading-none tabular-nums sm:text-8xl lg:text-9xl">{localDateParts(event.date, lang).day}</span>
+                    <span className="text-xl font-semibold leading-relaxed sm:text-2xl">{localDateParts(event.date, lang).monthYear}</span>
+                  </time>
+                </div>
+                <div className="flex flex-col justify-center p-6 sm:p-9">
+                  <h3 className={cn("text-2xl leading-relaxed text-foreground sm:text-3xl", lang === "mr" || lang === "hi" ? "kumbh-devanagari" : fontClass)}>{localEventLabel(event, i, lang)}</h3>
+                  <p className={cn("mt-4 inline-flex w-fit items-center gap-2 rounded-full border border-primary/40 px-4 py-2 text-sm font-semibold text-primary", lang === "mr" || lang === "hi" ? "kumbh-devanagari" : fontClass)}><CalendarDays className="size-4 shrink-0" />{localEventTime(event.time, lang)}</p>
+                  <p className="mt-5 text-sm leading-relaxed text-muted-foreground">{event.description}</p>
+                  <p className="mt-5 flex items-center gap-2 text-sm text-muted-foreground"><MapPin className="size-4 shrink-0 text-primary" />{event.location}</p>
+                </div>
+                <div className="relative min-h-60 overflow-hidden md:min-h-80">
+                  <Photo src={event.img} alt={"Historical pilgrimage photograph of " + event.location} className="absolute inset-0 transition-transform duration-700 hover:scale-105" />
+                  <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-background/45 to-transparent" />
                 </div>
               </div>
             </section>
