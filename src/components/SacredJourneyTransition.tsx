@@ -11,6 +11,7 @@ interface SacredJourneyTransitionProps {
   isEn: boolean;
   fontClass: string;
   className?: string;
+  ritual?: "flag" | "procession" | "river" | "temple" | "closing";
 }
 
 export function SacredJourneyTransition({
@@ -19,6 +20,7 @@ export function SacredJourneyTransition({
   isEn,
   fontClass,
   className,
+  ritual,
 }: SacredJourneyTransitionProps) {
   const containerRef = useRef<HTMLElement | null>(null);
   const stageRef = useRef<HTMLDivElement | null>(null);
@@ -358,7 +360,7 @@ export function SacredJourneyTransition({
     },
     {
       scope: containerRef,
-      dependencies: [transition.fromSlug, transition.toSlug, lang],
+      dependencies: [transition.fromSlug, transition.toSlug, lang, ritual],
     },
   );
 
@@ -442,14 +444,14 @@ export function SacredJourneyTransition({
           <div className="pointer-events-none absolute inset-x-4 sm:inset-x-8 top-1/2 -translate-y-1/2 h-px bg-white/10 z-10 overflow-hidden">
             <div
               ref={stageRayLineRef}
-              className="absolute inset-y-0 left-0 w-full bg-gradient-to-r from-transparent via-primary to-accent"
+              className={cn("absolute inset-y-0 left-0 w-full", ritual === "river" ? "bg-gradient-to-r from-sky-500/30 via-cyan-300 to-sky-200 shadow-[0_0_16px_rgba(125,211,252,0.8)]" : ritual === "flag" || ritual === "closing" ? "bg-gradient-to-r from-orange-500/20 via-amber-400 to-orange-300 shadow-[0_0_16px_rgba(251,191,36,0.7)]" : ritual === "procession" ? "bg-gradient-to-r from-rose-500/30 via-amber-300 to-rose-300" : "bg-gradient-to-r from-transparent via-primary to-accent")}
             />
           </div>
 
           {/* Traveling Ray Glowing Head */}
           <div
             ref={stageRayHeadRef}
-            className="pointer-events-none absolute top-1/2 -translate-y-1/2 size-3 rounded-full bg-accent blur-[1px] shadow-glow z-10 select-none"
+            className={cn("pointer-events-none absolute top-1/2 -translate-y-1/2 size-3 rounded-full blur-[1px] shadow-glow z-10 select-none", ritual === "river" ? "bg-cyan-200" : ritual === "flag" || ritual === "closing" ? "bg-orange-300" : "bg-accent")}
           />
 
           {/* Optical Inner Border & Subtle Vignette */}
@@ -482,7 +484,7 @@ export function SacredJourneyTransition({
               className="inline-flex size-11 sm:size-14 items-center justify-center rounded-full border border-primary/40 bg-black/70 backdrop-blur-md mb-3 shadow-glow"
             >
               <span className="text-2xl sm:text-3xl text-primary font-bold font-display select-none leading-none">
-                ॐ
+                {ritual === "flag" || ritual === "closing" ? "🚩" : ritual === "river" ? "💧" : ritual === "procession" ? "🪔" : "ॐ"}
               </span>
             </div>
 
