@@ -195,8 +195,8 @@ export function KumbhExperience() {
                   </time>
                 </div>
                 <div className="flex flex-col justify-center p-6 sm:p-9">
-                  <h3 className={cn("text-2xl leading-relaxed text-foreground sm:text-3xl", lang === "mr" || lang === "hi" ? "kumbh-devanagari" : fontClass)}>{localEventLabel(event, i, lang)}</h3>
-                  <p className={cn("mt-4 inline-flex w-fit items-center gap-2 rounded-full border border-primary/40 px-4 py-2 text-sm font-semibold text-primary", lang === "mr" || lang === "hi" ? "kumbh-devanagari" : fontClass)}><CalendarDays className="size-4 shrink-0" />{localEventTime(event.time, lang)}</p>
+                  <h3 className={cn("text-2xl leading-relaxed text-foreground sm:text-3xl", fontClass)}>{localEventLabel(event, i, lang)}</h3>
+                  <p className={cn("mt-4 inline-flex w-fit items-center gap-2 rounded-full border border-primary/40 px-4 py-2 text-sm font-semibold text-primary", fontClass)}><CalendarDays className="size-4 shrink-0" />{localEventTime(event.time, lang)}</p>
                   <p className="mt-5 text-sm leading-relaxed text-muted-foreground">{KUMBH_DESCRIPTIONS[lang][i]}</p>
                   <p className="mt-5 flex items-center gap-2 text-sm text-muted-foreground"><MapPin className="size-4 shrink-0 text-primary" />{eventPlace(event.location, lang)}</p>
                 </div>
