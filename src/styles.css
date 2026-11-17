@@ -164,7 +164,7 @@
   --font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
 
   /* Explicit Script Fonts */
-  --font-en: "Inter", ui-sans-serif, system-ui, sans-serif;
+  --font-en: "Yatra One", serif;
   --font-devanagari: "Yatra One", serif;
   --font-hindi: "Yatra One", serif;
   --font-marathi: "Yatra One Marathi", "Yatra One", serif;
@@ -528,7 +528,9 @@ html[lang="hi"] label {
   }
 
   .font-en {
-    font-family: var(--font-en) !important;
+    font-family: "Yatra One", serif !important;
+    font-weight: 400;
+    font-synthesis: none;
   }
   .font-devanagari,
   .font-hindi {
