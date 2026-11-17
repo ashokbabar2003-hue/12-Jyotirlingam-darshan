@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { Link } from "@tanstack/react-router";
-import { ArrowUpRight, CalendarDays, ChevronLeft, ChevronRight, Droplets, Flame, MapPin, Mountain, Play, Waves } from "lucide-react";
+import { ArrowUpRight, CalendarDays, ChevronLeft, ChevronRight, Flame, MapPin, Mountain, Play, Waves } from "lucide-react";
 import { useLanguage } from "@/hooks/use-language";
 import { cn } from "@/lib/utils";
 import templeImg from "@/assets/jl-trimbakeshwar.jpg";
