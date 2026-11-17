@@ -541,6 +541,14 @@ html[lang="hi"] label {
     font-weight: 400;
     font-synthesis: none;
   }
+  /* Keep Hindi's font override in the same cascade layer as .font-hindi.
+   * Important declarations in layers outrank unlayered important rules. */
+  html[data-lang="hi"] .font-hindi,
+  html[lang="hi"] .font-hindi,
+  html[data-lang="hi"] .font-devanagari,
+  html[lang="hi"] .font-devanagari {
+    font-family: "Yatra One Marathi", "Yatra One", serif !important;
+  }
   .font-gujarati {
     font-family: "Noto Sans Gujarati", sans-serif !important;
   }
@@ -550,15 +558,6 @@ html[lang="hi"] label {
   .font-tamil {
     font-family: "Noto Sans Tamil", sans-serif !important;
   }
-}
-
-/* Staging experiment: use the corrected local Devanagari face for Hindi too.
- * Marathi styles and production remain unchanged. */
-html[data-lang="hi"] .font-hindi,
-html[lang="hi"] .font-hindi,
-html[data-lang="hi"] .font-devanagari,
-html[lang="hi"] .font-devanagari {
-  font-family: "Yatra One Marathi", "Yatra One", serif !important;
 }
 
 @keyframes diya-flicker {
