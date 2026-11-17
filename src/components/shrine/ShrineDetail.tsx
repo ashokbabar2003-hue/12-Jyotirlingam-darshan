@@ -10,6 +10,7 @@ import { DarshanTile } from "@/components/darshan-tile";
 import { StotramCompanion } from "@/components/stotram-companion";
 import { useLanguage, toLocalDigits, type Lang } from "@/hooks/use-language";
 import { cn } from "@/lib/utils";
+import { getShrineStory } from "@/data/shrine-stories";
 import { Button } from "@/components/ui/button";
 import { SubmitGalleryDialog } from "@/components/submit-gallery-dialog";
 import { SubmitStoryDialog } from "@/components/submit-story-dialog";
@@ -104,6 +105,7 @@ export function ShrineDetail({ jl }: { jl: Jyotirlinga }) {
   );
 
   const loc = getLocalized(jl, lang);
+  const [description, significance] = getShrineStory(jl, lang);
   const { name: displayName, location: displayLocation, state: displayState } = loc;
 
   return (
@@ -202,11 +204,11 @@ export function ShrineDetail({ jl }: { jl: Jyotirlinga }) {
               isEn ? "font-display tracking-tight" : "tracking-normal",
             )}
           >
-            {DETAIL_STRINGS[lang].aboutPrefix} {jl.deity}
+            {DETAIL_STRINGS[lang].aboutPrefix} {displayName}
           </h2>
-          <p className="mt-3 text-muted-foreground">{jl.description}</p>
-          <p className="mt-4 border-l-2 border-primary pl-4 text-foreground/90 italic">
-            {jl.significance}
+          <p className={cn("mt-3 text-muted-foreground", fontClass)}>{description}</p>
+          <p className={cn("mt-4 border-l-2 border-primary pl-4 text-foreground/90 italic", fontClass)}>
+            {significance}
           </p>
         </section>
 
