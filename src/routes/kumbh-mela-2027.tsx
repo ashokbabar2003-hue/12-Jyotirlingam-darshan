@@ -6,7 +6,6 @@ import { KUMBH_TEXT } from "@/components/KumbhFeature";
 import { KumbhExperience } from "@/components/KumbhExperience";
 import { cn } from "@/lib/utils";
 import heroImg from "@/assets/hero-aarti.jpg";
-import templeImg from "@/assets/jl-trimbakeshwar.jpg";
 
 const OFFICIAL_SITE = "https://simhasthamahakumbh.maharashtra.gov.in/";
 const OFFICIAL_SCHEDULE = "https://simhasthamahakumbh.maharashtra.gov.in/#snan";
@@ -20,14 +19,6 @@ const EXTRA: Record<Lang, { back: string; countdown: string; begins: string; day
   te: { back: "దర్శనానికి తిరిగి", countdown: "సింహస్థ కుంభమేళా 2027", begins: "ప్రధాన మేళా ప్రారంభానికి", days: "రోజులు", hours: "గంటలు", minutes: "నిమిషాలు", seconds: "సెకన్లు", started: "2027 మేళా కాలం ప్రారంభమైంది", what: "గోదావరి తీరాన భక్తి సంగమం", whatDesc: "నాసిక్, త్ర్యంబకేశ్వర్ వద్ద గోదావరి పవిత్ర తీరాన భక్తులు సమావేశమవుతారు. అధికారిక సూచనలతో మీ యాత్రను ప్లాన్ చేసుకోండి.", keyDates: "పవిత్ర స్నాన తేదీలు", locations: "రెండు పవిత్ర యాత్రా స్థలాలు", nashik: "నాసిక్ · రామ్‌తీర్థ్", nashikDesc: "పంచవటిలోని రామ్‌కుండ్ వద్ద గోదావరి తీరాన పవిత్ర స్నాన సంప్రదాయం.", trimbak: "త్ర్యంబకేశ్వర్ · కుశావర్త", trimbakDesc: "త్ర్యంబకేశ్వర్ జ్యోతిర్లింగ ఆలయం సమీపంలోని పవిత్ర కుశావర్త తీర్థం.", official: "అధికారిక కుంభ పోర్టల్", officialNote: "తేదీలు, ఏర్పాట్లు మారవచ్చు. అధికారిక సమాచారాన్ని పరిశీలించండి.", explore: "త్ర్యంబకేశ్వర్ దర్శనం", travel: "యాత్ర ప్రణాళిక", note: "షెడ్యూల్, యాత్రికుల మార్గదర్శకం", pilgrimage: "భక్తి · సంప్రదాయం · యాత్ర", dateLabels: ["ప్రధాన మేళా ప్రారంభం", "మొదటి అమృత స్నానం", "రెండవ అమృత స్నానం", "మూడవ అమృత స్నానం · నాసిక్", "మూడవ అమృత స్నానం · త్ర్యంబకేశ్వర్"] },
   ta: { back: "தரிசனத்திற்குத் திரும்பு", countdown: "சிம்ஹஸ்த கும்பமேளா 2027", begins: "முக்கிய விழா தொடங்க", days: "நாட்கள்", hours: "மணி", minutes: "நிமிடம்", seconds: "விநாடி", started: "2027 விழாக்காலம் தொடங்கியுள்ளது", what: "கோதாவரிக் கரையில் பக்தியின் சங்கமம்", whatDesc: "நாசிக் மற்றும் திரியம்பகேஸ்வரில் கோதாவரியின் புனிதக் கரையில் பக்தர்கள் கூடுகின்றனர். அதிகாரப்பூர்வ வழிகாட்டுதலுடன் பயணத்தைத் திட்டமிடுங்கள்.", keyDates: "புனித நீராடல் நாட்கள்", locations: "இரு புனித யாத்திரைத் தலங்கள்", nashik: "நாசிக் · ராம்தீர்த்தம்", nashikDesc: "பஞ்சவட்டியில் ராம்குண்டில் கோதாவரிக் கரையோரப் புனித நீராடல் மரபு.", trimbak: "திரியம்பகேஸ்வர் · குஷாவர்த்தம்", trimbakDesc: "திரியம்பகேஸ்வர் ஜோதிர்லிங்கக் கோயிலுக்கு அருகிலுள்ள புனித குஷாவர்த்த தீர்த்தம்.", official: "அதிகாரப்பூர்வ கும்ப இணையதளம்", officialNote: "தேதிகளும் ஏற்பாடுகளும் மாறலாம். அதிகாரப்பூர்வத் தகவலைச் சரிபார்க்கவும்.", explore: "திரியம்பகேஸ்வர் தரிசனம்", travel: "பயணத் திட்டம்", note: "நிகழ்ச்சி அட்டவணை மற்றும் பயணிகள் வழிகாட்டுதல்", pilgrimage: "பக்தி · மரபு · யாத்திரை", dateLabels: ["முக்கிய விழா தொடக்கம்", "முதல் அமிர்த நீராடல்", "இரண்டாம் அமிர்த நீராடல்", "மூன்றாம் அமிர்த நீராடல் · நாசிக்", "மூன்றாம் அமிர்த நீராடல் · திரியம்பகேஸ்வர்"] },
 };
-
-const SNAN_EVENTS = [
-  { date: "2027-06-15", display: "15 JUN 2027" },
-  { date: "2027-08-02", display: "02 AUG 2027" },
-  { date: "2027-08-31", display: "31 AUG 2027" },
-  { date: "2027-09-11", display: "11 SEP 2027" },
-  { date: "2027-09-12", display: "12 SEP 2027" },
-];
 
 function useCountdown() {
   const [remaining, setRemaining] = useState<number | null>(null);
