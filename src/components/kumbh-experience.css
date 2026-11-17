@@ -6,3 +6,9 @@
 @keyframes kumbh-ken-burns { from { transform: scale(1); } to { transform: scale(1.11); } }
 @keyframes kumbh-copy-arrive { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
 @media (prefers-reduced-motion: reduce) { .kumbh-reveal { opacity: 1; transform: none; transition: none; } .kumbh-story-photo, .kumbh-story-copy { animation: none; } }
+
+/* Keep Marathi/Hindi conjuncts such as स्नान intact; do not force a decorative font with incomplete glyph shaping. */
+.kumbh-devanagari { font-family: "Noto Serif Devanagari", "Noto Sans Devanagari", "Mukta", serif; font-variant-ligatures: normal; font-feature-settings: "kern" 1; letter-spacing: normal; }
+.kumbh-calendar-event { scroll-margin-top: 6rem; }
+.kumbh-calendar-event time { font-variant-numeric: tabular-nums; }
+@media (max-width: 767px) { .kumbh-calendar-event { padding-top: 2rem; padding-bottom: 2rem; } }
