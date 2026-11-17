@@ -215,14 +215,14 @@ export function HeroAarti({ t, lang, isEn, fontClass }: HeroAartiProps) {
           0,
         );
 
-      // 4. Ensure exact calculation after web fonts have settled
+      // Refresh measurements after font loading without replaying the entrance animation.
       if (typeof document !== "undefined" && "fonts" in document) {
         document.fonts.ready.then(() => {
           ScrollTrigger.refresh();
         });
       }
     },
-    { scope: containerRef, dependencies: [lang] },
+    { scope: containerRef, dependencies: [] },
   );
 
   return (
