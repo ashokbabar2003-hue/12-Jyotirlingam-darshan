@@ -36,9 +36,12 @@ export const Route = createFileRoute("/$slug")({
       </Link>
     </div>
   ),
-  errorComponent: () => (
+  errorComponent: ({ error }) => (
+    // Staging diagnostic: expose a referenceable browser console error while preserving the friendly page.
+    // The production route is not changed.
     <div className="mx-auto max-w-md px-4 py-24 text-center">
       <h1 className="font-display text-2xl text-foreground">Could not load this shrine</h1>
+      <p className="mt-3 break-words text-sm text-muted-foreground" role="alert">{error?.message || "Unknown route error"}</p>
       <Link to="/" className="mt-4 inline-block text-primary underline">
         Back to all Jyotirlingas
       </Link>
