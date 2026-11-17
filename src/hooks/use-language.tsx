@@ -16,7 +16,7 @@ export const LANGUAGES: {
   fontClass: string;
   displayFontClass: string;
 }[] = [
-  { code: "en", label: "English", fontClass: "font-en", displayFontClass: "font-display" },
+  { code: "en", label: "English", fontClass: "font-en", displayFontClass: "font-en" },
   { code: "mr", label: "मराठी", fontClass: "font-marathi", displayFontClass: "font-marathi" },
   { code: "hi", label: "हिन्दी", fontClass: "font-hindi", displayFontClass: "font-hindi" },
   { code: "gu", label: "ગુજરાતી", fontClass: "font-gujarati", displayFontClass: "font-gujarati" },
@@ -119,7 +119,7 @@ export function LanguageProvider({ children }: { children: ReactNode }) {
         const fontQueries: Record<Lang, string> = {
           mr: '16px "Yatra One Marathi"',
           hi: '16px "Yatra One"',
-          en: '16px "Inter"',
+          en: '16px "Yatra One"',
           gu: '16px "Noto Sans Gujarati"',
           te: '16px "Noto Sans Telugu"',
           ta: '16px "Noto Sans Tamil"',
