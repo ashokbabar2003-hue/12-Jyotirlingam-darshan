@@ -6,7 +6,6 @@ import { ArrowLeft, MapPin, Play, Images, BookHeart } from "lucide-react";
 import { type Jyotirlinga, getLocalized } from "@/data/jyotirlingas";
 import { getApprovedGallery, getApprovedStories, getDarshanLinks } from "@/lib/darshan.functions";
 import { resolveShrineStreams } from "@/lib/darshan-precedence";
-import { validateYoutubeUrl } from "@/lib/youtube";
 import { DarshanTile } from "@/components/darshan-tile";
 import { StotramCompanion } from "@/components/stotram-companion";
 import { useLanguage, toLocalDigits, type Lang } from "@/hooks/use-language";
@@ -99,6 +98,10 @@ export function ShrineDetail({ jl }: { jl: Jyotirlinga }) {
   const liveUrl = resolved.liveUrl;
   const defaultUrl = resolved.defaultUrl;
   const hasAnyEmbed = Boolean(liveUrl || defaultUrl);
+  // Offer an external source only when embedding is unavailable and a safe URL exists.
+  const externalDarshanUrl = [resolved.rawPrimary, resolved.rawFallback].find(
+    (url): url is string => Boolean(url && /^https:\/\//i.test(url)),
+  );
 
   const loc = getLocalized(jl, lang);
   const { name: displayName, location: displayLocation, state: displayState } = loc;
@@ -155,9 +158,9 @@ export function ShrineDetail({ jl }: { jl: Jyotirlinga }) {
           >
             <MapPin className="size-4" /> {displayLocation}, {displayState} · {jl.river}
           </p>
-          {!hasAnyEmbed && (
+          {!hasAnyEmbed && externalDarshanUrl && (
             <Button asChild variant="hero" className="mt-6" size="lg">
-              <a href={liveRaw} target="_blank" rel="noopener noreferrer">
+              <a href={externalDarshanUrl} target="_blank" rel="noopener noreferrer">
                 <Play className="size-4" />{" "}
                 <span className={fontClass}>{DETAIL_STRINGS[lang].watchLive}</span>
               </a>
