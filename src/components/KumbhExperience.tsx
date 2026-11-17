@@ -158,7 +158,7 @@ export function KumbhExperience() {
               <div className="grid overflow-hidden rounded-3xl border border-primary/35 bg-card/95 shadow-2xl md:grid-cols-[minmax(220px,0.85fr)_minmax(280px,1.3fr)_minmax(260px,1.3fr)]">
                 <div className="flex flex-col items-center justify-center border-b border-primary/30 bg-gradient-to-br from-primary/20 via-card to-card p-7 text-center md:border-b-0 md:border-r md:border-primary/30">
                   <span className="text-sm font-semibold tracking-wider text-primary">{new Intl.NumberFormat(DATE_LOCALES[lang], { minimumIntegerDigits: 2 }).format(i + 1)} / {new Intl.NumberFormat(DATE_LOCALES[lang], { minimumIntegerDigits: 2 }).format(EVENTS.length)}</span>
-                  <time dateTime={event.date} className={cn("mt-4 flex flex-col items-center text-primary", lang === "mr" || lang === "hi" ? "kumbh-devanagari" : fontClass)}>
+                  <time dateTime={event.date} className={cn("mt-4 flex flex-col items-center text-primary", fontClass)}>
                     <span className="text-lg font-semibold">{localDateParts(event.date, lang).weekday}</span>
                     <span className="my-2 text-7xl font-bold leading-none tabular-nums sm:text-8xl lg:text-9xl">{localDateParts(event.date, lang).day}</span>
                     <span className="text-xl font-semibold leading-relaxed sm:text-2xl">{localDateParts(event.date, lang).monthYear}</span>
