@@ -1,8 +1,9 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
-import { ArrowLeft, ArrowUpRight, CalendarDays, Clock3, Flame, MapPin, ShieldCheck, Sparkles } from "lucide-react";
+import { ArrowLeft, ArrowUpRight, CalendarDays, Clock3, Flame, ShieldCheck } from "lucide-react";
 import { useLanguage, type Lang } from "@/hooks/use-language";
 import { KUMBH_TEXT } from "@/components/KumbhFeature";
+import { KumbhExperience } from "@/components/KumbhExperience";
 import { cn } from "@/lib/utils";
 import heroImg from "@/assets/hero-aarti.jpg";
 import templeImg from "@/assets/jl-trimbakeshwar.jpg";
@@ -91,47 +92,9 @@ function KumbhPage() {
       </div>
 
       <div className="mx-auto max-w-6xl space-y-20 px-4 pb-20 pt-14 sm:pt-20">
-        <div className="grid items-center gap-8 lg:grid-cols-2">
-          <div>
-            <p className={cn("mb-3 flex items-center gap-2 text-sm text-primary", fontClass)}><Sparkles className="size-4" />{x.pilgrimage}</p>
-            <h2 className={cn("text-3xl leading-snug text-foreground sm:text-4xl", fontClass)}>{x.what}</h2>
-            <p className={cn("mt-5 text-base leading-relaxed text-muted-foreground sm:text-lg", fontClass)}>{x.whatDesc}</p>
-            <Link to="/$slug" params={{ slug: "trimbakeshwar" }} className={cn("mt-6 inline-flex min-h-11 items-center gap-2 rounded-full border border-primary/50 px-5 py-2 font-semibold text-primary hover:bg-primary/10", fontClass)}>{x.explore}<ArrowUpRight className="size-4" /></Link>
-          </div>
-          <div className="overflow-hidden rounded-2xl border border-primary/25 shadow-xl"><img src={templeImg} alt="Trimbakeshwar Jyotirlinga temple" className="aspect-[4/3] w-full object-cover" loading="lazy" /></div>
-        </div>
-
-        <section id="snan-dates" aria-labelledby="snan-heading" className="scroll-mt-28">
-          <div className="text-center"><Flame className="mx-auto mb-3 size-7 text-primary" /><h2 id="snan-heading" className={cn("text-3xl sm:text-4xl", fontClass)}>{x.keyDates}</h2></div>
-          <ol className="relative mx-auto mt-10 max-w-4xl border-l border-primary/50 pl-6 sm:pl-10">
-            {SNAN_EVENTS.map((event, i) => (
-              <li key={event.date} className="relative mb-5 last:mb-0">
-                <span className="absolute -left-[31px] top-6 size-3 rounded-full border-2 border-primary bg-background shadow-[0_0_16px_rgba(234,179,8,0.45)] sm:-left-[47px]" aria-hidden="true" />
-                <div className={cn("rounded-2xl border p-5 sm:flex sm:items-center sm:gap-8 sm:p-6", i === 0 ? "border-primary/60 bg-primary/10" : "border-border bg-card/70")}>
-                  <time dateTime={event.date} className="block shrink-0 text-sm font-bold tracking-wide text-primary sm:w-36">{event.display}</time>
-                  <p className={cn("mt-2 text-lg text-foreground sm:mt-0", fontClass)}>{x.dateLabels[i]}</p>
-                </div>
-              </li>
-            ))}
-          </ol>
-          <p className={cn("mx-auto mt-6 max-w-3xl text-center text-sm leading-relaxed text-muted-foreground", fontClass)}>{x.officialNote}</p>
-          <div className="mt-5 text-center"><a href={OFFICIAL_SCHEDULE} target="_blank" rel="noopener noreferrer" className={cn("inline-flex min-h-11 items-center gap-2 font-semibold text-primary hover:underline", fontClass)}>{t.calendar}<ArrowUpRight className="size-4" /></a></div>
-        </section>
-
-        <section aria-labelledby="pilgrimage-locations">
-          <div className="mb-8 text-center"><h2 id="pilgrimage-locations" className={cn("text-3xl sm:text-4xl", fontClass)}>{x.locations}</h2></div>
-          <div className="grid gap-5 md:grid-cols-2">
-            <article className="overflow-hidden rounded-2xl border border-primary/25 bg-card">
-              <div className="relative h-44 overflow-hidden bg-gradient-to-br from-amber-950/50 via-primary/10 to-background"><img src={heroImg} alt="Sacred aarti atmosphere" loading="lazy" className="size-full object-cover opacity-75" /></div>
-              <div className="p-6"><MapPin className="mb-3 size-5 text-primary" /><h3 className={cn("text-2xl", fontClass)}>{x.nashik}</h3><p className={cn("mt-3 leading-relaxed text-muted-foreground", fontClass)}>{x.nashikDesc}</p><a href={OFFICIAL_SITE} target="_blank" rel="noopener noreferrer" className={cn("mt-5 inline-flex min-h-11 items-center gap-2 font-semibold text-primary hover:underline", fontClass)}>{x.travel}<ArrowUpRight className="size-4" /></a></div>
-            </article>
-            <article className="overflow-hidden rounded-2xl border border-primary/25 bg-card">
-              <div className="h-44 overflow-hidden"><img src={templeImg} alt="Trimbakeshwar temple" loading="lazy" className="size-full object-cover" /></div>
-              <div className="p-6"><MapPin className="mb-3 size-5 text-primary" /><h3 className={cn("text-2xl", fontClass)}>{x.trimbak}</h3><p className={cn("mt-3 leading-relaxed text-muted-foreground", fontClass)}>{x.trimbakDesc}</p><Link to="/$slug" params={{ slug: "trimbakeshwar" }} className={cn("mt-5 inline-flex min-h-11 items-center gap-2 font-semibold text-primary hover:underline", fontClass)}>{x.explore}<ArrowUpRight className="size-4" /></Link></div>
-            </article>
-          </div>
-        </section>
-
+      </div>
+      <KumbhExperience />
+      <div className="mx-auto max-w-6xl px-4 pb-20">
         <section className="rounded-2xl border border-primary/35 bg-gradient-to-r from-card to-primary/10 p-6 sm:p-9">
           <div className="flex flex-col gap-5 sm:flex-row sm:items-center sm:justify-between">
             <div><p className={cn("flex items-center gap-2 text-lg font-semibold text-foreground", fontClass)}><ShieldCheck className="size-5 text-primary" />{x.note}</p><p className={cn("mt-2 text-sm text-muted-foreground", fontClass)}>{x.officialNote}</p></div>
