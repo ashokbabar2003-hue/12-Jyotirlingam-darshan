@@ -9,22 +9,43 @@ import "./kumbh-experience.css";
 import { SacredJourneyTransition } from "@/components/SacredJourneyTransition";
 import type { SacredJourneyTransitionData } from "@/data/transitions";
 
+// Historical, openly licensed images selected to match each event's subject.
+// These are illustrative archival photographs, NOT photographs of the 2026–28 ceremonies.
+// Wikimedia Commons author: Prabirghose; CC BY-SA 4.0.
+const commonsPhoto = (name: string) =>
+  "https://commons.wikimedia.org/wiki/Special:Redirect/file/" + encodeURIComponent(name) + "?width=1200";
+const commonsPage = (name: string) =>
+  "https://commons.wikimedia.org/wiki/File:" + encodeURIComponent(name.replaceAll(" ", "_"));
 const MEDIA = {
-  ramkund: "https://commons.wikimedia.org/wiki/Special:Redirect/file/Ramkund%20Nashik.jpg?width=1200",
-  mela: "https://commons.wikimedia.org/wiki/Special:Redirect/file/Kumbhmela%20Nashik%202015%20-%20view%20across%20Ramkund.JPG?width=1200",
-  kushavarta: "https://commons.wikimedia.org/wiki/Special:Redirect/file/Kumbhmela%20Nashik%202015%20-%20Trimbakeshwar%20Kushavarta.JPG?width=1200",
-  pilgrims: "https://commons.wikimedia.org/wiki/Special:Redirect/file/Kumbha%20mela%20on%20ghats%20of%20the%20river%20godavari%20nashik.jpg?width=1200",
+  flag: commonsPhoto("Kumbhmela Nashik 2015 - the copper flag in Kushavarta, Trimbakeshwar.JPG"),
+  mela: commonsPhoto("Kumbhmela Nashik 2015 - view across Ramkund.JPG"),
+  procession: commonsPhoto("Kumbhmela Nashik 2015 - sadhu in Trimbakeshwar.JPG"),
+  firstSnan: commonsPhoto("Kumbhmela Nashik - holy dip.JPG"),
+  secondSnan: commonsPhoto("Kumbhmela Nashik - devotees.JPG"),
+  nashikSnan: commonsPhoto("Kumbhmela Nashik - peole in Ramkund.JPG"),
+  kushavarta: commonsPhoto("Kumbhmela Nashik 2015 - Trimbakeshwar Kushavarta.JPG"),
+  closing: commonsPhoto("Kumbhmela Nashik 2015 - spire of Kushavarta, Trimbakeshwar.JPG"),
 };
-const PHOTO_CREDITS = "Historical photographs: Wikimedia Commons contributors (2014–2025), CC BY-SA 4.0. These are not photographs of the 2027 event.";
+const MEDIA_FILES = [
+  "Kumbhmela Nashik 2015 - the copper flag in Kushavarta, Trimbakeshwar.JPG",
+  "Kumbhmela Nashik 2015 - view across Ramkund.JPG",
+  "Kumbhmela Nashik 2015 - sadhu in Trimbakeshwar.JPG",
+  "Kumbhmela Nashik - holy dip.JPG",
+  "Kumbhmela Nashik - devotees.JPG",
+  "Kumbhmela Nashik - peole in Ramkund.JPG",
+  "Kumbhmela Nashik 2015 - Trimbakeshwar Kushavarta.JPG",
+  "Kumbhmela Nashik 2015 - spire of Kushavarta, Trimbakeshwar.JPG",
+];
+const PHOTO_CREDITS = "Archival photographs by Prabirghose (2015), Wikimedia Commons, CC BY-SA 4.0. Images illustrate the locations and traditions, not the specific 2026–28 ceremonies.";
 const EVENTS = [
-  { date: "2026-10-31", dateText: "31 OCT 2026", time: "12:02 PM", img: MEDIA.ramkund, location: "Nashik–Trimbakeshwar", label: ["Dhwajarohan (Flag Hoisting)","ध्वजारोहण (ध्वजवंदन)","ध्वजारोहण (ध्वज फहराना)"], description: "Dhwaj Parv, Jupiter’s entry into Leo, and commencement of Simhastha Mahakumbh." },
-  { date: "2027-06-15", dateText: "15 JUN 2027", time: "All Day", img: MEDIA.ramkund, location: "Nashik–Trimbakeshwar", label: ["Major Mela Period Begins","मुख्य मेळा कालावधी सुरू","मुख्य मेला अवधि शुरू"], description: "The official major Mela period begins." },
-  { date: "2027-07-29", dateText: "29 JUL 2027", time: "To be notified", img: MEDIA.mela, location: "Nashik", label: ["Nagar Pradakshina","नगर प्रदक्षिणा","नगर प्रदक्षिणा"], description: "The traditional procession around Nashik before the Amrut Snans." },
-  { date: "2027-08-02", dateText: "02 AUG 2027", time: "All Day", img: MEDIA.pilgrims, location: "Nashik–Trimbakeshwar", label: ["First Amrut Snan","पहिले अमृत स्नान","पहला अमृत स्नान"], description: "The first sacred bathing day of Simhastha Mahakumbh." },
-  { date: "2027-08-31", dateText: "31 AUG 2027", time: "All Day", img: MEDIA.mela, location: "Nashik–Trimbakeshwar", label: ["Second Amrut Snan","दुसरे अमृत स्नान","दूसरा अमृत स्नान"], description: "The second sacred bathing day of Simhastha Mahakumbh." },
-  { date: "2027-09-11", dateText: "11 SEP 2027", time: "All Day", img: MEDIA.ramkund, location: "Ramtirth, Nashik", label: ["Third Amrut Snan","तिसरे अमृत स्नान","तीसरा अमृत स्नान"], description: "The third sacred bathing day of Simhastha Mahakumbh at Ramtirth, Nashik." },
+  { date: "2026-10-31", dateText: "31 OCT 2026", time: "12:02 PM", img: MEDIA.flag, location: "Nashik–Trimbakeshwar", label: ["Dhwajarohan (Flag Hoisting)","ध्वजारोहण (ध्वजवंदन)","ध्वजारोहण (ध्वज फहराना)"], description: "Dhwaj Parv, Jupiter’s entry into Leo, and commencement of Simhastha Mahakumbh." },
+  { date: "2027-06-15", dateText: "15 JUN 2027", time: "All Day", img: MEDIA.mela, location: "Nashik–Trimbakeshwar", label: ["Major Mela Period Begins","मुख्य मेळा कालावधी सुरू","मुख्य मेला अवधि शुरू"], description: "The official major Mela period begins." },
+  { date: "2027-07-29", dateText: "29 JUL 2027", time: "To be notified", img: MEDIA.procession, location: "Nashik", label: ["Nagar Pradakshina","नगर प्रदक्षिणा","नगर प्रदक्षिणा"], description: "The traditional procession around Nashik before the Amrut Snans." },
+  { date: "2027-08-02", dateText: "02 AUG 2027", time: "All Day", img: MEDIA.firstSnan, location: "Nashik–Trimbakeshwar", label: ["First Amrut Snan","पहिले अमृत स्नान","पहला अमृत स्नान"], description: "The first sacred bathing day of Simhastha Mahakumbh." },
+  { date: "2027-08-31", dateText: "31 AUG 2027", time: "All Day", img: MEDIA.secondSnan, location: "Nashik–Trimbakeshwar", label: ["Second Amrut Snan","दुसरे अमृत स्नान","दूसरा अमृत स्नान"], description: "The second sacred bathing day of Simhastha Mahakumbh." },
+  { date: "2027-09-11", dateText: "11 SEP 2027", time: "All Day", img: MEDIA.nashikSnan, location: "Ramtirth, Nashik", label: ["Third Amrut Snan","तिसरे अमृत स्नान","तीसरा अमृत स्नान"], description: "The third sacred bathing day of Simhastha Mahakumbh at Ramtirth, Nashik." },
   { date: "2027-09-12", dateText: "12 SEP 2027", time: "All Day", img: MEDIA.kushavarta, location: "Kushavarta Tirth, Trimbakeshwar", label: ["Third Amrut Snan","तिसरे अमृत स्नान","तीसरा अमृत स्नान"], description: "The third sacred bathing day of Simhastha Mahakumbh at Kushavarta Tirth, Trimbakeshwar." },
-  { date: "2028-07-24", dateText: "24 JUL 2028", time: "3:36 PM", img: MEDIA.kushavarta, location: "Nashik–Trimbakeshwar", label: ["Dhwajavatarana (Flag Lowering)","ध्वजावतरण (ध्वज उतरवणे)","ध्वजावतरण (ध्वज उतारना)"], description: "Lowering of the flag, marking the conclusion of Simhastha Mahakumbh." },
+  { date: "2028-07-24", dateText: "24 JUL 2028", time: "3:36 PM", img: MEDIA.closing, location: "Nashik–Trimbakeshwar", label: ["Dhwajavatarana (Flag Lowering)","ध्वजावतरण (ध्वज उतरवणे)","ध्वजावतरण (ध्वज उतारना)"], description: "Lowering of the flag, marking the conclusion of Simhastha Mahakumbh." },
 ];
 const COPY = {
   en: { what: "What is the Kumbh Mela?", watch: "Explore the story", journey: "A journey of faith", steps: ["A sacred gathering","The holy rivers","A living tradition"], details: ["Pilgrims come together in a shared celebration of faith and spiritual renewal.","Ritual bathing in sacred waters is a central part of the pilgrimage.","At Nashik and Trimbakeshwar, Simhastha connects the Godavari with generations of devotion."], calendar: "The sacred Snan journey", locations: "Two sacred destinations", nashik: "Nashik · Ramkund", nashikDesc: "The Godavari ghats in Panchavati are a gathering place for pilgrims.", trimbak: "Trimbakeshwar · Kushavarta", trimbakDesc: "The sacred tank near Trimbakeshwar Jyotirlinga is another important bathing site.", temple: "Explore Trimbakeshwar", official: "Verify the official schedule", warning: "Historical images are illustrative; dates and arrangements may change." },
@@ -137,7 +158,7 @@ export function KumbhExperience() {
     const timer = window.setInterval(() => setScene(s => (s + 1) % 3), 4800);
     return () => window.clearInterval(timer);
   }, [playing]);
-  const storyImages = [MEDIA.pilgrims, MEDIA.ramkund, MEDIA.kushavarta];
+  const storyImages = [MEDIA.secondSnan, MEDIA.firstSnan, MEDIA.kushavarta];
   return <div ref={root} className="mx-auto max-w-6xl space-y-20 px-4 pb-20 pt-14 sm:space-y-28 sm:pt-20">
     <section aria-labelledby="kumbh-story-title" className="kumbh-reveal overflow-hidden rounded-3xl border border-primary/30 bg-card shadow-2xl">
       <div className="grid lg:grid-cols-[1.2fr_1fr]">
@@ -206,6 +227,7 @@ export function KumbhExperience() {
                 <div className="relative min-h-60 overflow-hidden md:min-h-80">
                   <Photo src={event.img} alt={ui.historic + ": " + eventPlace(event.location, lang)} className="absolute inset-0 transition-transform duration-700 hover:scale-105" />
                   <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-background/45 to-transparent" />
+                  <a href={commonsPage(MEDIA_FILES[i])} target="_blank" rel="noopener noreferrer" className="absolute bottom-3 right-3 z-10 rounded-md bg-background/85 px-2 py-1 text-[11px] text-foreground underline underline-offset-2 backdrop-blur-sm">© Prabirghose · CC BY-SA 4.0</a>
                 </div>
               </div>
             </section>
@@ -219,7 +241,7 @@ export function KumbhExperience() {
     <section aria-labelledby="kumbh-places-title">
       <h2 id="kumbh-places-title" className={cn("kumbh-reveal mb-9 text-center text-3xl sm:text-4xl", fontClass)}>{t.locations}</h2>
       <div className="grid gap-6 md:grid-cols-2">
-        <article className="kumbh-reveal group overflow-hidden rounded-2xl border border-primary/25 bg-card"><div className="h-56 overflow-hidden"><Photo src={MEDIA.ramkund} alt="Ramkund on the Godavari in Nashik" className="transition-transform duration-700 group-hover:scale-105" /></div><div className="p-6"><Waves className="mb-3 size-6 text-primary" /><h3 className={cn("text-2xl", fontClass)}>{t.nashik}</h3><p className={cn("mt-3 leading-relaxed text-muted-foreground", fontClass)}>{t.nashikDesc}</p></div></article>
+        <article className="kumbh-reveal group overflow-hidden rounded-2xl border border-primary/25 bg-card"><div className="h-56 overflow-hidden"><Photo src={MEDIA.mela} alt="Ramkund on the Godavari in Nashik" className="transition-transform duration-700 group-hover:scale-105" /></div><div className="p-6"><Waves className="mb-3 size-6 text-primary" /><h3 className={cn("text-2xl", fontClass)}>{t.nashik}</h3><p className={cn("mt-3 leading-relaxed text-muted-foreground", fontClass)}>{t.nashikDesc}</p></div></article>
         <article className="kumbh-reveal group overflow-hidden rounded-2xl border border-primary/25 bg-card"><div className="h-56 overflow-hidden"><img src={templeImg} alt="Trimbakeshwar Jyotirlinga temple" loading="lazy" className="size-full object-cover transition-transform duration-700 group-hover:scale-105" /></div><div className="p-6"><Mountain className="mb-3 size-6 text-primary" /><h3 className={cn("text-2xl", fontClass)}>{t.trimbak}</h3><p className={cn("mt-3 leading-relaxed text-muted-foreground", fontClass)}>{t.trimbakDesc}</p><Link to="/$slug" params={{slug:"trimbakeshwar"}} className={cn("mt-4 inline-flex min-h-11 items-center gap-2 font-semibold text-primary",fontClass)}>{t.temple}<ArrowUpRight className="size-4" /></Link></div></article>
       </div>
     </section>
