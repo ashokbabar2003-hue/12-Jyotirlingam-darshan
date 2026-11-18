@@ -1,6 +1,6 @@
 import { useRef } from "react";
 import { Flame, ChevronDown } from "lucide-react";
-import { useGSAP, gsap, ScrollTrigger, prefersReducedMotion } from "@/hooks/use-gsap";
+import { useGSAP, gsap, prefersReducedMotion } from "@/hooks/use-gsap";
 import { displayFontClassFor, type Lang } from "@/hooks/use-language";
 import { cn } from "@/lib/utils";
 import heroImg from "@/assets/hero-aarti.jpg";
@@ -215,12 +215,6 @@ export function HeroAarti({ t, lang, isEn, fontClass }: HeroAartiProps) {
           0,
         );
 
-      // Refresh measurements after font loading without replaying the entrance animation.
-      if (typeof document !== "undefined" && "fonts" in document) {
-        document.fonts.ready.then(() => {
-          ScrollTrigger.refresh();
-        });
-      }
     },
     { scope: containerRef, dependencies: [] },
   );

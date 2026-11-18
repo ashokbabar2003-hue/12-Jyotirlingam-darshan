@@ -89,37 +89,11 @@ export function LanguageProvider({ children, initialLang = "en" }: { children: R
     }
   }, []);
 
-  // Load only the selected script font instead of fetching every language at startup.
+  // Keep document language synchronized without initiating redundant font requests.
+  // CSS font faces load on demand when the selected language is rendered.
   useEffect(() => {
-    if (typeof document !== "undefined") {
-      document.documentElement.lang = lang;
-      document.documentElement.setAttribute("data-lang", lang);
-
-      if (document.fonts) {
-        const fontQueries: Record<Lang, string> = {
-          mr: '16px "Yatra One Marathi"',
-          hi: '16px "Yatra One"',
-          en: '16px "Yatra One"',
-          gu: '16px "Noto Sans Gujarati"',
-          te: '16px "Noto Sans Telugu"',
-          ta: '16px "Noto Sans Tamil"',
-        };
-        const query = fontQueries[lang];
-        if (query) {
-          document.fonts
-            .load(query)
-            .then(() => {
-              const available = document.fonts.check(query);
-              console.log(
-                `[Typography] Script font active for "${lang}" (${query}): ${available ? "READY" : "PENDING"}`,
-              );
-            })
-            .catch(() => {
-              /* font load silent catch */
-            });
-        }
-      }
-    }
+    document.documentElement.lang = lang;
+    document.documentElement.setAttribute("data-lang", lang);
   }, [lang]);
 
   const value = useMemo(
