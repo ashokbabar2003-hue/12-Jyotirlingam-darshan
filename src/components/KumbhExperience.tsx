@@ -18,25 +18,28 @@ const commonsPage = (name: string) =>
   "https://commons.wikimedia.org/wiki/File:" + encodeURIComponent(name.replaceAll(" ", "_"));
 const MEDIA = {
   flag: commonsPhoto("Kumbhmela Nashik 2015 - the copper flag in Kushavarta, Trimbakeshwar.JPG"),
-  mela: commonsPhoto("Kumbhmela Nashik 2015 - view across Ramkund.JPG"),
+  mela: commonsPhoto("Kumbh @ Nashik 2015 (21752545956).jpg"),
   procession: commonsPhoto("Kumbhmela Nashik 2015 - sadhu in Trimbakeshwar.JPG"),
   firstSnan: commonsPhoto("Kumbhmela Nashik - holy dip.JPG"),
   secondSnan: commonsPhoto("Kumbhmela Nashik - devotees.JPG"),
-  nashikSnan: commonsPhoto("Kumbhmela Nashik - peole in Ramkund.JPG"),
+  nashikSnan: commonsPhoto("Nashik kumbha snan.jpg"),
   kushavarta: commonsPhoto("Kumbhmela Nashik 2015 - Trimbakeshwar Kushavarta.JPG"),
-  closing: commonsPhoto("Kumbhmela Nashik 2015 - spire of Kushavarta, Trimbakeshwar.JPG"),
+  closing: commonsPhoto("Kumbhmela Nashik 2015 - the copper flag in Kushavarta, Trimbakeshwar.JPG"),
 };
 const MEDIA_FILES = [
   "Kumbhmela Nashik 2015 - the copper flag in Kushavarta, Trimbakeshwar.JPG",
-  "Kumbhmela Nashik 2015 - view across Ramkund.JPG",
+  "Kumbh @ Nashik 2015 (21752545956).jpg",
   "Kumbhmela Nashik 2015 - sadhu in Trimbakeshwar.JPG",
   "Kumbhmela Nashik - holy dip.JPG",
   "Kumbhmela Nashik - devotees.JPG",
-  "Kumbhmela Nashik - peole in Ramkund.JPG",
+  "Nashik kumbha snan.jpg",
   "Kumbhmela Nashik 2015 - Trimbakeshwar Kushavarta.JPG",
-  "Kumbhmela Nashik 2015 - spire of Kushavarta, Trimbakeshwar.JPG",
+  "Kumbhmela Nashik 2015 - the copper flag in Kushavarta, Trimbakeshwar.JPG",
 ];
-const PHOTO_CREDITS = "Archival photographs by Prabirghose (2015), Wikimedia Commons, CC BY-SA 4.0. Images illustrate the locations and traditions, not the specific 2026–28 ceremonies.";
+const MEDIA_CREDITS = [
+  "Prabirghose · CC BY-SA 4.0", "BOMBMAN · CC BY 2.0", "Prabirghose · CC BY-SA 4.0", "Prabirghose · CC BY-SA 4.0", "Prabirghose · CC BY-SA 4.0", "Wikimedia Commons · see licence", "Prabirghose · CC BY-SA 4.0", "Prabirghose · CC BY-SA 4.0",
+];
+const PHOTO_CREDITS = "Historical photos from Wikimedia Commons. Attribution and license details are linked on each photograph; these are illustrative, not photographs of the 2027 ceremonies.";
 const EVENTS = [
   { date: "2026-10-31", dateText: "31 OCT 2026", time: "12:02 PM", img: MEDIA.flag, location: "Nashik–Trimbakeshwar", label: ["Dhwajarohan (Flag Hoisting)","ध्वजारोहण (ध्वजवंदन)","ध्वजारोहण (ध्वज फहराना)"], description: "Dhwaj Parv, Jupiter’s entry into Leo, and commencement of Simhastha Mahakumbh." },
   { date: "2027-06-15", dateText: "15 JUN 2027", time: "All Day", img: MEDIA.mela, location: "Nashik–Trimbakeshwar", label: ["Major Mela Period Begins","मुख्य मेळा कालावधी सुरू","मुख्य मेला अवधि शुरू"], description: "The official major Mela period begins." },
@@ -227,7 +230,7 @@ export function KumbhExperience() {
                 <div className="relative min-h-60 overflow-hidden md:min-h-80">
                   <Photo src={event.img} alt={ui.historic + ": " + eventPlace(event.location, lang)} className="absolute inset-0 transition-transform duration-700 hover:scale-105" />
                   <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-background/45 to-transparent" />
-                  <a href={commonsPage(MEDIA_FILES[i])} target="_blank" rel="noopener noreferrer" className="absolute bottom-3 right-3 z-10 rounded-md bg-background/85 px-2 py-1 text-[11px] text-foreground underline underline-offset-2 backdrop-blur-sm">© Prabirghose · CC BY-SA 4.0</a>
+                  <a href={commonsPage(MEDIA_FILES[i])} target="_blank" rel="noopener noreferrer" className="absolute bottom-3 right-3 z-10 rounded-md bg-background/85 px-2 py-1 text-[11px] text-foreground underline underline-offset-2 backdrop-blur-sm">{MEDIA_CREDITS[i]}</a>
                 </div>
               </div>
             </section>
