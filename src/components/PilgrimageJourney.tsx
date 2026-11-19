@@ -134,7 +134,16 @@ export function PilgrimageJourney({
   const returnToShrineSelection = () => {
     const target = document.getElementById("pilgrimage-shrine-selection");
     if (!target) return;
-    target.scrollIntoView({ behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth", block: "start" });
+    // Reset the selection and clear the anchor so a return does not leave
+    // the previously chosen shrine highlighted or re-trigger its GSAP jump.
+    setSelectedShrine(null);
+    if (window.location.hash.startsWith("#shrine-scene-")) {
+      window.history.replaceState(window.history.state, "", window.location.pathname + window.location.search);
+    }
+    target.scrollIntoView({
+      behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth",
+      block: "start",
+    });
   };
   const firstShrineLoc = shrines[0] ? getLocalized(shrines[0], lang) : { name: "Somnath" };
   const lastShrineLoc = shrines[shrines.length - 1]
