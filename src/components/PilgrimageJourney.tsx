@@ -140,10 +140,15 @@ export function PilgrimageJourney({
     if (window.location.hash.startsWith("#shrine-scene-")) {
       window.history.replaceState(window.history.state, "", window.location.pathname + window.location.search);
     }
-    target.scrollIntoView({
-      behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth",
-      block: "start",
-    });
+    // Pinned GSAP scenes can intercept smooth scrollIntoView and land at the
+    // homepage hero. Use the selector's document position for a deterministic
+    // return, without modifying the separate transition animations.
+    const goToSelection = () => {
+      const top = window.scrollY + target.getBoundingClientRect().top - 112;
+      window.scrollTo({ top: Math.max(0, top), behavior: "instant" });
+    };
+    goToSelection();
+    requestAnimationFrame(goToSelection);
   };
   const firstShrineLoc = shrines[0] ? getLocalized(shrines[0], lang) : { name: "Somnath" };
   const lastShrineLoc = shrines[shrines.length - 1]
