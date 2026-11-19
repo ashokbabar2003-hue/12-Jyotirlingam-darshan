@@ -1,4 +1,5 @@
-import { useRef } from "react";
+import { useEffect, useRef, useState } from "react";
+import "./pilgrimage-selection.css";
 import { Sparkles, Compass, MapPin, ArrowUp } from "lucide-react";
 import { TempleScene } from "@/components/TempleScene";
 import { SacredJourneyTransition } from "@/components/SacredJourneyTransition";
@@ -116,6 +117,25 @@ export function PilgrimageJourney({
   const introHeaderRef = useRef<HTMLElement | null>(null);
   const completionRef = useRef<HTMLElement | null>(null);
   const ps = PILGRIMAGE_STRINGS[lang] ?? PILGRIMAGE_STRINGS.en;
+  const [selectedShrine, setSelectedShrine] = useState<string | null>(() => {
+    if (typeof window === "undefined") return null;
+    const slug = window.location.hash.startsWith("#shrine-scene-") ? window.location.hash.slice("#shrine-scene-".length) : null;
+    return slug && shrines.some(shrine => shrine.slug === slug) ? slug : null;
+  });
+  useEffect(() => {
+    const sync = () => {
+      const slug = window.location.hash.startsWith("#shrine-scene-") ? window.location.hash.slice("#shrine-scene-".length) : null;
+      if (slug && shrines.some(shrine => shrine.slug === slug)) setSelectedShrine(slug);
+    };
+    window.addEventListener("hashchange", sync);
+    sync();
+    return () => window.removeEventListener("hashchange", sync);
+  }, [shrines]);
+  const returnToShrineSelection = () => {
+    const target = document.getElementById("pilgrimage-shrine-selection");
+    if (!target) return;
+    target.scrollIntoView({ behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth", block: "start" });
+  };
   const firstShrineLoc = shrines[0] ? getLocalized(shrines[0], lang) : { name: "Somnath" };
   const lastShrineLoc = shrines[shrines.length - 1]
     ? getLocalized(shrines[shrines.length - 1], lang)
@@ -237,7 +257,7 @@ export function PilgrimageJourney({
             <div className="absolute inset-y-0 left-0 w-full bg-gradient-to-r from-primary via-accent to-primary opacity-60" />
           </div>
 
-          <div className="flex flex-wrap items-center justify-center gap-1.5 sm:gap-2">
+          <nav id="pilgrimage-shrine-selection" aria-label={ps.canonicalSequence} className="flex scroll-mt-28 flex-wrap items-center justify-center gap-1.5 sm:gap-2">
             {shrines.map((shrine, idx) => {
               const num = toLocalDigits(idx + 1, lang);
               const loc = getLocalized(shrine, lang);
@@ -245,7 +265,9 @@ export function PilgrimageJourney({
                 <a
                   key={shrine.slug}
                   href={`#shrine-scene-${shrine.slug}`}
-                  className="group inline-flex items-center gap-1.5 rounded-lg border border-border/40 bg-card/50 px-2.5 py-1.5 text-xs text-muted-foreground transition-all duration-200 hover:border-primary/50 hover:bg-card hover:text-foreground shadow-sm"
+                  onClick={() => setSelectedShrine(shrine.slug)}
+                  aria-current={selectedShrine === shrine.slug ? "location" : undefined}
+                  className={cn("pilgrimage-shrine-nav group relative isolate inline-flex min-h-11 items-center gap-1.5 rounded-lg border px-2.5 py-1.5 text-xs transition-colors duration-200 hover:border-primary/50 hover:bg-card hover:text-foreground shadow-sm", selectedShrine === shrine.slug ? "is-selected border-[#c58b46] bg-amber-500/15 text-foreground" : "border-border/40 bg-card/50 text-muted-foreground")}
                   title={`${loc.name} - ${loc.location}`}
                 >
                   <span className="text-[10px] font-mono font-semibold text-primary">{num}</span>
@@ -257,10 +279,11 @@ export function PilgrimageJourney({
                   >
                     {loc.name}
                   </span>
+                  {selectedShrine === shrine.slug && <span aria-hidden="true" className="shrink-0 font-bold text-amber-300">✓</span>}
                 </a>
               );
             })}
-          </div>
+          </nav>
         </div>
       </section>
 
@@ -281,6 +304,7 @@ export function PilgrimageJourney({
                 lang={lang}
                 isEn={isEn}
                 fontClass={fontClass}
+                onReturnToSelection={returnToShrineSelection}
               />
 
               {/* Data-Driven Sacred Journey Transition between consecutive shrines */}
