@@ -196,6 +196,15 @@ export function KumbhExperience() {
     </section>
     <section id="snan-dates" aria-labelledby="kumbh-dates-title" className="scroll-mt-28">
       <div className="kumbh-reveal text-center"><Flame className="mx-auto mb-3 size-8 text-primary" /><h2 id="kumbh-dates-title" className={cn("text-3xl sm:text-4xl", fontClass)}>{t.calendar}</h2></div>
+      <nav aria-label={t.calendar} className="kumbh-reveal mx-auto mt-8 grid max-w-5xl grid-cols-2 gap-2 sm:grid-cols-4">
+        {EVENTS.map((event, i) => (
+          <a key={event.date} href={"#kumbh-event-" + i}
+            className="flex min-h-14 flex-col justify-center rounded-xl border border-primary/30 bg-card px-3 py-2 text-left transition-colors hover:border-primary hover:bg-primary/10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary">
+            <span className="text-xs font-semibold text-primary">{localDate(event.date, lang)}</span>
+            <span className={cn("mt-1 text-sm leading-snug text-foreground", fontClass)}>{localEventLabel(event, i, lang)}</span>
+          </a>
+        ))}
+      </nav>
       <div className="relative left-1/2 mt-10 w-screen -translate-x-1/2">
         {EVENTS.map((event, i) => {
           const transition: SacredJourneyTransitionData | null = i < EVENTS.length - 1 ? {
@@ -217,7 +226,7 @@ export function KumbhExperience() {
           } : null;
           return <div key={event.date} className="relative">
 
-            <section className="kumbh-calendar-event relative mx-auto max-w-6xl px-4 py-10 sm:py-16" aria-label={localEventLabel(event, i, lang)}>
+            <section id={"kumbh-event-" + i} className="kumbh-calendar-event relative mx-auto max-w-6xl scroll-mt-28 px-4 py-10 sm:py-16" aria-label={localEventLabel(event, i, lang)}>
               <div className="grid overflow-hidden rounded-3xl border border-primary/35 bg-card/95 shadow-2xl md:grid-cols-[minmax(220px,0.85fr)_minmax(280px,1.3fr)_minmax(260px,1.3fr)]">
                 <div className="flex flex-col items-center justify-center border-b border-primary/30 bg-gradient-to-br from-primary/20 via-card to-card p-7 text-center md:border-b-0 md:border-r md:border-primary/30">
                   <span className="text-sm font-semibold tracking-wider text-primary">{toLocalDigits(new Intl.NumberFormat(DATE_LOCALES[lang], { minimumIntegerDigits: 2 }).format(i + 1), lang)} / {toLocalDigits(new Intl.NumberFormat(DATE_LOCALES[lang], { minimumIntegerDigits: 2 }).format(EVENTS.length), lang)}</span>
