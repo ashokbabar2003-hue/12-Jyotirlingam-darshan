@@ -1,10 +1,11 @@
 import { useRef } from "react";
 import { Link } from "@tanstack/react-router";
-import { MapPin, Compass, ArrowRight, Quote } from "lucide-react";
+import { MapPin, Compass, ArrowRight, ArrowUp, Quote } from "lucide-react";
 import { useGSAP, gsap, ScrollTrigger, prefersReducedMotion } from "@/hooks/use-gsap";
 import { toLocalDigits, displayFontClassFor, type Lang } from "@/hooks/use-language";
 import { type Jyotirlinga, getLocalized } from "@/data/jyotirlingas";
 import { cn } from "@/lib/utils";
+import { getShrineStory } from "@/data/shrine-stories";
 
 interface TempleSceneProps {
   shrine: Jyotirlinga;
@@ -14,37 +15,45 @@ interface TempleSceneProps {
   isEn: boolean;
   fontClass: string;
   className?: string;
+  onReturnToSelection?: () => void;
 }
 
 type TempleSceneLocale = {
   pilgrimageProgress: (curr: string, total: string) => string;
   enterDarshan: (shrineName: string) => string;
+  returnSelection: string;
 };
 
 const TEMPLE_SCENE_STRINGS: Record<Lang, TempleSceneLocale> = {
   en: {
     pilgrimageProgress: (c, t) => `Pilgrimage ${c} of ${t}`,
     enterDarshan: (name) => `Enter ${name} Darshan`,
+    returnSelection: "Back to temple selection",
   },
   mr: {
     pilgrimageProgress: (c, t) => `तीर्थक्षेत्र ${c} / ${t}`,
     enterDarshan: (name) => `${name} दर्शन प्रवेश`,
+    returnSelection: "मंदिर निवडीकडे परत जा",
   },
   hi: {
     pilgrimageProgress: (c, t) => `तीर्थक्षेत्र ${c} / ${t}`,
     enterDarshan: (name) => `${name} दर्शन में प्रवेश करें`,
+    returnSelection: "मंदिर चयन पर वापस जाएँ",
   },
   gu: {
     pilgrimageProgress: (c, t) => `તીર્થક્ષેત્ર ${c} / ${t}`,
     enterDarshan: (name) => `${name} દર્શનમાં પ્રવેશ કરો`,
+    returnSelection: "મંદિર પસંદગી પર પાછા જાઓ",
   },
   te: {
     pilgrimageProgress: (c, t) => `పుణ్యక్షేత్రం ${c} / ${t}`,
     enterDarshan: (name) => `${name} దర్శనంలోకి ప్రవేశించండి`,
+    returnSelection: "ఆలయ ఎంపికకు తిరిగి వెళ్ళండి",
   },
   ta: {
     pilgrimageProgress: (c, t) => `புனித தலம் ${c} / ${t}`,
     enterDarshan: (name) => `${name} தரிசனத்திற்குள் நுழைக`,
+    returnSelection: "கோயில் தேர்வுக்குத் திரும்பு",
   },
 };
 
@@ -56,6 +65,7 @@ export function TempleScene({
   isEn,
   fontClass,
   className,
+  onReturnToSelection,
 }: TempleSceneProps) {
   const containerRef = useRef<HTMLElement | null>(null);
   const pinTargetRef = useRef<HTMLDivElement | null>(null);
@@ -70,6 +80,7 @@ export function TempleScene({
   const ctaRef = useRef<HTMLDivElement | null>(null);
 
   const loc = getLocalized(shrine, lang);
+  const localizedStory = getShrineStory(shrine, lang);
   const displayNumber = toLocalDigits(shrine.number, lang);
   const totalDisplay = toLocalDigits(totalShrines, lang);
   const tss = TEMPLE_SCENE_STRINGS[lang] ?? TEMPLE_SCENE_STRINGS.en;
@@ -113,16 +124,9 @@ export function TempleScene({
         opacity: 0.85,
       });
 
-      gsap.set(numberBadge, {
-        opacity: 0,
-        y: 8,
-      });
-
-      // Unified subtle text entry (y: 12 -> 0)
-      gsap.set([metaBadge, title, desc, significance, cta], {
-        opacity: 0,
-        y: 12,
-      });
+      // Restore the scroll-driven entrance: narrative starts hidden during normal scrolling.
+      gsap.set(numberBadge, { opacity: 0, y: 8 });
+      gsap.set([metaBadge, title, desc, significance, cta], { opacity: 0, y: 12 });
 
       if (window.innerWidth >= 768) {
         // Desktop Experience: Data-driven pinned narrative hold
@@ -209,21 +213,48 @@ export function TempleScene({
             img,
             {
               scale: 1.0,
-              yPercent: 5,
+              yPercent: -2,
               ease: "none",
             },
             0.35,
           )
-          // 3. Gentle Pilgrimage Chapter Transition (75% - 100% scroll)
+          // 3. The image and text depart upward before the next transition.
+          .to(img, {
+            scale: 0.97,
+            yPercent: -9,
+            opacity: 0.78,
+            ease: "power1.inOut",
+          }, 0.75)
           .to(
-            [title, metaBadge, desc, significance, cta],
+            [numberBadge, title, metaBadge, desc, significance, cta],
             {
-              opacity: 0.7,
-              y: -6,
+              opacity: 0.2,
+              y: -22,
               ease: "power1.inOut",
             },
             0.75,
           );
+
+        // A timeline navigation click should land after the entrance reveal,
+        // not on the empty first frame of the pinned scene.
+        // Scroll to a point inside this scene's own timeline; no changes to
+        // the separate cosmic transition component or normal scroll behavior.
+        const revealOnAnchor = () => {
+          if (window.location.hash !== `#shrine-scene-${shrine.slug}`) return;
+          requestAnimationFrame(() => {
+            const trigger = masterTl.scrollTrigger;
+            if (!trigger) return;
+            const destination = trigger.start + (trigger.end - trigger.start) * 0.42;
+            window.scrollTo({ top: destination, behavior: "instant" });
+            trigger.update();
+          });
+        };
+        window.addEventListener("hashchange", revealOnAnchor);
+        // Handle direct links as well as clicks from the selector.
+        requestAnimationFrame(revealOnAnchor);
+        // Font loading may refresh pinned offsets after the first navigation.
+        if ("fonts" in document) document.fonts.ready.then(revealOnAnchor);
+        return () => window.removeEventListener("hashchange", revealOnAnchor);
       } else {
         // Mobile / Touch: Natural document flow with subtle opacity reveal
         const mobileTl = gsap.timeline({
@@ -323,7 +354,7 @@ export function TempleScene({
           <div
             ref={imgWrapperRef}
             className={cn(
-              "relative order-1 col-span-1 overflow-hidden rounded-2xl border border-border/50 bg-card/60 shadow-xl",
+              "pilgrimage-scene-frame relative isolate order-1 col-span-1 overflow-hidden rounded-2xl border border-border/50 bg-card/60 shadow-xl",
               imgColSpan,
               isEven ? "lg:order-2" : "lg:order-1",
             )}
@@ -434,7 +465,7 @@ export function TempleScene({
                 fontClass,
               )}
             >
-              {shrine.description}
+              {localizedStory?.[0] ?? shrine.description}
             </p>
 
             {/* Scriptural Significance Moment (Reflective sacred quote) */}
@@ -449,12 +480,12 @@ export function TempleScene({
                   fontClass,
                 )}
               >
-                {shrine.significance}
+                {localizedStory?.[1] ?? shrine.significance}
               </p>
             </div>
 
             {/* Enter Darshan Link */}
-            <div ref={ctaRef} className="pt-1">
+            <div ref={ctaRef} className="flex flex-wrap items-center gap-3 pt-1">
               <Link
                 to="/$slug"
                 params={{ slug: shrine.slug }}
@@ -466,6 +497,13 @@ export function TempleScene({
                 <span>{tss.enterDarshan(loc.name)}</span>
                 <ArrowRight className="size-4 transition-transform duration-300 group-hover:translate-x-1" />
               </Link>
+              {onReturnToSelection && (
+                <button type="button" onClick={onReturnToSelection}
+                  aria-label={tss.returnSelection} title={tss.returnSelection}
+                  className="pilgrimage-return-arrow relative z-10 grid size-12 shrink-0 place-items-center rounded-full border border-amber-400/70 bg-background/85 text-amber-300 hover:bg-amber-500/20 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary">
+                  <ArrowUp className="size-6" aria-hidden="true" />
+                </button>
+              )}
             </div>
           </div>
         </div>

@@ -1,0 +1,85 @@
+/* Match the Kumbh Mela event selection's three-second traveling golden border. */
+@property --pilgrimage-border-angle {
+  syntax: "<angle>";
+  initial-value: 0deg;
+  inherits: false;
+}
+.pilgrimage-shrine-nav.is-selected {
+  border-color: #c58b46;
+  box-shadow: 0 0 0 1px rgba(246,173,66,.25), 0 0 24px rgba(246,173,66,.16);
+}
+.pilgrimage-shrine-nav.is-selected::after,
+section[id^="shrine-scene-"]:target .pilgrimage-scene-frame::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  border-radius: inherit;
+  padding: 3px;
+  pointer-events: none;
+  background: conic-gradient(from var(--pilgrimage-border-angle), transparent 0deg, transparent 255deg, rgba(246,173,66,.2) 282deg, #ffd98c 309deg, #fff4d3 322deg, #ffc064 335deg, transparent 355deg);
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  mask-composite: exclude;
+  animation: pilgrimage-border-travel 3s linear infinite;
+}
+@keyframes pilgrimage-border-travel {
+  to { --pilgrimage-border-angle: 360deg; }
+}
+/* Matching selected scene emphasis without changing temple imagery or layout. */
+section[id^="shrine-scene-"]:target .pilgrimage-scene-frame {
+  border-color: #c58b46;
+  box-shadow: 0 0 0 1px rgba(246,173,66,.25), 0 0 24px rgba(246,173,66,.16);
+}
+.pilgrimage-return-arrow {
+  animation: pilgrimage-return-pulse 2s ease-in-out infinite;
+}
+@keyframes pilgrimage-return-pulse {
+  0%,100% { transform: scale(1); box-shadow: 0 0 7px rgba(255,179,72,.22); }
+  50% { transform: scale(1.09); box-shadow: 0 0 20px rgba(255,179,72,.64), 0 0 34px rgba(255,179,72,.24); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .pilgrimage-shrine-nav.is-selected::after,
+  section[id^="shrine-scene-"]:target .pilgrimage-scene-frame::after { animation: none; background: #f6ad42; }
+  .pilgrimage-return-arrow { animation: none; transform: none; }
+}
+
+
+/* Featured Live Darshan — Option 3: a quiet bronze frame and one
+   five-second amber sweep along the bottom edge only. */
+.live-darshan-temple-frame {
+  isolation: isolate;
+  border-color: rgba(175, 113, 55, .55);
+}
+.live-darshan-temple-frame::after {
+  content: "";
+  position: absolute;
+  z-index: 5;
+  pointer-events: none;
+  left: 0;
+  bottom: 0;
+  width: 35%;
+  height: 2px;
+  border-radius: 999px;
+  background: linear-gradient(90deg, transparent 0%, rgba(255,178,75,.35) 25%, #fff0bd 68%, transparent 100%);
+  box-shadow: 0 0 10px 2px rgba(255,170,65,.3);
+  transform: translateX(-110%);
+  animation: live-darshan-bottom-sweep 5s ease-in-out infinite;
+}
+@keyframes live-darshan-bottom-sweep {
+  0%, 12% { transform: translateX(-110%); opacity: 0; }
+  20% { opacity: 1; }
+  70% { transform: translateX(290%); opacity: 1; }
+  78%, 100% { transform: translateX(290%); opacity: 0; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .live-darshan-temple-frame::after {
+    animation: none;
+    transform: none;
+    width: 100%;
+    opacity: .55;
+    background: rgba(210, 151, 79, .65);
+    box-shadow: none;
+  }
+}

@@ -10,6 +10,7 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as SlugRouteImport } from './routes/$slug'
 import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/route'
 import { Route as AuthRouteImport } from './routes/auth'
 import { Route as DashboardRouteImport } from './routes/dashboard'
@@ -17,11 +18,18 @@ import { Route as LiveRouteImport } from './routes/live'
 import { Route as SitemapDotxmlRouteImport } from './routes/sitemap[.]xml'
 import { Route as AuthenticatedAdminRouteImport } from './routes/_authenticated/admin'
 import { Route as JyotirlingaSlugRouteImport } from './routes/jyotirlinga.$slug'
+import { Route as ApiDebugDatabaseRouteImport } from './routes/api/debug/database'
+import { Route as ApiDebugSupabaseConfigRouteImport } from './routes/api/debug/supabase-config'
 import { Route as ApiPublicHooksRefreshLiveStreamsRouteImport } from './routes/api/public/hooks/refresh-live-streams'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const SlugRoute = SlugRouteImport.update({
+  id: '/$slug',
+  path: '/$slug',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AuthenticatedRouteRoute = AuthenticatedRouteRouteImport.update({
@@ -58,6 +66,16 @@ const JyotirlingaSlugRoute = JyotirlingaSlugRouteImport.update({
   path: '/jyotirlinga/$slug',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiDebugDatabaseRoute = ApiDebugDatabaseRouteImport.update({
+  id: '/api/debug/database',
+  path: '/api/debug/database',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiDebugSupabaseConfigRoute = ApiDebugSupabaseConfigRouteImport.update({
+  id: '/api/debug/supabase-config',
+  path: '/api/debug/supabase-config',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiPublicHooksRefreshLiveStreamsRoute =
   ApiPublicHooksRefreshLiveStreamsRouteImport.update({
     id: '/api/public/hooks/refresh-live-streams',
@@ -67,78 +85,99 @@ const ApiPublicHooksRefreshLiveStreamsRoute =
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/$slug': typeof SlugRoute
   '/auth': typeof AuthRoute
   '/dashboard': typeof DashboardRoute
   '/live': typeof LiveRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/admin': typeof AuthenticatedAdminRoute
   '/jyotirlinga/$slug': typeof JyotirlingaSlugRoute
+  '/api/debug/database': typeof ApiDebugDatabaseRoute
+  '/api/debug/supabase-config': typeof ApiDebugSupabaseConfigRoute
   '/api/public/hooks/refresh-live-streams': typeof ApiPublicHooksRefreshLiveStreamsRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/$slug': typeof SlugRoute
   '/auth': typeof AuthRoute
   '/dashboard': typeof DashboardRoute
   '/live': typeof LiveRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/admin': typeof AuthenticatedAdminRoute
   '/jyotirlinga/$slug': typeof JyotirlingaSlugRoute
+  '/api/debug/database': typeof ApiDebugDatabaseRoute
+  '/api/debug/supabase-config': typeof ApiDebugSupabaseConfigRoute
   '/api/public/hooks/refresh-live-streams': typeof ApiPublicHooksRefreshLiveStreamsRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/_authenticated': typeof AuthenticatedRouteRouteWithChildren
+  '/$slug': typeof SlugRoute
   '/auth': typeof AuthRoute
   '/dashboard': typeof DashboardRoute
   '/live': typeof LiveRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/_authenticated/admin': typeof AuthenticatedAdminRoute
   '/jyotirlinga/$slug': typeof JyotirlingaSlugRoute
+  '/api/debug/database': typeof ApiDebugDatabaseRoute
+  '/api/debug/supabase-config': typeof ApiDebugSupabaseConfigRoute
   '/api/public/hooks/refresh-live-streams': typeof ApiPublicHooksRefreshLiveStreamsRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
+    | '/$slug'
     | '/auth'
     | '/dashboard'
     | '/live'
     | '/sitemap.xml'
     | '/admin'
     | '/jyotirlinga/$slug'
+    | '/api/debug/database'
+    | '/api/debug/supabase-config'
     | '/api/public/hooks/refresh-live-streams'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
+    | '/$slug'
     | '/auth'
     | '/dashboard'
     | '/live'
     | '/sitemap.xml'
     | '/admin'
     | '/jyotirlinga/$slug'
+    | '/api/debug/database'
+    | '/api/debug/supabase-config'
     | '/api/public/hooks/refresh-live-streams'
   id:
     | '__root__'
     | '/'
     | '/_authenticated'
+    | '/$slug'
     | '/auth'
     | '/dashboard'
     | '/live'
     | '/sitemap.xml'
     | '/_authenticated/admin'
     | '/jyotirlinga/$slug'
+    | '/api/debug/database'
+    | '/api/debug/supabase-config'
     | '/api/public/hooks/refresh-live-streams'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AuthenticatedRouteRoute: typeof AuthenticatedRouteRouteWithChildren
+  SlugRoute: typeof SlugRoute
   AuthRoute: typeof AuthRoute
   DashboardRoute: typeof DashboardRoute
   LiveRoute: typeof LiveRoute
   SitemapDotxmlRoute: typeof SitemapDotxmlRoute
   JyotirlingaSlugRoute: typeof JyotirlingaSlugRoute
+  ApiDebugDatabaseRoute: typeof ApiDebugDatabaseRoute
+  ApiDebugSupabaseConfigRoute: typeof ApiDebugSupabaseConfigRoute
   ApiPublicHooksRefreshLiveStreamsRoute: typeof ApiPublicHooksRefreshLiveStreamsRoute
 }
 
@@ -149,6 +188,13 @@ declare module '@tanstack/react-router' {
       path: '/'
       fullPath: '/'
       preLoaderRoute: typeof IndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/$slug': {
+      id: '/$slug'
+      path: '/$slug'
+      fullPath: '/$slug'
+      preLoaderRoute: typeof SlugRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/_authenticated': {
@@ -200,6 +246,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof JyotirlingaSlugRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/debug/database': {
+      id: '/api/debug/database'
+      path: '/api/debug/database'
+      fullPath: '/api/debug/database'
+      preLoaderRoute: typeof ApiDebugDatabaseRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/debug/supabase-config': {
+      id: '/api/debug/supabase-config'
+      path: '/api/debug/supabase-config'
+      fullPath: '/api/debug/supabase-config'
+      preLoaderRoute: typeof ApiDebugSupabaseConfigRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/public/hooks/refresh-live-streams': {
       id: '/api/public/hooks/refresh-live-streams'
       path: '/api/public/hooks/refresh-live-streams'
@@ -224,11 +284,14 @@ const AuthenticatedRouteRouteWithChildren =
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AuthenticatedRouteRoute: AuthenticatedRouteRouteWithChildren,
+  SlugRoute: SlugRoute,
   AuthRoute: AuthRoute,
   DashboardRoute: DashboardRoute,
   LiveRoute: LiveRoute,
   SitemapDotxmlRoute: SitemapDotxmlRoute,
   JyotirlingaSlugRoute: JyotirlingaSlugRoute,
+  ApiDebugDatabaseRoute: ApiDebugDatabaseRoute,
+  ApiDebugSupabaseConfigRoute: ApiDebugSupabaseConfigRoute,
   ApiPublicHooksRefreshLiveStreamsRoute: ApiPublicHooksRefreshLiveStreamsRoute,
 }
 export const routeTree = rootRouteImport

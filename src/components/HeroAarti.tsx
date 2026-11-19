@@ -1,6 +1,6 @@
 import { useRef } from "react";
 import { Flame, ChevronDown } from "lucide-react";
-import { useGSAP, gsap, ScrollTrigger, prefersReducedMotion } from "@/hooks/use-gsap";
+import { useGSAP, gsap, prefersReducedMotion } from "@/hooks/use-gsap";
 import { displayFontClassFor, type Lang } from "@/hooks/use-language";
 import { cn } from "@/lib/utils";
 import heroImg from "@/assets/hero-aarti.jpg";
@@ -28,7 +28,7 @@ export function HeroAarti({ t, lang, isEn, fontClass }: HeroAartiProps) {
   const taglineRef = useRef<HTMLParagraphElement | null>(null);
   const titleRef = useRef<HTMLHeadingElement | null>(null);
   const descRef = useRef<HTMLParagraphElement | null>(null);
-  const ctaRef = useRef<HTMLAnchorElement | null>(null);
+  const ctaRef = useRef<HTMLDivElement | null>(null);
   const scrollIndicatorRef = useRef<HTMLDivElement | null>(null);
 
   useGSAP(
@@ -83,7 +83,7 @@ export function HeroAarti({ t, lang, isEn, fontClass }: HeroAartiProps) {
           {
             opacity: 0.55,
             scale: 1.05,
-            duration: 2.2,
+            duration: 1.25,
             ease: "power1.inOut",
           },
           0,
@@ -92,7 +92,7 @@ export function HeroAarti({ t, lang, isEn, fontClass }: HeroAartiProps) {
           overlay,
           {
             opacity: 0.6,
-            duration: 2.0,
+            duration: 1.2,
             ease: "power1.inOut",
           },
           0,
@@ -103,10 +103,10 @@ export function HeroAarti({ t, lang, isEn, fontClass }: HeroAartiProps) {
           {
             opacity: 1,
             y: 0,
-            duration: 1.4,
+            duration: 0.85,
             ease: "power2.out",
           },
-          0.6,
+          0.25,
         )
         // Step 4: Tagline & Primary Sacred Title (1.2s)
         .to(
@@ -114,20 +114,20 @@ export function HeroAarti({ t, lang, isEn, fontClass }: HeroAartiProps) {
           {
             opacity: 1,
             y: 0,
-            duration: 1.0,
+            duration: 0.65,
             ease: "power2.out",
           },
-          1.0,
+          0.45,
         )
         .to(
           title,
           {
             opacity: 1,
             y: 0,
-            duration: 1.4,
+            duration: 0.85,
             ease: "power3.out",
           },
-          1.2,
+          0.55,
         )
         // Step 5: Supporting Scripture & Description (0.9s)
         .to(
@@ -135,10 +135,10 @@ export function HeroAarti({ t, lang, isEn, fontClass }: HeroAartiProps) {
           {
             opacity: 1,
             y: 0,
-            duration: 1.1,
+            duration: 0.7,
             ease: "power2.out",
           },
-          1.6,
+          0.7,
         )
         // Step 6: CTA button (0.7s)
         .to(
@@ -146,10 +146,10 @@ export function HeroAarti({ t, lang, isEn, fontClass }: HeroAartiProps) {
           {
             opacity: 1,
             y: 0,
-            duration: 0.9,
+            duration: 0.6,
             ease: "power2.out",
           },
-          1.9,
+          0.85,
         )
         // Step 7: Subtle Scroll Indicator (0.6s)
         .to(
@@ -160,7 +160,7 @@ export function HeroAarti({ t, lang, isEn, fontClass }: HeroAartiProps) {
             duration: 0.8,
             ease: "power2.out",
           },
-          2.2,
+          1.0,
         );
 
       // 3. Scroll Choreography (Parallax and Fade Transition)
@@ -215,14 +215,8 @@ export function HeroAarti({ t, lang, isEn, fontClass }: HeroAartiProps) {
           0,
         );
 
-      // 4. Ensure exact calculation after web fonts have settled
-      if (typeof document !== "undefined" && "fonts" in document) {
-        document.fonts.ready.then(() => {
-          ScrollTrigger.refresh();
-        });
-      }
     },
-    { scope: containerRef, dependencies: [lang] },
+    { scope: containerRef, dependencies: [] },
   );
 
   return (
@@ -286,23 +280,36 @@ export function HeroAarti({ t, lang, isEn, fontClass }: HeroAartiProps) {
         <p
           ref={descRef}
           className={cn(
-            "mt-3 max-w-2xl text-xs sm:text-base leading-relaxed text-muted-foreground sm:mt-6 sm:text-lg sm:leading-relaxed",
+            "mt-3 max-w-2xl text-sm leading-relaxed text-muted-foreground sm:mt-6 sm:text-lg sm:leading-relaxed",
             fontClass,
           )}
         >
           {t.heroDesc}
         </p>
 
-        <a
+        <div
           ref={ctaRef}
-          href="#live-darshan"
-          className={cn(
-            "mt-5 inline-flex min-h-[44px] items-center justify-center rounded-md bg-gradient-aarti px-6 py-2.5 sm:px-8 sm:py-3.5 text-sm font-semibold text-primary-foreground shadow-glow transition-all duration-300 hover:opacity-95 hover:shadow-lg focus:outline-none focus:ring-2 focus:ring-primary/50 sm:mt-8",
-            !isEn && cn("text-base", fontClass),
-          )}
+          className="mt-5 flex w-full flex-col items-stretch justify-center gap-3 sm:mt-8 sm:w-auto sm:flex-row sm:items-center"
         >
-          {t.cta}
-        </a>
+          <a
+            href="#live-darshan"
+            className={cn(
+              "inline-flex min-h-12 items-center justify-center rounded-lg bg-gradient-aarti px-6 py-3 text-sm font-semibold text-primary-foreground shadow-glow transition-all duration-300 hover:opacity-95 hover:shadow-lg focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/60 sm:min-w-52 sm:px-8",
+              !isEn && cn("text-base", fontClass),
+            )}
+          >
+            {t.cta}
+          </a>
+          <a
+            href="#shrines"
+            className={cn(
+              "inline-flex min-h-12 items-center justify-center rounded-lg border border-primary/45 bg-background/35 px-6 py-3 text-sm font-semibold text-foreground backdrop-blur-sm transition-all duration-300 hover:border-primary/75 hover:bg-primary/10 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/60 sm:min-w-52",
+              !isEn && cn("text-base", fontClass),
+            )}
+          >
+            {t.explore}
+          </a>
+        </div>
 
         {/* Subtle scroll guide indicator */}
         <div
