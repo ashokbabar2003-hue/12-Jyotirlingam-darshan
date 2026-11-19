@@ -124,19 +124,9 @@ export function TempleScene({
         opacity: 0.85,
       });
 
-      // Desktop anchor jumps land at the beginning of the pinned scroll timeline.
-      // Keep editorial content readable from frame one; animate its position
-      // during normal scrolling rather than hiding it until scroll progress.
-      const isDesktop = window.innerWidth >= 768;
-      gsap.set(numberBadge, {
-        opacity: isDesktop ? 1 : 0,
-        y: isDesktop ? 0 : 8,
-      });
-
-      gsap.set([metaBadge, title, desc, significance, cta], {
-        opacity: isDesktop ? 1 : 0,
-        y: isDesktop ? 0 : 12,
-      });
+      // Restore the scroll-driven entrance: narrative starts hidden during normal scrolling.
+      gsap.set(numberBadge, { opacity: 0, y: 8 });
+      gsap.set([metaBadge, title, desc, significance, cta], { opacity: 0, y: 12 });
 
       if (window.innerWidth >= 768) {
         // Desktop Experience: Data-driven pinned narrative hold
@@ -223,21 +213,48 @@ export function TempleScene({
             img,
             {
               scale: 1.0,
-              yPercent: 5,
+              yPercent: -2,
               ease: "none",
             },
             0.35,
           )
-          // 3. Gentle Pilgrimage Chapter Transition (75% - 100% scroll)
+          // 3. The image and text depart upward before the next transition.
+          .to(img, {
+            scale: 0.97,
+            yPercent: -9,
+            opacity: 0.78,
+            ease: "power1.inOut",
+          }, 0.75)
           .to(
-            [title, metaBadge, desc, significance, cta],
+            [numberBadge, title, metaBadge, desc, significance, cta],
             {
-              opacity: 0.7,
-              y: -6,
+              opacity: 0.2,
+              y: -22,
               ease: "power1.inOut",
             },
             0.75,
           );
+
+        // A timeline navigation click should land after the entrance reveal,
+        // not on the empty first frame of the pinned scene.
+        // Scroll to a point inside this scene's own timeline; no changes to
+        // the separate cosmic transition component or normal scroll behavior.
+        const revealOnAnchor = () => {
+          if (window.location.hash !== `#shrine-scene-${shrine.slug}`) return;
+          requestAnimationFrame(() => {
+            const trigger = masterTl.scrollTrigger;
+            if (!trigger) return;
+            const destination = trigger.start + (trigger.end - trigger.start) * 0.42;
+            window.scrollTo({ top: destination, behavior: "instant" });
+            trigger.update();
+          });
+        };
+        window.addEventListener("hashchange", revealOnAnchor);
+        // Handle direct links as well as clicks from the selector.
+        requestAnimationFrame(revealOnAnchor);
+        // Font loading may refresh pinned offsets after the first navigation.
+        if ("fonts" in document) document.fonts.ready.then(revealOnAnchor);
+        return () => window.removeEventListener("hashchange", revealOnAnchor);
       } else {
         // Mobile / Touch: Natural document flow with subtle opacity reveal
         const mobileTl = gsap.timeline({
