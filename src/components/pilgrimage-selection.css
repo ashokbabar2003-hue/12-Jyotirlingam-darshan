@@ -8,7 +8,8 @@
   border-color: #c58b46;
   box-shadow: 0 0 0 1px rgba(246,173,66,.25), 0 0 24px rgba(246,173,66,.16);
 }
-.pilgrimage-shrine-nav.is-selected::after {
+.pilgrimage-shrine-nav.is-selected::after,
+section[id^="shrine-scene-"]:target .pilgrimage-scene-frame::after {
   content: "";
   position: absolute;
   inset: 0;
@@ -29,6 +30,7 @@
 /* Matching selected scene emphasis without changing temple imagery or layout. */
 section[id^="shrine-scene-"]:target .pilgrimage-scene-frame {
   border-color: #c58b46;
+  box-shadow: 0 0 0 1px rgba(246,173,66,.25), 0 0 24px rgba(246,173,66,.16);
 }
 .pilgrimage-return-arrow {
   animation: pilgrimage-return-pulse 2s ease-in-out infinite;
@@ -38,6 +40,7 @@ section[id^="shrine-scene-"]:target .pilgrimage-scene-frame {
   50% { transform: scale(1.09); box-shadow: 0 0 20px rgba(255,179,72,.64), 0 0 34px rgba(255,179,72,.24); }
 }
 @media (prefers-reduced-motion: reduce) {
-  .pilgrimage-shrine-nav.is-selected::after { animation: none; background: #f6ad42; }
+  .pilgrimage-shrine-nav.is-selected::after,
+  section[id^="shrine-scene-"]:target .pilgrimage-scene-frame::after { animation: none; background: #f6ad42; }
   .pilgrimage-return-arrow { animation: none; transform: none; }
 }
