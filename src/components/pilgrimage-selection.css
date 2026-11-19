@@ -46,46 +46,40 @@ section[id^="shrine-scene-"]:target .pilgrimage-scene-frame {
 }
 
 
-/* Featured Live Darshan: devotional illuminated corners, deliberately
-   distinct from the selected shrine's traveling golden border. */
+/* Featured Live Darshan — Option 3: a quiet bronze frame and one
+   five-second amber sweep along the bottom edge only. */
 .live-darshan-temple-frame {
   isolation: isolate;
+  border-color: rgba(175, 113, 55, .55);
 }
-.live-darshan-temple-frame::before,
 .live-darshan-temple-frame::after {
   content: "";
   position: absolute;
-  inset: 0;
   z-index: 5;
   pointer-events: none;
-  border-radius: inherit;
-  background:
-    linear-gradient(90deg, #ffe3a1, #d99c45) left 12px top 12px / 42px 2px no-repeat,
-    linear-gradient(#ffe3a1, #d99c45) left 12px top 12px / 2px 42px no-repeat,
-    linear-gradient(270deg, #ffe3a1, #d99c45) right 12px top 12px / 42px 2px no-repeat,
-    linear-gradient(#ffe3a1, #d99c45) right 12px top 12px / 2px 42px no-repeat,
-    linear-gradient(90deg, #ffe3a1, #d99c45) left 12px bottom 12px / 42px 2px no-repeat,
-    linear-gradient(0deg, #ffe3a1, #d99c45) left 12px bottom 12px / 2px 42px no-repeat,
-    linear-gradient(270deg, #ffe3a1, #d99c45) right 12px bottom 12px / 42px 2px no-repeat,
-    linear-gradient(0deg, #ffe3a1, #d99c45) right 12px bottom 12px / 2px 42px no-repeat;
-  animation: live-darshan-corner-glow 4s ease-in-out infinite;
+  left: 0;
+  bottom: 0;
+  width: 35%;
+  height: 2px;
+  border-radius: 999px;
+  background: linear-gradient(90deg, transparent 0%, rgba(255,178,75,.35) 25%, #fff0bd 68%, transparent 100%);
+  box-shadow: 0 0 10px 2px rgba(255,170,65,.3);
+  transform: translateX(-110%);
+  animation: live-darshan-bottom-sweep 5s ease-in-out infinite;
 }
-.live-darshan-temple-frame::after {
-  opacity: .45;
-  filter: blur(7px);
-  animation-delay: -2s;
-}
-@keyframes live-darshan-corner-glow {
-  0%, 100% { opacity: .48; }
-  50% { opacity: 1; }
-}
-@media (max-width: 640px) {
-  .live-darshan-temple-frame::before,
-  .live-darshan-temple-frame::after {
-    background-size: 24px 2px, 2px 24px, 24px 2px, 2px 24px, 24px 2px, 2px 24px, 24px 2px, 2px 24px;
-  }
+@keyframes live-darshan-bottom-sweep {
+  0%, 12% { transform: translateX(-110%); opacity: 0; }
+  20% { opacity: 1; }
+  70% { transform: translateX(290%); opacity: 1; }
+  78%, 100% { transform: translateX(290%); opacity: 0; }
 }
 @media (prefers-reduced-motion: reduce) {
-  .live-darshan-temple-frame::before,
-  .live-darshan-temple-frame::after { animation: none; opacity: .7; }
+  .live-darshan-temple-frame::after {
+    animation: none;
+    transform: none;
+    width: 100%;
+    opacity: .55;
+    background: rgba(210, 151, 79, .65);
+    box-shadow: none;
+  }
 }
