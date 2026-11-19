@@ -220,14 +220,14 @@ export function KumbhExperience() {
   };
   const [detailIndex, setDetailIndex] = useState<number | null>(() => {
     if (typeof window === "undefined") return null;
-    const match = /^#kumbh-detail-(\\d+)$/.exec(window.location.hash);
+    const match = /^#kumbh-detail-(\d+)$/.exec(window.location.hash);
     const index = match ? Number(match[1]) : -1;
     return index >= 0 && index < EVENTS.length ? index : null;
   });
   const [detailTab, setDetailTab] = useState<"overview" | "rituals" | "visit">("overview");
   useEffect(() => {
     const sync = () => {
-      const match = /^#kumbh-detail-(\\d+)$/.exec(window.location.hash);
+      const match = /^#kumbh-detail-(\d+)$/.exec(window.location.hash);
       const index = match ? Number(match[1]) : -1;
       setDetailIndex(index >= 0 && index < EVENTS.length ? index : null);
     };
