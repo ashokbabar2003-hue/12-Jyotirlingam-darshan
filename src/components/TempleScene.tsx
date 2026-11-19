@@ -124,15 +124,18 @@ export function TempleScene({
         opacity: 0.85,
       });
 
+      // Desktop anchor jumps land at the beginning of the pinned scroll timeline.
+      // Keep editorial content readable from frame one; animate its position
+      // during normal scrolling rather than hiding it until scroll progress.
+      const isDesktop = window.innerWidth >= 768;
       gsap.set(numberBadge, {
-        opacity: 0,
-        y: 8,
+        opacity: isDesktop ? 1 : 0,
+        y: isDesktop ? 0 : 8,
       });
 
-      // Unified subtle text entry (y: 12 -> 0)
       gsap.set([metaBadge, title, desc, significance, cta], {
-        opacity: 0,
-        y: 12,
+        opacity: isDesktop ? 1 : 0,
+        y: isDesktop ? 0 : 12,
       });
 
       if (window.innerWidth >= 768) {
