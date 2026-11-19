@@ -1,4 +1,5 @@
 import { useState, useMemo, useRef, useCallback } from "react";
+import "./pilgrimage-selection.css";
 import { Link } from "@tanstack/react-router";
 import { Play, Radio, Check, MapPin, Sparkles, ArrowRight, Grid, Eye } from "lucide-react";
 import { useGSAP, gsap, prefersReducedMotion } from "@/hooks/use-gsap";
@@ -195,6 +196,22 @@ export function LiveDarshanSection({
   // Active featured shrine in the dominant theater viewport (default to Somnath or first available)
   const [activeSlug, setActiveSlug] = useState<string>("somnath");
   const [viewMode, setViewMode] = useState<"theater" | "grid">("theater");
+
+  const selectFeaturedShrine = (slug: string) => {
+    setActiveSlug(slug);
+    // Return to the start of the featured video rather than leaving the
+    // viewport on the selection rail. Avoid a native hash jump.
+    requestAnimationFrame(() => {
+      const stage = featuredStageRef.current;
+      if (!stage) return;
+      const headerHeight = document.querySelector("header")?.getBoundingClientRect().height ?? 80;
+      const top = window.scrollY + stage.getBoundingClientRect().top - headerHeight - 12;
+      window.scrollTo({
+        top: Math.max(0, top),
+        behavior: prefersReducedMotion() ? "instant" : "smooth",
+      });
+    });
+  };
 
   const activeShrine: Jyotirlinga = useMemo(() => {
     return jyotirlingas.find((j) => j.slug === activeSlug) || jyotirlingas[0];
@@ -461,6 +478,7 @@ export function LiveDarshanSection({
             >
               <div className="relative aspect-video w-full overflow-hidden bg-neutral-950">
                 <DarshanTile
+                  key={activeShrine.slug}
                   title={`${activeShrine.name} live darshan`}
                   liveUrl={activeUrls.liveUrl}
                   defaultUrl={activeUrls.defaultUrl}
@@ -579,11 +597,11 @@ export function LiveDarshanSection({
                     <button
                       key={j.slug}
                       type="button"
-                      onClick={() => setActiveSlug(j.slug)}
+                      onClick={() => selectFeaturedShrine(j.slug)}
                       className={cn(
-                        "group relative flex flex-col rounded-xl border p-2.5 text-left transition-all duration-200 bg-card/60 backdrop-blur-sm",
+                        "pilgrimage-shrine-nav group relative isolate flex flex-col rounded-xl border p-2.5 text-left transition-all duration-200 bg-card/60 backdrop-blur-sm",
                         isActive
-                          ? "border-primary bg-card ring-2 ring-primary/50 shadow-lg scale-[1.02]"
+                          ? "is-selected border-[#c58b46] bg-amber-500/15 shadow-lg scale-[1.02]"
                           : "border-border/60 hover:border-primary/40 hover:bg-card/90",
                       )}
                     >
@@ -616,7 +634,8 @@ export function LiveDarshanSection({
                         {loc.state}
                       </span>
 
-                      {isSelected && (
+                      {isActive && <span aria-hidden="true" className="absolute right-2 top-1 text-sm font-bold text-amber-300">✓</span>}
+                      {isSelected && !isActive && (
                         <div className="absolute top-1.5 right-1.5 size-2 rounded-full bg-primary" />
                       )}
                     </button>
