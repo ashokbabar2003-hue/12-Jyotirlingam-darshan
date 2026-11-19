@@ -73,6 +73,26 @@ const KUMBH_UI = {
   te: { pause: "ఆపండి", previous: "మునుపటి దృశ్యం", next: "తదుపరి దృశ్యం", historic: "యాత్ర చారిత్రక చిత్రం", state: "మహారాష్ట్ర", journey: "పవిత్ర సింహస్థ యాత్ర", source: "అధికారిక చిత్ర గ్యాలరీ", photoNote: "చారిత్రక చిత్రాలు సూచన కోసం మాత్రమే; అవి పేర్కొన్న వేడుకకు చెందినవి కాకపోవచ్చు." },
   ta: { pause: "நிறுத்து", previous: "முந்தைய காட்சி", next: "அடுத்த காட்சி", historic: "யாத்திரையின் வரலாற்றுப் படம்", state: "மகாராஷ்டிரா", journey: "புனித சிம்ஹஸ்த பயணம்", source: "அதிகாரப்பூர்வ படத் தொகுப்பு", photoNote: "வரலாற்றுப் படங்கள் எடுத்துக்காட்டுகளே; அவை குறிப்பிட்ட நிகழ்வைச் சேர்ந்ததாக இருக்க வேண்டியதில்லை." },
 } as const;
+const EVENT_STATUS_LABELS = {
+  en: { past: "Date passed", today: "Scheduled today", upcoming: "Upcoming" },
+  mr: { past: "तारीख उलटली", today: "आज नियोजित", upcoming: "आगामी" },
+  hi: { past: "तारीख बीत गई", today: "आज निर्धारित", upcoming: "आगामी" },
+  gu: { past: "તારીખ વીતી ગઈ", today: "આજે નિર્ધારિત", upcoming: "આગામી" },
+  te: { past: "తేదీ ముగిసింది", today: "ఈరోజు షెడ్యూల్", upcoming: "రాబోయేది" },
+  ta: { past: "தேதி கடந்தது", today: "இன்று திட்டமிடப்பட்டது", upcoming: "வரவிருப்பது" },
+} as const;
+// Compare calendar dates in the event's India timezone, never the viewer's timezone.
+// "Date passed" does not assert that the ceremony actually took place.
+function indiaTodayISO() {
+  const parts = new Intl.DateTimeFormat("en-GB", {
+    timeZone: "Asia/Kolkata", year: "numeric", month: "2-digit", day: "2-digit",
+  }).formatToParts(new Date());
+  const part = (type: string) => parts.find(p => p.type === type)?.value ?? "";
+  return part("year") + "-" + part("month") + "-" + part("day");
+}
+function eventDateStatus(date: string, today: string): "past" | "today" | "upcoming" {
+  return date < today ? "past" : date === today ? "today" : "upcoming";
+}
 const KUMBH_PLACES = {
   en: ["Nashik–Trimbakeshwar", "Nashik", "Ramtirth, Nashik", "Kushavarta Tirth, Trimbakeshwar"],
   mr: ["नाशिक–त्र्यंबकेश्वर", "नाशिक", "रामतीर्थ, नाशिक", "कुशावर्त तीर्थ, त्र्यंबकेश्वर"],
@@ -150,6 +170,7 @@ export function KumbhExperience() {
   const ui = KUMBH_UI[lang];
   const langIndex = lang === "mr" ? 1 : lang === "hi" ? 2 : 0;
   const [scene, setScene] = useState(0);
+  const [todayISO] = useState(indiaTodayISO);
   const [playing, setPlaying] = useState(false);
   const root = useRef<HTMLDivElement>(null);
   useEffect(() => {
@@ -202,6 +223,11 @@ export function KumbhExperience() {
             className="flex min-h-14 flex-col justify-center rounded-xl border border-primary/30 bg-card px-3 py-2 text-left transition-colors hover:border-primary hover:bg-primary/10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary">
             <span className="text-xs font-semibold text-primary">{localDate(event.date, lang)}</span>
             <span className={cn("mt-1 text-sm leading-snug text-foreground", fontClass)}>{localEventLabel(event, i, lang)}</span>
+            <span className={cn("mt-2 w-fit rounded-full px-2 py-0.5 text-xs font-medium",
+              eventDateStatus(event.date, todayISO) === "today" ? "bg-primary text-primary-foreground" :
+              eventDateStatus(event.date, todayISO) === "past" ? "bg-muted text-muted-foreground" :
+              "border border-primary/40 text-primary"
+            )}>{EVENT_STATUS_LABELS[lang][eventDateStatus(event.date, todayISO)]}</span>
           </a>
         ))}
       </nav>
@@ -238,6 +264,11 @@ export function KumbhExperience() {
                 </div>
                 <div className="flex flex-col justify-center p-6 sm:p-9">
                   <h3 className={cn("text-2xl leading-relaxed text-foreground sm:text-3xl", fontClass)}>{localEventLabel(event, i, lang)}</h3>
+                  <span className={cn("mt-3 inline-flex w-fit rounded-full px-3 py-1 text-xs font-semibold",
+                    eventDateStatus(event.date, todayISO) === "today" ? "bg-primary text-primary-foreground" :
+                    eventDateStatus(event.date, todayISO) === "past" ? "bg-muted text-muted-foreground" :
+                    "border border-primary/40 text-primary"
+                  )}>{EVENT_STATUS_LABELS[lang][eventDateStatus(event.date, todayISO)]}</span>
                   <p className={cn("mt-4 inline-flex w-fit items-center gap-2 rounded-full border border-primary/40 px-4 py-2 text-sm font-semibold text-primary", fontClass)}><CalendarDays className="size-4 shrink-0" />{localEventTime(event.time, lang)}</p>
                   <p className="mt-5 text-sm leading-relaxed text-muted-foreground">{KUMBH_DESCRIPTIONS[lang][i]}</p>
                   <p className="mt-5 flex items-center gap-2 text-sm text-muted-foreground"><MapPin className="size-4 shrink-0 text-primary" />{eventPlace(event.location, lang)}</p>
