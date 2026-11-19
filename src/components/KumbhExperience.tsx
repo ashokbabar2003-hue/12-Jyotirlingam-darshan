@@ -167,6 +167,23 @@ function localEventLabel(event: typeof EVENTS[number], index: number, lang: keyo
   return event.label[0];
 }
 
+
+const EVENT_DETAIL_COPY = {
+  en: { enter:"Enter Event", back:"Back to timeline", overview:"Overview", rituals:"Rituals", visit:"Visitor info", why:"About this event", ceremony:"Traditions and significance", planning:"Planning your visit", source:"Official Maharashtra Simhastha portal", note:"Historical photograph for illustration. Confirm schedules and arrangements with the official authority.", info:[
+    ["The sacred flag-hoisting marks the ceremonial beginning of Simhastha at Nashik and Trimbakeshwar.","Dhwajarohan is associated with the beginning of the Simhastha observances and Jupiter entering Leo.","The opening ceremony brings the two sacred destinations into the festival calendar."],
+    ["The principal Mela period opens the main phase of the pilgrimage.","Devotees gather in Nashik and Trimbakeshwar along the Godavari.","The period leads toward the principal procession and Amrut Snan dates."],
+    ["Nagar Pradakshina is the traditional circumambulation procession in Nashik.","The procession forms part of the festival's public religious observances.","Detailed routes and timings are subject to official announcement."],
+    ["The first Amrut Snan is a major sacred bathing observance.","Ritual bathing in the Godavari is central to the Nashik–Trimbakeshwar pilgrimage.","Follow designated access routes and official guidance at bathing sites."],
+    ["The second Amrut Snan is another important sacred bathing date.","Pilgrims participate in the longstanding tradition of ritual bathing.","Access arrangements and crowd controls may differ from ordinary days."],
+    ["This third Amrut Snan is observed at Ramtirth in Nashik.","The Godavari ghats at Nashik are central to the local bathing tradition.","Follow official guidance for ghats, approach routes and crowd arrangements."],
+    ["This third Amrut Snan takes place at Kushavarta Tirth in Trimbakeshwar.","Kushavarta is an important sacred bathing site near Trimbakeshwar Jyotirlinga.","Follow local access and safety instructions for the sacred tank."],
+    ["Dhwajavatarana marks the ceremonial conclusion of Simhastha.","The sacred flag is lowered as the festival's observances come to a close.","Confirm final ceremony access and timings with the authority."]
+  ]},
+  mr: {enter:"कार्यक्रमात प्रवेश",back:"कार्यक्रम यादीकडे परत",overview:"माहिती",rituals:"परंपरा",visit:"प्रवास माहिती",why:"या कार्यक्रमाविषयी",ceremony:"परंपरा व महत्त्व",planning:"भेटीचे नियोजन",source:"महाराष्ट्र शासनाचे अधिकृत सिंहस्थ संकेतस्थळ",note:"हे ऐतिहासिक छायाचित्र प्रातिनिधिक आहे. वेळापत्रक व व्यवस्था अधिकृत संकेतस्थळावर तपासा."},
+  hi: {enter:"कार्यक्रम देखें",back:"कार्यक्रम सूची पर लौटें",overview:"परिचय",rituals:"परंपराएँ",visit:"यात्रा जानकारी",why:"इस कार्यक्रम के बारे में",ceremony:"परंपरा और महत्व",planning:"यात्रा की योजना",source:"महाराष्ट्र सरकार का आधिकारिक सिंहस्थ पोर्टल",note:"ऐतिहासिक चित्र केवल उदाहरण के लिए है। समय और व्यवस्था आधिकारिक वेबसाइट पर जाँचें।"}
+} as const;
+const EVENT_OFFICIAL_URL = "https://simhasthamahakumbh.maharashtra.gov.in/";
+
 function Photo({ src, alt, className = "" }: { src: string; alt: string; className?: string }) {
   const [failed, setFailed] = useState(false);
   return <img src={failed ? fallbackImg : src} onError={() => setFailed(true)} alt={alt} loading="lazy" className={cn("size-full object-cover", className)} />;
@@ -201,6 +218,37 @@ export function KumbhExperience() {
     const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     grid.scrollIntoView({ behavior: reducedMotion ? "instant" : "smooth", block: "start" });
   };
+  const [detailIndex, setDetailIndex] = useState<number | null>(() => {
+    if (typeof window === "undefined") return null;
+    const match = /^#kumbh-detail-(\\d+)$/.exec(window.location.hash);
+    const index = match ? Number(match[1]) : -1;
+    return index >= 0 && index < EVENTS.length ? index : null;
+  });
+  const [detailTab, setDetailTab] = useState<"overview" | "rituals" | "visit">("overview");
+  useEffect(() => {
+    const sync = () => {
+      const match = /^#kumbh-detail-(\\d+)$/.exec(window.location.hash);
+      const index = match ? Number(match[1]) : -1;
+      setDetailIndex(index >= 0 && index < EVENTS.length ? index : null);
+    };
+    window.addEventListener("hashchange", sync);
+    return () => window.removeEventListener("hashchange", sync);
+  }, []);
+  const openEventDetail = (index: number) => {
+    setSelectedEvent(index);
+    setDetailTab("overview");
+    window.history.pushState(window.history.state, "", "#kumbh-detail-" + index);
+    setDetailIndex(index);
+    window.scrollTo({ top: 0, behavior: "instant" });
+  };
+  const closeEventDetail = () => {
+    const index = detailIndex;
+    window.history.pushState(window.history.state, "", index === null ? "#snan-dates" : "#kumbh-event-" + index);
+    setDetailIndex(null);
+    if (index !== null) {
+      requestAnimationFrame(() => document.getElementById("kumbh-event-" + index)?.scrollIntoView({ behavior: "instant", block: "start" }));
+    }
+  };
   const [playing, setPlaying] = useState(false);
   const root = useRef<HTMLDivElement>(null);
   useEffect(() => {
@@ -219,6 +267,46 @@ export function KumbhExperience() {
     return () => window.clearInterval(timer);
   }, [playing]);
   const storyImages = [MEDIA.secondSnan, MEDIA.firstSnan, MEDIA.kushavarta];
+  if (detailIndex !== null) {
+    const event = EVENTS[detailIndex];
+    const loc = eventPlace(event.location, lang);
+    const strings = EVENT_DETAIL_COPY[lang === "mr" ? "mr" : lang === "hi" ? "hi" : "en"];
+    const overview = KUMBH_DESCRIPTIONS[lang][detailIndex];
+    const details = EVENT_DETAIL_COPY.en.info[detailIndex];
+    const detailText = detailTab === "overview" ? overview + " " + details[0] : detailTab === "rituals" ? details[1] : details[2];
+    return <main className="kumbh-event-detail mx-auto max-w-6xl px-4 pb-24 pt-10 sm:pt-16">
+      <div className="mb-6 flex items-center justify-between gap-3">
+        <button type="button" onClick={closeEventDetail} className="inline-flex min-h-11 items-center gap-2 rounded-full border border-amber-400/60 px-4 text-sm font-semibold text-amber-300 hover:bg-amber-500/10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary"><ChevronLeft className="size-5" />{strings.back}</button>
+        <span className="text-xs font-semibold text-primary">{toLocalDigits(detailIndex + 1, lang)} / {toLocalDigits(EVENTS.length, lang)}</span>
+      </div>
+      <article className="overflow-hidden rounded-3xl border border-primary/35 bg-card/95 shadow-2xl">
+        <div className="relative h-60 overflow-hidden sm:h-96">
+          <Photo src={event.img} alt={ui.historic + ": " + loc} className="absolute inset-0" />
+          <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-card via-transparent to-transparent" />
+          <a href={commonsPage(MEDIA_FILES[detailIndex])} target="_blank" rel="noopener noreferrer" className="absolute bottom-3 right-3 rounded bg-background/90 px-2 py-1 text-xs underline">{MEDIA_CREDITS[detailIndex]}</a>
+        </div>
+        <div className="space-y-6 p-5 sm:p-10">
+          <p className="text-xs font-bold uppercase tracking-widest text-amber-400">Simhastha Mahakumbh 2027</p>
+          <h1 className={cn("text-3xl leading-snug sm:text-5xl",fontClass)}>{localEventLabel(event, detailIndex, lang)}</h1>
+          <p className={cn("max-w-3xl text-base leading-relaxed text-muted-foreground",fontClass)}>{overview}</p>
+          <div className="grid gap-3 sm:grid-cols-3">
+            <div className="rounded-xl border border-primary/25 bg-background/40 p-4"><CalendarDays className="mb-2 size-5 text-primary"/><time dateTime={event.date} className="text-sm font-semibold">{localDate(event.date,lang)}</time></div>
+            <div className="rounded-xl border border-primary/25 bg-background/40 p-4"><CalendarDays className="mb-2 size-5 text-primary"/><p className="text-sm font-semibold">{localEventTime(event.time,lang)}</p></div>
+            <div className="rounded-xl border border-primary/25 bg-background/40 p-4"><MapPin className="mb-2 size-5 text-primary"/><p className="text-sm font-semibold">{loc}</p></div>
+          </div>
+          <div role="tablist" aria-label="Event information" className="flex flex-wrap gap-2">
+            {(["overview","rituals","visit"] as const).map(tab => <button key={tab} type="button" role="tab" aria-selected={detailTab === tab} onClick={() => setDetailTab(tab)} className={cn("min-h-11 rounded-full border px-5 text-sm font-semibold",detailTab === tab ? "border-amber-400 bg-amber-500/15 text-amber-200" : "border-primary/30 hover:bg-primary/10")}>{strings[tab]}</button>)}
+          </div>
+          <section role="tabpanel" className="rounded-2xl border border-primary/25 bg-background/30 p-5 sm:p-7">
+            <h2 className={cn("mb-3 text-xl text-foreground",fontClass)}>{detailTab === "overview" ? strings.why : detailTab === "rituals" ? strings.ceremony : strings.planning}</h2>
+            <p className={cn("leading-relaxed text-muted-foreground",fontClass)}>{detailTab === "overview" ? detailText : lang === "en" ? detailText : detailTab === "rituals" ? overview : t.warning}</p>
+          </section>
+          <p className="text-sm text-muted-foreground">{strings.note}</p>
+          <a href={EVENT_OFFICIAL_URL} target="_blank" rel="noopener noreferrer" className="inline-flex min-h-11 items-center gap-2 font-semibold text-primary hover:underline">{strings.source}<ArrowUpRight className="size-4"/></a>
+        </div>
+      </article>
+    </main>;
+  }
   return <div ref={root} className="mx-auto max-w-6xl space-y-20 px-4 pb-20 pt-14 sm:space-y-28 sm:pt-20">
     <section aria-labelledby="kumbh-story-title" className="kumbh-reveal overflow-hidden rounded-3xl border border-primary/30 bg-card shadow-2xl">
       <div className="grid lg:grid-cols-[1.2fr_1fr]">
@@ -310,11 +398,14 @@ export function KumbhExperience() {
                   <p className={cn("mt-4 inline-flex w-fit items-center gap-2 rounded-full border border-primary/40 px-4 py-2 text-sm font-semibold text-primary", fontClass)}><CalendarDays className="size-4 shrink-0" />{localEventTime(event.time, lang)}</p>
                   <p className="mt-5 text-sm leading-relaxed text-muted-foreground">{KUMBH_DESCRIPTIONS[lang][i]}</p>
                   <p className="mt-5 flex items-center gap-2 text-sm text-muted-foreground"><MapPin className="size-4 shrink-0 text-primary" />{eventPlace(event.location, lang)}</p>
+                  <div className="mt-6 flex flex-wrap items-center gap-3">
+                    <button type="button" onClick={() => openEventDetail(i)} className={cn("inline-flex min-h-12 items-center gap-2 rounded-xl bg-gradient-to-r from-rose-400 to-fuchsia-600 px-5 text-sm font-semibold text-slate-950 shadow-lg transition-transform hover:scale-[1.02] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary",fontClass)}>{EVENT_DETAIL_COPY[lang === "mr" ? "mr" : lang === "hi" ? "hi" : "en"].enter}<ArrowUpRight className="size-4"/></button>
                   <button type="button" onClick={returnToEventSelection}
                     aria-label={BACK_TO_EVENTS_LABELS[lang]} title={BACK_TO_EVENTS_LABELS[lang]}
                     className="kumbh-return-arrow mt-6 inline-grid size-12 place-items-center rounded-full border border-amber-400/70 bg-amber-500/10 text-amber-300 transition-colors hover:bg-amber-500/20 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary">
                     <ChevronLeft className="size-6 rotate-90" aria-hidden="true" />
                   </button>
+                  </div>
                 </div>
                 <div className="relative min-h-60 overflow-hidden md:min-h-80">
                   <Photo src={event.img} alt={ui.historic + ": " + eventPlace(event.location, lang)} className="absolute inset-0 transition-transform duration-700 hover:scale-105" />
