@@ -332,13 +332,6 @@ export function TempleScene({
         className,
       )}
     >
-      {onReturnToSelection && (
-        <button type="button" onClick={onReturnToSelection}
-          aria-label={tss.returnSelection} title={tss.returnSelection}
-          className="pilgrimage-return-arrow absolute right-4 top-4 z-30 grid size-12 place-items-center rounded-full border border-amber-400/70 bg-background/85 text-amber-300 hover:bg-amber-500/20 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary sm:right-8 sm:top-8">
-          <ArrowUp className="size-6" aria-hidden="true" />
-        </button>
-      )}
       {/* Waypoint marker connecting continuous pilgrimage */}
       <div className="pointer-events-none absolute -top-1.5 left-1/2 -translate-x-1/2 flex items-center justify-center">
         <span className="size-3 rounded-full bg-border border-2 border-background shadow-sm" />
@@ -492,7 +485,7 @@ export function TempleScene({
             </div>
 
             {/* Enter Darshan Link */}
-            <div ref={ctaRef} className="pt-1">
+            <div ref={ctaRef} className="flex flex-wrap items-center gap-3 pt-1">
               <Link
                 to="/$slug"
                 params={{ slug: shrine.slug }}
@@ -504,6 +497,13 @@ export function TempleScene({
                 <span>{tss.enterDarshan(loc.name)}</span>
                 <ArrowRight className="size-4 transition-transform duration-300 group-hover:translate-x-1" />
               </Link>
+              {onReturnToSelection && (
+                <button type="button" onClick={onReturnToSelection}
+                  aria-label={tss.returnSelection} title={tss.returnSelection}
+                  className="pilgrimage-return-arrow relative z-10 grid size-12 shrink-0 place-items-center rounded-full border border-amber-400/70 bg-background/85 text-amber-300 hover:bg-amber-500/20 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary">
+                  <ArrowUp className="size-6" aria-hidden="true" />
+                </button>
+              )}
             </div>
           </div>
         </div>
