@@ -341,7 +341,7 @@ export function TempleScene({
           <div
             ref={imgWrapperRef}
             className={cn(
-              "relative order-1 col-span-1 overflow-hidden rounded-2xl border border-border/50 bg-card/60 shadow-xl",
+              "pilgrimage-scene-frame relative isolate order-1 col-span-1 overflow-hidden rounded-2xl border border-border/50 bg-card/60 shadow-xl",
               imgColSpan,
               isEven ? "lg:order-2" : "lg:order-1",
             )}
