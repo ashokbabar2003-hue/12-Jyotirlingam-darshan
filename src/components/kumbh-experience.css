@@ -25,24 +25,42 @@
   z-index: 1;
   transition: border-color 220ms ease, box-shadow 220ms ease;
 }
-.kumbh-calendar-event:target > div {
-  border-color: #f6ad42;
-  box-shadow: 0 0 0 2px rgba(246, 173, 66, 0.42), 0 0 32px rgba(246, 173, 66, 0.24), 0 20px 45px hsl(var(--background) / 0.24);
-  animation: kumbh-target-glow 1.25s ease-out both;
+/* A continuous traveling light traces only the selected event's rounded border. */
+@property --kumbh-border-angle {
+  syntax: "<angle>";
+  initial-value: 0deg;
+  inherits: false;
 }
-@keyframes kumbh-target-glow {
-  0% {
-    border-color: #ffcf7a;
-    box-shadow: 0 0 0 0 rgba(246, 173, 66, 0.75), 0 0 0 rgba(246, 173, 66, 0);
-  }
-  45% {
-    border-color: #ffd88e;
-    box-shadow: 0 0 0 6px rgba(246, 173, 66, 0.26), 0 0 48px rgba(246, 173, 66, 0.36);
-  }
-  100% {
-    border-color: #f6ad42;
-    box-shadow: 0 0 0 2px rgba(246, 173, 66, 0.42), 0 0 32px rgba(246, 173, 66, 0.24), 0 20px 45px hsl(var(--background) / 0.24);
-  }
+.kumbh-calendar-event:target > div {
+  border-color: #c58b46;
+  box-shadow: 0 0 0 1px rgba(246, 173, 66, 0.25), 0 0 24px rgba(246, 173, 66, 0.16);
+}
+.kumbh-calendar-event:target > div::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 3;
+  border-radius: inherit;
+  padding: 3px;
+  pointer-events: none;
+  background: conic-gradient(
+    from var(--kumbh-border-angle),
+    transparent 0deg,
+    transparent 255deg,
+    rgba(246, 173, 66, 0.2) 282deg,
+    #ffd98c 309deg,
+    #fff4d3 322deg,
+    #ffc064 335deg,
+    transparent 355deg
+  );
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  mask-composite: exclude;
+  animation: kumbh-border-travel 3s linear infinite;
+}
+@keyframes kumbh-border-travel {
+  to { --kumbh-border-angle: 360deg; }
 }
 @media (max-width: 767px) {
   .kumbh-calendar-event {
@@ -51,4 +69,5 @@
 }
 @media (prefers-reduced-motion: reduce) {
   .kumbh-calendar-event > div { transition: none; animation: none; }
+  .kumbh-calendar-event:target > div::after { animation: none; background: #f6ad42; }
 }
