@@ -44,3 +44,48 @@ section[id^="shrine-scene-"]:target .pilgrimage-scene-frame {
   section[id^="shrine-scene-"]:target .pilgrimage-scene-frame::after { animation: none; background: #f6ad42; }
   .pilgrimage-return-arrow { animation: none; transform: none; }
 }
+
+
+/* Featured Live Darshan: devotional illuminated corners, deliberately
+   distinct from the selected shrine's traveling golden border. */
+.live-darshan-temple-frame {
+  isolation: isolate;
+}
+.live-darshan-temple-frame::before,
+.live-darshan-temple-frame::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 5;
+  pointer-events: none;
+  border-radius: inherit;
+  background:
+    linear-gradient(90deg, #ffe3a1, #d99c45) left 12px top 12px / 42px 2px no-repeat,
+    linear-gradient(#ffe3a1, #d99c45) left 12px top 12px / 2px 42px no-repeat,
+    linear-gradient(270deg, #ffe3a1, #d99c45) right 12px top 12px / 42px 2px no-repeat,
+    linear-gradient(#ffe3a1, #d99c45) right 12px top 12px / 2px 42px no-repeat,
+    linear-gradient(90deg, #ffe3a1, #d99c45) left 12px bottom 12px / 42px 2px no-repeat,
+    linear-gradient(0deg, #ffe3a1, #d99c45) left 12px bottom 12px / 2px 42px no-repeat,
+    linear-gradient(270deg, #ffe3a1, #d99c45) right 12px bottom 12px / 42px 2px no-repeat,
+    linear-gradient(0deg, #ffe3a1, #d99c45) right 12px bottom 12px / 2px 42px no-repeat;
+  animation: live-darshan-corner-glow 4s ease-in-out infinite;
+}
+.live-darshan-temple-frame::after {
+  opacity: .45;
+  filter: blur(7px);
+  animation-delay: -2s;
+}
+@keyframes live-darshan-corner-glow {
+  0%, 100% { opacity: .48; }
+  50% { opacity: 1; }
+}
+@media (max-width: 640px) {
+  .live-darshan-temple-frame::before,
+  .live-darshan-temple-frame::after {
+    background-size: 24px 2px, 2px 24px, 24px 2px, 2px 24px, 24px 2px, 2px 24px, 24px 2px, 2px 24px;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .live-darshan-temple-frame::before,
+  .live-darshan-temple-frame::after { animation: none; opacity: .7; }
+}
