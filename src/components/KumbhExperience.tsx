@@ -180,6 +180,9 @@ const EVENT_DETAIL_COPY = {
     ["Dhwajavatarana marks the ceremonial conclusion of Simhastha.","The sacred flag is lowered as the festival's observances come to a close.","Confirm final ceremony access and timings with the authority."]
   ]},
   mr: {enter:"कार्यक्रमात प्रवेश",back:"कार्यक्रम यादीकडे परत",overview:"माहिती",rituals:"परंपरा",visit:"प्रवास माहिती",why:"या कार्यक्रमाविषयी",ceremony:"परंपरा व महत्त्व",planning:"भेटीचे नियोजन",source:"महाराष्ट्र शासनाचे अधिकृत सिंहस्थ संकेतस्थळ",note:"हे ऐतिहासिक छायाचित्र प्रातिनिधिक आहे. वेळापत्रक व व्यवस्था अधिकृत संकेतस्थळावर तपासा."},
+  gu: {enter:"કાર્યક્રમ જુઓ",back:"સમયરેખા પર પાછા જાઓ",overview:"પરિચય",rituals:"પરંપરાઓ",visit:"મુલાકાત માહિતી",why:"આ કાર્યક્રમ વિશે",ceremony:"પરંપરા અને મહત્વ",planning:"મુલાકાતનું આયોજન",source:"મહારાષ્ટ્ર સરકારનું અધિકૃત સિંહસ્થ પોર્ટલ",note:"ઐતિહાસિક ફોટો માત્ર ઉદાહરણ માટે છે. સમય અને વ્યવસ્થા અધિકૃત વેબસાઇટ પર તપાસો."},
+  te: {enter:"కార్యక్రమాన్ని చూడండి",back:"కాలక్రమానికి తిరిగి",overview:"పరిచయం",rituals:"సంప్రదాయాలు",visit:"యాత్ర సమాచారం",why:"ఈ కార్యక్రమం గురించి",ceremony:"సంప్రదాయాలు మరియు ప్రాముఖ్యత",planning:"యాత్ర ప్రణాళిక",source:"మహారాష్ట్ర ప్రభుత్వ అధికారిక సింహస్థ పోర్టల్",note:"చారిత్రక చిత్రం సూచన కోసం మాత్రమే. సమయాలు, ఏర్పాట్లను అధికారిక వెబ్‌సైట్‌లో తనిఖీ చేయండి."},
+  ta: {enter:"நிகழ்வைப் பார்க்க",back:"காலவரிசைக்குத் திரும்பு",overview:"அறிமுகம்",rituals:"மரபுகள்",visit:"பயணத் தகவல்",why:"இந்த நிகழ்வு பற்றி",ceremony:"மரபுகளும் முக்கியத்துவமும்",planning:"பயணத் திட்டம்",source:"மகாராஷ்டிர அரசின் அதிகாரப்பூர்வ சிம்ஹஸ்த தளம்",note:"வரலாற்றுப் படம் விளக்கத்திற்காக மட்டுமே. நேரம் மற்றும் ஏற்பாடுகளை அதிகாரப்பூர்வ இணையதளத்தில் சரிபார்க்கவும்."},
   hi: {enter:"कार्यक्रम देखें",back:"कार्यक्रम सूची पर लौटें",overview:"परिचय",rituals:"परंपराएँ",visit:"यात्रा जानकारी",why:"इस कार्यक्रम के बारे में",ceremony:"परंपरा और महत्व",planning:"यात्रा की योजना",source:"महाराष्ट्र सरकार का आधिकारिक सिंहस्थ पोर्टल",note:"ऐतिहासिक चित्र केवल उदाहरण के लिए है। समय और व्यवस्था आधिकारिक वेबसाइट पर जाँचें।"}
 } as const;
 const EVENT_OFFICIAL_URL = "https://simhasthamahakumbh.maharashtra.gov.in/";
@@ -270,7 +273,7 @@ export function KumbhExperience() {
   if (detailIndex !== null) {
     const event = EVENTS[detailIndex];
     const loc = eventPlace(event.location, lang);
-    const strings = EVENT_DETAIL_COPY[lang === "mr" ? "mr" : lang === "hi" ? "hi" : "en"];
+    const strings = EVENT_DETAIL_COPY[lang];
     const overview = KUMBH_DESCRIPTIONS[lang][detailIndex];
     const details = EVENT_DETAIL_COPY.en.info[detailIndex];
     const detailText = detailTab === "overview" ? overview + " " + details[0] : detailTab === "rituals" ? details[1] : details[2];
@@ -399,7 +402,7 @@ export function KumbhExperience() {
                   <p className="mt-5 text-sm leading-relaxed text-muted-foreground">{KUMBH_DESCRIPTIONS[lang][i]}</p>
                   <p className="mt-5 flex items-center gap-2 text-sm text-muted-foreground"><MapPin className="size-4 shrink-0 text-primary" />{eventPlace(event.location, lang)}</p>
                   <div className="mt-6 flex flex-wrap items-center gap-3">
-                    <button type="button" onClick={() => openEventDetail(i)} className={cn("inline-flex min-h-12 items-center justify-center gap-2 rounded-xl border border-primary/60 bg-primary px-5 text-sm font-semibold text-primary-foreground shadow-lg shadow-primary/15 transition-all hover:bg-primary/90 hover:shadow-primary/25 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary",fontClass)}>{EVENT_DETAIL_COPY[lang === "mr" ? "mr" : lang === "hi" ? "hi" : "en"].enter}<ArrowUpRight className="size-4"/></button>
+                    <button type="button" onClick={() => openEventDetail(i)} className={cn("inline-flex min-h-12 items-center justify-center gap-2 rounded-xl border border-primary/60 bg-primary px-5 text-sm font-semibold text-primary-foreground shadow-lg shadow-primary/15 transition-all hover:bg-primary/90 hover:shadow-primary/25 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary",fontClass)}>{EVENT_DETAIL_COPY[lang].enter}<ArrowUpRight className="size-4"/></button>
                   <button type="button" onClick={returnToEventSelection}
                     aria-label={BACK_TO_EVENTS_LABELS[lang]} title={BACK_TO_EVENTS_LABELS[lang]}
                     className="kumbh-return-arrow inline-grid size-12 shrink-0 place-items-center rounded-full border border-amber-400/70 bg-amber-500/10 text-amber-300 transition-colors hover:bg-amber-500/20 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary">
