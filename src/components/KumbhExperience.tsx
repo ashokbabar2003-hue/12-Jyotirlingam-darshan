@@ -399,10 +399,10 @@ export function KumbhExperience() {
                   <p className="mt-5 text-sm leading-relaxed text-muted-foreground">{KUMBH_DESCRIPTIONS[lang][i]}</p>
                   <p className="mt-5 flex items-center gap-2 text-sm text-muted-foreground"><MapPin className="size-4 shrink-0 text-primary" />{eventPlace(event.location, lang)}</p>
                   <div className="mt-6 flex flex-wrap items-center gap-3">
-                    <button type="button" onClick={() => openEventDetail(i)} className={cn("inline-flex min-h-12 items-center gap-2 rounded-xl bg-gradient-to-r from-rose-400 to-fuchsia-600 px-5 text-sm font-semibold text-slate-950 shadow-lg transition-transform hover:scale-[1.02] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary",fontClass)}>{EVENT_DETAIL_COPY[lang === "mr" ? "mr" : lang === "hi" ? "hi" : "en"].enter}<ArrowUpRight className="size-4"/></button>
+                    <button type="button" onClick={() => openEventDetail(i)} className={cn("inline-flex min-h-12 items-center justify-center gap-2 rounded-xl border border-primary/60 bg-primary px-5 text-sm font-semibold text-primary-foreground shadow-lg shadow-primary/15 transition-all hover:bg-primary/90 hover:shadow-primary/25 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary",fontClass)}>{EVENT_DETAIL_COPY[lang === "mr" ? "mr" : lang === "hi" ? "hi" : "en"].enter}<ArrowUpRight className="size-4"/></button>
                   <button type="button" onClick={returnToEventSelection}
                     aria-label={BACK_TO_EVENTS_LABELS[lang]} title={BACK_TO_EVENTS_LABELS[lang]}
-                    className="kumbh-return-arrow mt-6 inline-grid size-12 place-items-center rounded-full border border-amber-400/70 bg-amber-500/10 text-amber-300 transition-colors hover:bg-amber-500/20 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary">
+                    className="kumbh-return-arrow inline-grid size-12 shrink-0 place-items-center rounded-full border border-amber-400/70 bg-amber-500/10 text-amber-300 transition-colors hover:bg-amber-500/20 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary">
                     <ChevronLeft className="size-6 rotate-90" aria-hidden="true" />
                   </button>
                   </div>
