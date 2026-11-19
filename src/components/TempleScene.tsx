@@ -1,6 +1,6 @@
 import { useRef } from "react";
 import { Link } from "@tanstack/react-router";
-import { MapPin, Compass, ArrowRight, Quote } from "lucide-react";
+import { MapPin, Compass, ArrowRight, ArrowUp, Quote } from "lucide-react";
 import { useGSAP, gsap, ScrollTrigger, prefersReducedMotion } from "@/hooks/use-gsap";
 import { toLocalDigits, displayFontClassFor, type Lang } from "@/hooks/use-language";
 import { type Jyotirlinga, getLocalized } from "@/data/jyotirlingas";
@@ -15,37 +15,45 @@ interface TempleSceneProps {
   isEn: boolean;
   fontClass: string;
   className?: string;
+  onReturnToSelection?: () => void;
 }
 
 type TempleSceneLocale = {
   pilgrimageProgress: (curr: string, total: string) => string;
   enterDarshan: (shrineName: string) => string;
+  returnSelection: string;
 };
 
 const TEMPLE_SCENE_STRINGS: Record<Lang, TempleSceneLocale> = {
   en: {
     pilgrimageProgress: (c, t) => `Pilgrimage ${c} of ${t}`,
     enterDarshan: (name) => `Enter ${name} Darshan`,
+    returnSelection: "Back to temple selection",
   },
   mr: {
     pilgrimageProgress: (c, t) => `तीर्थक्षेत्र ${c} / ${t}`,
     enterDarshan: (name) => `${name} दर्शन प्रवेश`,
+    returnSelection: "मंदिर निवडीकडे परत जा",
   },
   hi: {
     pilgrimageProgress: (c, t) => `तीर्थक्षेत्र ${c} / ${t}`,
     enterDarshan: (name) => `${name} दर्शन में प्रवेश करें`,
+    returnSelection: "मंदिर चयन पर वापस जाएँ",
   },
   gu: {
     pilgrimageProgress: (c, t) => `તીર્થક્ષેત્ર ${c} / ${t}`,
     enterDarshan: (name) => `${name} દર્શનમાં પ્રવેશ કરો`,
+    returnSelection: "મંદિર પસંદગી પર પાછા જાઓ",
   },
   te: {
     pilgrimageProgress: (c, t) => `పుణ్యక్షేత్రం ${c} / ${t}`,
     enterDarshan: (name) => `${name} దర్శనంలోకి ప్రవేశించండి`,
+    returnSelection: "ఆలయ ఎంపికకు తిరిగి వెళ్ళండి",
   },
   ta: {
     pilgrimageProgress: (c, t) => `புனித தலம் ${c} / ${t}`,
     enterDarshan: (name) => `${name} தரிசனத்திற்குள் நுழைக`,
+    returnSelection: "கோயில் தேர்வுக்குத் திரும்பு",
   },
 };
 
@@ -57,6 +65,7 @@ export function TempleScene({
   isEn,
   fontClass,
   className,
+  onReturnToSelection,
 }: TempleSceneProps) {
   const containerRef = useRef<HTMLElement | null>(null);
   const pinTargetRef = useRef<HTMLDivElement | null>(null);
@@ -303,6 +312,13 @@ export function TempleScene({
         className,
       )}
     >
+      {onReturnToSelection && (
+        <button type="button" onClick={onReturnToSelection}
+          aria-label={tss.returnSelection} title={tss.returnSelection}
+          className="pilgrimage-return-arrow absolute right-4 top-4 z-30 grid size-12 place-items-center rounded-full border border-amber-400/70 bg-background/85 text-amber-300 hover:bg-amber-500/20 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary sm:right-8 sm:top-8">
+          <ArrowUp className="size-6" aria-hidden="true" />
+        </button>
+      )}
       {/* Waypoint marker connecting continuous pilgrimage */}
       <div className="pointer-events-none absolute -top-1.5 left-1/2 -translate-x-1/2 flex items-center justify-center">
         <span className="size-3 rounded-full bg-border border-2 border-background shadow-sm" />
