@@ -73,6 +73,22 @@ const KUMBH_UI = {
   te: { pause: "ఆపండి", previous: "మునుపటి దృశ్యం", next: "తదుపరి దృశ్యం", historic: "యాత్ర చారిత్రక చిత్రం", state: "మహారాష్ట్ర", journey: "పవిత్ర సింహస్థ యాత్ర", source: "అధికారిక చిత్ర గ్యాలరీ", photoNote: "చారిత్రక చిత్రాలు సూచన కోసం మాత్రమే; అవి పేర్కొన్న వేడుకకు చెందినవి కాకపోవచ్చు." },
   ta: { pause: "நிறுத்து", previous: "முந்தைய காட்சி", next: "அடுத்த காட்சி", historic: "யாத்திரையின் வரலாற்றுப் படம்", state: "மகாராஷ்டிரா", journey: "புனித சிம்ஹஸ்த பயணம்", source: "அதிகாரப்பூர்வ படத் தொகுப்பு", photoNote: "வரலாற்றுப் படங்கள் எடுத்துக்காட்டுகளே; அவை குறிப்பிட்ட நிகழ்வைச் சேர்ந்ததாக இருக்க வேண்டியதில்லை." },
 } as const;
+const SELECTED_EVENT_LABELS = {
+  en: "Selected event",
+  mr: "निवडलेला कार्यक्रम",
+  hi: "चयनित कार्यक्रम",
+  gu: "પસંદ કરેલો કાર્યક્રમ",
+  te: "ఎంచుకున్న కార్యక్రమం",
+  ta: "தேர்ந்தெடுத்த நிகழ்வு",
+} as const;
+const BACK_TO_EVENTS_LABELS = {
+  en: "Back to event selection",
+  mr: "कार्यक्रम निवडीकडे परत जा",
+  hi: "कार्यक्रम चयन पर वापस जाएँ",
+  gu: "કાર્યક્રમ પસંદગી પર પાછા જાઓ",
+  te: "కార్యక్రమ ఎంపికకు తిరిగి వెళ్ళండి",
+  ta: "நிகழ்வு தேர்வுக்குத் திரும்பு",
+} as const;
 const EVENT_STATUS_LABELS = {
   en: { past: "Date passed", today: "Scheduled today", upcoming: "Upcoming" },
   mr: { past: "तारीख उलटली", today: "आज नियोजित", upcoming: "आगामी" },
@@ -171,6 +187,28 @@ export function KumbhExperience() {
   const langIndex = lang === "mr" ? 1 : lang === "hi" ? 2 : 0;
   const [scene, setScene] = useState(0);
   const [todayISO] = useState(indiaTodayISO);
+  const [selectedEvent, setSelectedEvent] = useState<number | null>(() => {
+    if (typeof window === "undefined") return null;
+    const match = /^#kumbh-event-(\\d+)$/.exec(window.location.hash);
+    const index = match ? Number(match[1]) : -1;
+    return index >= 0 && index < EVENTS.length ? index : null;
+  });
+  useEffect(() => {
+    const syncSelectedEvent = () => {
+      const match = /^#kumbh-event-(\\d+)$/.exec(window.location.hash);
+      const index = match ? Number(match[1]) : -1;
+      if (index >= 0 && index < EVENTS.length) setSelectedEvent(index);
+    };
+    window.addEventListener("hashchange", syncSelectedEvent);
+    syncSelectedEvent();
+    return () => window.removeEventListener("hashchange", syncSelectedEvent);
+  }, []);
+  const returnToEventSelection = () => {
+    const grid = document.getElementById("kumbh-event-selection");
+    if (!grid) return;
+    const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    grid.scrollIntoView({ behavior: reducedMotion ? "instant" : "smooth", block: "start" });
+  };
   const [playing, setPlaying] = useState(false);
   const root = useRef<HTMLDivElement>(null);
   useEffect(() => {
@@ -217,12 +255,21 @@ export function KumbhExperience() {
     </section>
     <section id="snan-dates" aria-labelledby="kumbh-dates-title" className="scroll-mt-28">
       <div className="kumbh-reveal text-center"><Flame className="mx-auto mb-3 size-8 text-primary" /><h2 id="kumbh-dates-title" className={cn("text-3xl sm:text-4xl", fontClass)}>{t.calendar}</h2></div>
-      <nav aria-label={t.calendar} className="kumbh-reveal mx-auto mt-8 grid max-w-5xl grid-cols-2 gap-2 sm:grid-cols-4">
+      <nav id="kumbh-event-selection" aria-label={t.calendar} className="kumbh-reveal mx-auto mt-8 grid max-w-5xl scroll-mt-28 grid-cols-2 gap-2 sm:grid-cols-4">
         {EVENTS.map((event, i) => (
-          <a key={event.date} href={"#kumbh-event-" + i}
-            className="flex min-h-14 flex-col justify-center rounded-xl border border-primary/30 bg-card px-3 py-2 text-left transition-colors hover:border-primary hover:bg-primary/10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary">
-            <span className="text-xs font-semibold text-primary">{localDate(event.date, lang)}</span>
+          <a key={event.date} href={"#kumbh-event-" + i} onClick={() => setSelectedEvent(i)}
+            aria-current={selectedEvent === i ? "location" : undefined}
+            className={cn("flex min-h-14 flex-col justify-center rounded-xl border px-3 py-2 text-left transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary",
+              selectedEvent === i
+                ? "border-amber-400 bg-amber-500/15 shadow-[0_0_0_1px_rgba(251,191,36,0.5),0_0_22px_rgba(251,191,36,0.15)]"
+                : "border-primary/30 bg-card hover:border-primary hover:bg-primary/10"
+            )}>
+            <span className="flex items-center justify-between gap-2 text-xs font-semibold text-primary">
+              {localDate(event.date, lang)}
+              {selectedEvent === i && <span aria-hidden="true" className="text-amber-300">✓</span>}
+            </span>
             <span className={cn("mt-1 text-sm leading-snug text-foreground", fontClass)}>{localEventLabel(event, i, lang)}</span>
+            {selectedEvent === i && <span className={cn("mt-1 text-xs font-semibold text-amber-300", fontClass)}>{SELECTED_EVENT_LABELS[lang]}</span>}
             <span className={cn("mt-2 w-fit rounded-full px-2 py-0.5 text-xs font-medium",
               eventDateStatus(event.date, todayISO) === "today" ? "bg-primary text-primary-foreground" :
               eventDateStatus(event.date, todayISO) === "past" ? "bg-muted text-muted-foreground" :
@@ -272,6 +319,11 @@ export function KumbhExperience() {
                   <p className={cn("mt-4 inline-flex w-fit items-center gap-2 rounded-full border border-primary/40 px-4 py-2 text-sm font-semibold text-primary", fontClass)}><CalendarDays className="size-4 shrink-0" />{localEventTime(event.time, lang)}</p>
                   <p className="mt-5 text-sm leading-relaxed text-muted-foreground">{KUMBH_DESCRIPTIONS[lang][i]}</p>
                   <p className="mt-5 flex items-center gap-2 text-sm text-muted-foreground"><MapPin className="size-4 shrink-0 text-primary" />{eventPlace(event.location, lang)}</p>
+                  <button type="button" onClick={returnToEventSelection}
+                    className={cn("mt-6 inline-flex min-h-11 w-fit items-center gap-2 rounded-full border border-primary/45 px-4 py-2 text-sm font-semibold text-primary transition-colors hover:bg-primary/10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary", fontClass)}>
+                    <ChevronLeft className="size-4 rotate-90" aria-hidden="true" />
+                    {BACK_TO_EVENTS_LABELS[lang]}
+                  </button>
                 </div>
                 <div className="relative min-h-60 overflow-hidden md:min-h-80">
                   <Photo src={event.img} alt={ui.historic + ": " + eventPlace(event.location, lang)} className="absolute inset-0 transition-transform duration-700 hover:scale-105" />
