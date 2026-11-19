@@ -189,13 +189,13 @@ export function KumbhExperience() {
   const [todayISO] = useState(indiaTodayISO);
   const [selectedEvent, setSelectedEvent] = useState<number | null>(() => {
     if (typeof window === "undefined") return null;
-    const match = /^#kumbh-event-(\\d+)$/.exec(window.location.hash);
+    const match = /^#kumbh-event-(\d+)$/.exec(window.location.hash);
     const index = match ? Number(match[1]) : -1;
     return index >= 0 && index < EVENTS.length ? index : null;
   });
   useEffect(() => {
     const syncSelectedEvent = () => {
-      const match = /^#kumbh-event-(\\d+)$/.exec(window.location.hash);
+      const match = /^#kumbh-event-(\d+)$/.exec(window.location.hash);
       const index = match ? Number(match[1]) : -1;
       if (index >= 0 && index < EVENTS.length) setSelectedEvent(index);
     };
