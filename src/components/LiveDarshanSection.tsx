@@ -474,7 +474,7 @@ export function LiveDarshanSection({
             {/* Featured Dominant Active Stream Stage */}
             <div
               ref={featuredStageRef}
-              className="relative mx-auto max-w-5xl overflow-hidden rounded-2xl border border-primary/30 bg-card/90 shadow-2xl backdrop-blur-md"
+              className="live-darshan-temple-frame relative mx-auto max-w-5xl overflow-hidden rounded-2xl border border-primary/30 bg-card/90 shadow-2xl backdrop-blur-md"
             >
               <div className="relative aspect-video w-full overflow-hidden bg-neutral-950">
                 <DarshanTile
