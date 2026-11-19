@@ -73,14 +73,6 @@ const KUMBH_UI = {
   te: { pause: "ఆపండి", previous: "మునుపటి దృశ్యం", next: "తదుపరి దృశ్యం", historic: "యాత్ర చారిత్రక చిత్రం", state: "మహారాష్ట్ర", journey: "పవిత్ర సింహస్థ యాత్ర", source: "అధికారిక చిత్ర గ్యాలరీ", photoNote: "చారిత్రక చిత్రాలు సూచన కోసం మాత్రమే; అవి పేర్కొన్న వేడుకకు చెందినవి కాకపోవచ్చు." },
   ta: { pause: "நிறுத்து", previous: "முந்தைய காட்சி", next: "அடுத்த காட்சி", historic: "யாத்திரையின் வரலாற்றுப் படம்", state: "மகாராஷ்டிரா", journey: "புனித சிம்ஹஸ்த பயணம்", source: "அதிகாரப்பூர்வ படத் தொகுப்பு", photoNote: "வரலாற்றுப் படங்கள் எடுத்துக்காட்டுகளே; அவை குறிப்பிட்ட நிகழ்வைச் சேர்ந்ததாக இருக்க வேண்டியதில்லை." },
 } as const;
-const SELECTED_EVENT_LABELS = {
-  en: "Selected event",
-  mr: "निवडलेला कार्यक्रम",
-  hi: "चयनित कार्यक्रम",
-  gu: "પસંદ કરેલો કાર્યક્રમ",
-  te: "ఎంచుకున్న కార్యక్రమం",
-  ta: "தேர்ந்தெடுத்த நிகழ்வு",
-} as const;
 const BACK_TO_EVENTS_LABELS = {
   en: "Back to event selection",
   mr: "कार्यक्रम निवडीकडे परत जा",
@@ -259,9 +251,9 @@ export function KumbhExperience() {
         {EVENTS.map((event, i) => (
           <a key={event.date} href={"#kumbh-event-" + i} onClick={() => setSelectedEvent(i)}
             aria-current={selectedEvent === i ? "location" : undefined}
-            className={cn("flex min-h-14 flex-col justify-center rounded-xl border px-3 py-2 text-left transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary",
+            className={cn("kumbh-event-nav-card relative isolate flex min-h-14 flex-col justify-center rounded-xl border px-3 py-2 text-left transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary",
               selectedEvent === i
-                ? "border-amber-400 bg-amber-500/15 shadow-[0_0_0_1px_rgba(251,191,36,0.5),0_0_22px_rgba(251,191,36,0.15)]"
+                ? "is-selected border-[#c58b46] bg-amber-500/15"
                 : "border-primary/30 bg-card hover:border-primary hover:bg-primary/10"
             )}>
             <span className="flex items-center justify-between gap-2 text-xs font-semibold text-primary">
@@ -269,7 +261,6 @@ export function KumbhExperience() {
               {selectedEvent === i && <span aria-hidden="true" className="text-amber-300">✓</span>}
             </span>
             <span className={cn("mt-1 text-sm leading-snug text-foreground", fontClass)}>{localEventLabel(event, i, lang)}</span>
-            {selectedEvent === i && <span className={cn("mt-1 text-xs font-semibold text-amber-300", fontClass)}>{SELECTED_EVENT_LABELS[lang]}</span>}
             <span className={cn("mt-2 w-fit rounded-full px-2 py-0.5 text-xs font-medium",
               eventDateStatus(event.date, todayISO) === "today" ? "bg-primary text-primary-foreground" :
               eventDateStatus(event.date, todayISO) === "past" ? "bg-muted text-muted-foreground" :
@@ -320,9 +311,9 @@ export function KumbhExperience() {
                   <p className="mt-5 text-sm leading-relaxed text-muted-foreground">{KUMBH_DESCRIPTIONS[lang][i]}</p>
                   <p className="mt-5 flex items-center gap-2 text-sm text-muted-foreground"><MapPin className="size-4 shrink-0 text-primary" />{eventPlace(event.location, lang)}</p>
                   <button type="button" onClick={returnToEventSelection}
-                    className={cn("mt-6 inline-flex min-h-11 w-fit items-center gap-2 rounded-full border border-primary/45 px-4 py-2 text-sm font-semibold text-primary transition-colors hover:bg-primary/10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary", fontClass)}>
-                    <ChevronLeft className="size-4 rotate-90" aria-hidden="true" />
-                    {BACK_TO_EVENTS_LABELS[lang]}
+                    aria-label={BACK_TO_EVENTS_LABELS[lang]} title={BACK_TO_EVENTS_LABELS[lang]}
+                    className="kumbh-return-arrow mt-6 inline-grid size-12 place-items-center rounded-full border border-amber-400/70 bg-amber-500/10 text-amber-300 transition-colors hover:bg-amber-500/20 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary">
+                    <ChevronLeft className="size-6 rotate-90" aria-hidden="true" />
                   </button>
                 </div>
                 <div className="relative min-h-60 overflow-hidden md:min-h-80">
