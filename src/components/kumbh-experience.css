@@ -31,11 +31,13 @@
   initial-value: 0deg;
   inherits: false;
 }
-.kumbh-calendar-event:target > div {
+.kumbh-calendar-event:target > div,
+.kumbh-event-nav-card.is-selected {
   border-color: #c58b46;
   box-shadow: 0 0 0 1px rgba(246, 173, 66, 0.25), 0 0 24px rgba(246, 173, 66, 0.16);
 }
-.kumbh-calendar-event:target > div::after {
+.kumbh-calendar-event:target > div::after,
+.kumbh-event-nav-card.is-selected::after {
   content: "";
   position: absolute;
   inset: 0;
@@ -62,6 +64,24 @@
 @keyframes kumbh-border-travel {
   to { --kumbh-border-angle: 360deg; }
 }
+
+/* The compact event selector shares the exact same traveling border effect. */
+.kumbh-event-nav-card.is-selected {
+  box-shadow: 0 0 0 1px rgba(246, 173, 66, 0.25), 0 0 24px rgba(246, 173, 66, 0.16);
+}
+.kumbh-return-arrow {
+  animation: kumbh-return-pulse 2s ease-in-out infinite;
+}
+@keyframes kumbh-return-pulse {
+  0%, 100% {
+    transform: scale(1);
+    box-shadow: 0 0 7px rgba(255, 179, 72, 0.22);
+  }
+  50% {
+    transform: scale(1.09);
+    box-shadow: 0 0 20px rgba(255, 179, 72, 0.64), 0 0 34px rgba(255, 179, 72, 0.24);
+  }
+}
 @media (max-width: 767px) {
   .kumbh-calendar-event {
     padding-block: 2rem;
@@ -69,5 +89,7 @@
 }
 @media (prefers-reduced-motion: reduce) {
   .kumbh-calendar-event > div { transition: none; animation: none; }
-  .kumbh-calendar-event:target > div::after { animation: none; background: #f6ad42; }
+  .kumbh-calendar-event:target > div::after,
+  .kumbh-event-nav-card.is-selected::after { animation: none; background: #f6ad42; }
+  .kumbh-return-arrow { animation: none; transform: none; }
 }
