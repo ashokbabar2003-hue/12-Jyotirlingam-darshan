@@ -7,12 +7,14 @@ import {
   Link,
 } from "@tanstack/react-router";
 import { createServerFn } from "@tanstack/react-start";
+import { getCookie } from "@tanstack/react-start/server";
+import type { Lang } from "@/hooks/use-language";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import * as React from "react";
 import "@/styles.css";
 import { AuthProvider } from "@/hooks/use-auth";
 import { LanguageProvider, useLanguage } from "@/hooks/use-language";
-import { SeasonProvider } from "@/hooks/use-season";
+import { SeasonProvider, detectSeason, type SeasonMode } from "@/hooks/use-season";
 import { AudioChantProvider } from "@/hooks/use-audio-chant";
 import { SmoothScrollProvider } from "@/components/animation/SmoothScrollProvider";
 import { Compass, Home, RefreshCw } from "lucide-react";
@@ -25,16 +27,29 @@ const fetchPublicSupabaseConfig = createServerFn({ method: "GET" }).handler(asyn
   return getPublicSupabaseEnv();
 });
 
+const getInitialLanguage = createServerFn({ method: "GET" }).handler(async () => {
+  const lang = getCookie("lang");
+  return (["en", "mr", "hi", "gu", "te", "ta"].includes(lang ?? "") ? lang : "en") as Lang;
+});
+
+const getInitialSeason = createServerFn({ method: "GET" }).handler(async () => {
+  const value = getCookie("prakruti-mode");
+  return (["auto", "vasanta", "grishma", "varsha", "sharad", "hemanta", "shishira"].includes(value ?? "") ? value : "auto") as SeasonMode;
+});
+
 export const Route = createRootRouteWithContext<{
   queryClient: QueryClient;
 }>()({
   loader: async () => {
-    try {
-      const config = await fetchPublicSupabaseConfig();
-      return { publicConfig: config };
-    } catch {
-      return { publicConfig: { url: "", publishableKey: "" } };
-    }
+    // A configuration fetch failure must not reset the user's language or theme.
+    const [configResult, languageResult, seasonResult] = await Promise.allSettled([
+      fetchPublicSupabaseConfig(), getInitialLanguage(), getInitialSeason(),
+    ]);
+    return {
+      publicConfig: configResult.status === "fulfilled" ? configResult.value : { url: "", publishableKey: "" },
+      initialLang: languageResult.status === "fulfilled" ? languageResult.value : "en" as Lang,
+      initialSeasonMode: seasonResult.status === "fulfilled" ? seasonResult.value : "auto" as SeasonMode,
+    };
   },
   meta: () => [
     {
@@ -44,6 +59,21 @@ export const Route = createRootRouteWithContext<{
       name: "description",
       content:
         "Sacred portal for 12 Jyotirlingas darshan, live streams, devotional stotrams, chants, and stories.",
+    },
+  ],
+  links: () => [
+    {
+      rel: "preconnect",
+      href: "https://fonts.googleapis.com",
+    },
+    {
+      rel: "preconnect",
+      href: "https://fonts.gstatic.com",
+      crossOrigin: "anonymous",
+    },
+    {
+      rel: "stylesheet",
+      href: "https://fonts.googleapis.com/css2?family=Cinzel:wght@500;600;700;800&family=Inter:wght@300;400;500;600;700;800&family=Noto+Sans+Gujarati:wght@300;400;500;600;700&family=Noto+Sans+Tamil:wght@300;400;500;600;700&family=Noto+Sans+Telugu:wght@300;400;500;600;700&family=Noto+Serif+Devanagari:wght@400;500;600;700;800&family=Yatra+One&display=swap",
     },
   ],
   component: RootComponent,
@@ -163,26 +193,34 @@ function RootComponent() {
       : { url: "", publishableKey: "" });
 
   const hasConfig = Boolean(publicConfig?.url && publicConfig?.publishableKey);
+  const initialLang = loaderData?.initialLang ?? "en";
+  const initialSeasonMode = loaderData?.initialSeasonMode ?? "auto";
+  const initialSeason = initialSeasonMode === "auto" ? detectSeason() : initialSeasonMode;
 
   return (
-    <html lang="en" suppressHydrationWarning>
+    <html lang={initialLang} data-lang={initialLang} data-season={initialSeason} suppressHydrationWarning>
       <head suppressHydrationWarning>
         <meta charSet="utf-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+        {initialLang === "mr" || initialLang === "hi" ? (
+          <link rel="preload" as="font" type="font/ttf" href="/fonts/yatra-one-marathi.ttf" crossOrigin="anonymous" />
+        ) : initialLang === "en" ? (
+          <link rel="preload" as="font" type="font/woff2" href="/fonts/yatra-one-latin.woff2" crossOrigin="anonymous" />
+        ) : null}
         <HeadContent />
         <script
           dangerouslySetInnerHTML={{
             __html: `(function(){try{${
               hasConfig ? `window.__PUBLIC_SUPABASE_CONFIG__=${JSON.stringify(publicConfig)};` : ""
-            }var l=localStorage.getItem('lang');if(l&&['en','mr','hi','gu','te','ta'].indexOf(l)>-1){document.documentElement.setAttribute('data-lang',l);document.documentElement.lang=l;}}catch(e){}})();`,
+            }/* Language and theme are rendered from the server cookie. */}catch(e){}})();`,
           }}
         />
       </head>
       <body suppressHydrationWarning>
         <QueryClientProvider client={context.queryClient}>
           <AuthProvider>
-            <LanguageProvider>
-              <SeasonProvider>
+            <LanguageProvider initialLang={initialLang}>
+              <SeasonProvider initialMode={initialSeasonMode}>
                 <AudioChantProvider>
                   <SmoothScrollProvider>
                     <div className="flex min-h-screen flex-col bg-background text-foreground">
