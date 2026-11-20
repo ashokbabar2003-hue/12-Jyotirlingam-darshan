@@ -16,7 +16,7 @@ export const LANGUAGES: {
   fontClass: string;
   displayFontClass: string;
 }[] = [
-  { code: "en", label: "English", fontClass: "font-en", displayFontClass: "font-display" },
+  { code: "en", label: "English", fontClass: "font-en", displayFontClass: "font-en" },
   { code: "mr", label: "मराठी", fontClass: "font-marathi", displayFontClass: "font-marathi" },
   { code: "hi", label: "हिन्दी", fontClass: "font-hindi", displayFontClass: "font-hindi" },
   { code: "gu", label: "ગુજરાતી", fontClass: "font-gujarati", displayFontClass: "font-gujarati" },
@@ -62,84 +62,38 @@ const LanguageContext = createContext<LanguageContextValue | null>(null);
 
 const STORAGE_KEY = "lang";
 
-export function LanguageProvider({ children }: { children: ReactNode }) {
-  const [lang, setLangState] = useState<Lang>("en");
+export function LanguageProvider({ children, initialLang = "en" }: { children: ReactNode; initialLang?: Lang }) {
+  const [lang, setLangState] = useState<Lang>(initialLang);
 
+  // The server cookie is authoritative. Never overwrite it with stale localStorage
+  // during hydration or client-side route revalidation.
   useEffect(() => {
     try {
-      const saved = localStorage.getItem(STORAGE_KEY) as Lang | null;
-      if (saved && LANGUAGES.some((l) => l.code === saved)) {
-        setLangState(saved);
-        if (typeof document !== "undefined") {
-          document.documentElement.lang = saved;
-          document.documentElement.setAttribute("data-lang", saved);
-        }
-      }
+      localStorage.setItem(STORAGE_KEY, lang);
     } catch {
-      /* ignore */
+      /* Storage may be disabled; the cookie still preserves the preference. */
     }
-  }, []);
+  }, [lang]);
 
   const setLang = useCallback((l: Lang) => {
     setLangState(l);
+    if (typeof document !== "undefined") {
+      document.cookie = `lang=${l}; Path=/; Max-Age=31536000; SameSite=Lax`;
+      document.documentElement.lang = l;
+      document.documentElement.setAttribute("data-lang", l);
+    }
     try {
       localStorage.setItem(STORAGE_KEY, l);
-      if (typeof document !== "undefined") {
-        document.documentElement.lang = l;
-        document.documentElement.setAttribute("data-lang", l);
-      }
     } catch {
-      /* ignore */
+      /* Cookie remains the source of truth if storage is unavailable. */
     }
   }, []);
 
-  // Preload all script fonts so language menu options always display in their designated fonts
+  // Keep document language synchronized without initiating redundant font requests.
+  // CSS font faces load on demand when the selected language is rendered.
   useEffect(() => {
-    if (typeof document !== "undefined" && document.fonts) {
-      const allFonts = [
-        '16px "Yatra One"',
-        '16px "Noto Serif Devanagari"',
-        '16px "Inter"',
-        '16px "Noto Sans Gujarati"',
-        '16px "Noto Sans Telugu"',
-        '16px "Noto Sans Tamil"',
-      ];
-      allFonts.forEach((f) => {
-        document.fonts.load(f).catch(() => {});
-      });
-    }
-  }, []);
-
-  useEffect(() => {
-    if (typeof document !== "undefined") {
-      document.documentElement.lang = lang;
-      document.documentElement.setAttribute("data-lang", lang);
-
-      if (document.fonts) {
-        const fontQueries: Record<Lang, string> = {
-          mr: '16px "Yatra One"',
-          hi: '16px "Yatra One"',
-          en: '16px "Inter"',
-          gu: '16px "Noto Sans Gujarati"',
-          te: '16px "Noto Sans Telugu"',
-          ta: '16px "Noto Sans Tamil"',
-        };
-        const query = fontQueries[lang];
-        if (query) {
-          document.fonts
-            .load(query)
-            .then(() => {
-              const available = document.fonts.check(query);
-              console.log(
-                `[Typography] Script font active for "${lang}" (${query}): ${available ? "READY" : "PENDING"}`,
-              );
-            })
-            .catch(() => {
-              /* font load silent catch */
-            });
-        }
-      }
-    }
+    document.documentElement.lang = lang;
+    document.documentElement.setAttribute("data-lang", lang);
   }, [lang]);
 
   const value = useMemo(
