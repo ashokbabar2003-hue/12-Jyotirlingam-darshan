@@ -396,6 +396,28 @@ export function getSacredJourneyTransition(
     `From ${fromLoc.name} (${fromLoc.location}) to ${toLoc.name} (${toLoc.location})`;
   let spiritualEssence = match?.spiritualEssence ?? "Passing Through Sacred Grace";
 
+  if (lang === "mr") {
+    const from = fromLoc.name;
+    const to = toLoc.name;
+    label = `पवित्र तीर्थमार्ग • ${from} ते ${to}`;
+    subtitle = `${fromLoc.location} येथून ${toLoc.location} पर्यंतची पवित्र यात्रा`;
+    spiritualEssence = "शिवकृपेच्या पवित्र प्रवाहातून";
+  }
+  if (lang !== "en") {
+    const localizedFallback = {
+      mr: "शिवकृपेच्या पवित्र प्रवाहातून",
+      hi: "भगवान शिव की दिव्य कृपा की यात्रा",
+      gu: "શિવકૃપાનો પવિત્ર પ્રવાસ",
+      te: "శివుని దివ్య అనుగ్రహ యాత్ర",
+      ta: "சிவபெருமானின் திருவருள் பயணம்",
+    };
+    if (!match?.i18n?.[lang] && lang !== "mr") {
+      label = `${fromLoc.name} → ${toLoc.name}`;
+      subtitle = `${fromLoc.location} → ${toLoc.location}`;
+      spiritualEssence = localizedFallback[lang];
+    }
+  }
+
   if (match?.i18n && lang !== "en") {
     const locMeta = match.i18n[lang];
     if (locMeta) {

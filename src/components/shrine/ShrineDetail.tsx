@@ -6,11 +6,11 @@ import { ArrowLeft, MapPin, Play, Images, BookHeart } from "lucide-react";
 import { type Jyotirlinga, getLocalized } from "@/data/jyotirlingas";
 import { getApprovedGallery, getApprovedStories, getDarshanLinks } from "@/lib/darshan.functions";
 import { resolveShrineStreams } from "@/lib/darshan-precedence";
-import { validateYoutubeUrl } from "@/lib/youtube";
 import { DarshanTile } from "@/components/darshan-tile";
 import { StotramCompanion } from "@/components/stotram-companion";
 import { useLanguage, toLocalDigits, type Lang } from "@/hooks/use-language";
 import { cn } from "@/lib/utils";
+import { getShrineStory } from "@/data/shrine-stories";
 import { Button } from "@/components/ui/button";
 import { SubmitGalleryDialog } from "@/components/submit-gallery-dialog";
 import { SubmitStoryDialog } from "@/components/submit-story-dialog";
@@ -99,8 +99,13 @@ export function ShrineDetail({ jl }: { jl: Jyotirlinga }) {
   const liveUrl = resolved.liveUrl;
   const defaultUrl = resolved.defaultUrl;
   const hasAnyEmbed = Boolean(liveUrl || defaultUrl);
+  // Offer an external source only when embedding is unavailable and a safe URL exists.
+  const externalDarshanUrl = [resolved.rawPrimary, resolved.rawFallback].find(
+    (url): url is string => Boolean(url && /^https:\/\//i.test(url)),
+  );
 
   const loc = getLocalized(jl, lang);
+  const [description, significance] = getShrineStory(jl, lang);
   const { name: displayName, location: displayLocation, state: displayState } = loc;
 
   return (
@@ -155,9 +160,9 @@ export function ShrineDetail({ jl }: { jl: Jyotirlinga }) {
           >
             <MapPin className="size-4" /> {displayLocation}, {displayState} · {jl.river}
           </p>
-          {!hasAnyEmbed && (
+          {!hasAnyEmbed && externalDarshanUrl && (
             <Button asChild variant="hero" className="mt-6" size="lg">
-              <a href={liveRaw} target="_blank" rel="noopener noreferrer">
+              <a href={externalDarshanUrl} target="_blank" rel="noopener noreferrer">
                 <Play className="size-4" />{" "}
                 <span className={fontClass}>{DETAIL_STRINGS[lang].watchLive}</span>
               </a>
@@ -199,11 +204,11 @@ export function ShrineDetail({ jl }: { jl: Jyotirlinga }) {
               isEn ? "font-display tracking-tight" : "tracking-normal",
             )}
           >
-            {DETAIL_STRINGS[lang].aboutPrefix} {jl.deity}
+            {DETAIL_STRINGS[lang].aboutPrefix} {displayName}
           </h2>
-          <p className="mt-3 text-muted-foreground">{jl.description}</p>
-          <p className="mt-4 border-l-2 border-primary pl-4 text-foreground/90 italic">
-            {jl.significance}
+          <p className={cn("mt-3 text-muted-foreground", fontClass)}>{description}</p>
+          <p className={cn("mt-4 border-l-2 border-primary pl-4 text-foreground/90 italic", fontClass)}>
+            {significance}
           </p>
         </section>
 

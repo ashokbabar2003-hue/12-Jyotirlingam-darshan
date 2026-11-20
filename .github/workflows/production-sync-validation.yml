@@ -1,0 +1,25 @@
+name: Production sync validation (no deployment)
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'src/**'
+      - 'package.json'
+      - 'bun.lock'
+      - '.github/workflows/production-sync-validation.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+      - name: Install frozen dependencies
+        run: bun install --frozen-lockfile
+      - name: Build (no deploy)
+        run: bun run build
+      - name: Unit tests
+        run: bun run test

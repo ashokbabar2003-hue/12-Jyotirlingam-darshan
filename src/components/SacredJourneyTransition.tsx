@@ -11,14 +11,24 @@ interface SacredJourneyTransitionProps {
   isEn: boolean;
   fontClass: string;
   className?: string;
+  ritual?: "flag" | "procession" | "river" | "temple" | "closing";
 }
 
+const JOURNEY_WORDS = {
+  en: { traversed: "Traversed", approaching: "Approaching destination", departing: "Departing", near: "Approaching" },
+  mr: { traversed: "प्रवास", approaching: "पुढील तीर्थस्थान", departing: "प्रस्थान", near: "आगमन" },
+  hi: { traversed: "यात्रा", approaching: "अगला तीर्थस्थल", departing: "प्रस्थान", near: "आगमन" },
+  gu: { traversed: "યાત્રા", approaching: "આગળનું તીર્થસ્થળ", departing: "પ્રસ્થાન", near: "આગમન" },
+  te: { traversed: "యాత్ర", approaching: "తదుపరి తీర్థస్థలం", departing: "ప్రస్థానం", near: "ఆగమనం" },
+  ta: { traversed: "பயணம்", approaching: "அடுத்த திருத்தலம்", departing: "புறப்பாடு", near: "வருகை" },
+} as const;
 export function SacredJourneyTransition({
   transition,
   lang,
   isEn,
   fontClass,
   className,
+  ritual,
 }: SacredJourneyTransitionProps) {
   const containerRef = useRef<HTMLElement | null>(null);
   const stageRef = useRef<HTMLDivElement | null>(null);
@@ -43,6 +53,7 @@ export function SacredJourneyTransition({
   const footerTrackerRef = useRef<HTMLDivElement | null>(null);
   const progressTextRef = useRef<HTMLSpanElement | null>(null);
 
+  const words = JOURNEY_WORDS[lang];
   const fromNumberDisplay = toLocalDigits(transition.fromIndex, lang);
   const toNumberDisplay = toLocalDigits(transition.toIndex, lang);
 
@@ -80,7 +91,7 @@ export function SacredJourneyTransition({
         if (progressLine) gsap.set(progressLine, { scaleX: 1 });
         if (stageRayLine) gsap.set(stageRayLine, { scaleX: 1 });
         if (progressTextRef.current) {
-          progressTextRef.current.textContent = `100% ${isEn ? "Traversed" : "प्रवास"}`;
+          progressTextRef.current.textContent = `${toLocalDigits(100, lang)}% ${words.traversed}`;
         }
         return;
       }
@@ -147,7 +158,7 @@ export function SacredJourneyTransition({
           onUpdate: (self) => {
             if (progressTextRef.current) {
               const pct = Math.round(self.progress * 100);
-              progressTextRef.current.textContent = `${pct}% ${isEn ? "Traversed" : "प्रवास"}`;
+              progressTextRef.current.textContent = `${toLocalDigits(pct, lang)}% ${words.traversed}`;
             }
           },
         },
@@ -358,7 +369,7 @@ export function SacredJourneyTransition({
     },
     {
       scope: containerRef,
-      dependencies: [transition.fromSlug, transition.toSlug, lang],
+      dependencies: [transition.fromSlug, transition.toSlug, lang, ritual],
     },
   );
 
@@ -442,14 +453,14 @@ export function SacredJourneyTransition({
           <div className="pointer-events-none absolute inset-x-4 sm:inset-x-8 top-1/2 -translate-y-1/2 h-px bg-white/10 z-10 overflow-hidden">
             <div
               ref={stageRayLineRef}
-              className="absolute inset-y-0 left-0 w-full bg-gradient-to-r from-transparent via-primary to-accent"
+              className={cn("absolute inset-y-0 left-0 w-full", ritual === "river" ? "bg-gradient-to-r from-sky-500/30 via-cyan-300 to-sky-200 shadow-[0_0_16px_rgba(125,211,252,0.8)]" : ritual === "flag" || ritual === "closing" ? "bg-gradient-to-r from-orange-500/20 via-amber-400 to-orange-300 shadow-[0_0_16px_rgba(251,191,36,0.7)]" : ritual === "procession" ? "bg-gradient-to-r from-rose-500/30 via-amber-300 to-rose-300" : "bg-gradient-to-r from-transparent via-primary to-accent")}
             />
           </div>
 
           {/* Traveling Ray Glowing Head */}
           <div
             ref={stageRayHeadRef}
-            className="pointer-events-none absolute top-1/2 -translate-y-1/2 size-3 rounded-full bg-accent blur-[1px] shadow-glow z-10 select-none"
+            className={cn("pointer-events-none absolute top-1/2 -translate-y-1/2 size-3 rounded-full blur-[1px] shadow-glow z-10 select-none", ritual === "river" ? "bg-cyan-200" : ritual === "flag" || ritual === "closing" ? "bg-orange-300" : "bg-accent")}
           />
 
           {/* Optical Inner Border & Subtle Vignette */}
@@ -482,7 +493,7 @@ export function SacredJourneyTransition({
               className="inline-flex size-11 sm:size-14 items-center justify-center rounded-full border border-primary/40 bg-black/70 backdrop-blur-md mb-3 shadow-glow"
             >
               <span className="text-2xl sm:text-3xl text-primary font-bold font-display select-none leading-none">
-                ॐ
+                {ritual === "flag" || ritual === "closing" ? "🚩" : ritual === "river" ? "💧" : ritual === "procession" ? "🪔" : "ॐ"}
               </span>
             </div>
 
@@ -505,7 +516,7 @@ export function SacredJourneyTransition({
               ref={destinationPreviewRef}
               className="mt-3 flex items-center gap-2 text-xs sm:text-sm font-semibold text-white/90"
             >
-              <span className="text-accent/90">{isEn ? "Approaching Sanctuary" : "समीप धाम"}:</span>
+              <span className="text-accent/90">{words.approaching}:</span>
               <span
                 className={cn(
                   "text-white font-bold",
@@ -527,7 +538,7 @@ export function SacredJourneyTransition({
             >
               <div className="flex items-center gap-1.5 text-[10px] font-mono font-semibold uppercase tracking-wider text-primary/90">
                 <span className="inline-block size-1.5 rounded-full bg-primary/80 animate-pulse" />
-                <span>{isEn ? "Departing" : "प्रस्थान"}</span>
+                <span>{words.departing}</span>
                 <span className="text-muted-foreground">#{fromNumberDisplay}</span>
               </div>
               <span
@@ -552,7 +563,7 @@ export function SacredJourneyTransition({
             >
               <div className="flex items-center gap-1.5 text-[10px] font-mono font-semibold uppercase tracking-wider text-accent">
                 <span className="text-muted-foreground">#{toNumberDisplay}</span>
-                <span>{isEn ? "Approaching" : "समीप"}</span>
+                <span>{words.near}</span>
                 <span className="inline-block size-1.5 rounded-full bg-accent animate-pulse" />
               </div>
               <span
@@ -591,7 +602,7 @@ export function SacredJourneyTransition({
               ref={progressTextRef}
               className="text-[10px] uppercase tracking-widest text-muted-foreground/70 shrink-0 px-2"
             >
-              0% {isEn ? "Traversed" : "प्रवास"}
+              {toLocalDigits(0, lang)}% {words.traversed}
             </span>
             <span
               className={cn(

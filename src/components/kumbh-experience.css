@@ -1,0 +1,95 @@
+.kumbh-reveal { opacity: 0; transform: translateY(36px); transition: opacity 850ms ease, transform 850ms cubic-bezier(.2,.75,.2,1); }
+.kumbh-reveal.is-visible { opacity: 1; transform: translateY(0); }
+.kumbh-story-photo { animation: kumbh-image-arrive 1.1s ease both, kumbh-ken-burns 18s ease-in-out infinite alternate; }
+.kumbh-story-copy { animation: kumbh-copy-arrive .6s ease both; }
+@keyframes kumbh-image-arrive { from { opacity: .3; } to { opacity: 1; } }
+@keyframes kumbh-ken-burns { from { transform: scale(1); } to { transform: scale(1.11); } }
+@keyframes kumbh-copy-arrive { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
+@media (prefers-reduced-motion: reduce) { .kumbh-reveal { opacity: 1; transform: none; transition: none; } .kumbh-story-photo, .kumbh-story-copy { animation: none; } }
+
+/* Keep Marathi/Hindi conjuncts such as स्नान intact; do not force a decorative font with incomplete glyph shaping. */
+.kumbh-devanagari { font-family: "Noto Serif Devanagari", "Noto Sans Devanagari", "Mukta", serif; font-variant-ligatures: normal; font-feature-settings: "kern" 1; letter-spacing: normal; }
+.kumbh-calendar-event { scroll-margin-top: 6rem; }
+.kumbh-calendar-event time { font-variant-numeric: tabular-nums; }
+@media (max-width: 767px) { .kumbh-calendar-event { padding-top: 2rem; padding-bottom: 2rem; } }
+
+
+/* Kumbh timeline: consistent rhythm and a clear destination after jump navigation. */
+.kumbh-calendar-event {
+  position: relative;
+  isolation: isolate;
+  padding-block: clamp(2rem, 4vw, 4rem);
+}
+.kumbh-calendar-event > div {
+  position: relative;
+  z-index: 1;
+  transition: border-color 220ms ease, box-shadow 220ms ease;
+}
+/* A continuous traveling light traces only the selected event's rounded border. */
+@property --kumbh-border-angle {
+  syntax: "<angle>";
+  initial-value: 0deg;
+  inherits: false;
+}
+.kumbh-calendar-event:target > div,
+.kumbh-event-nav-card.is-selected {
+  border-color: #c58b46;
+  box-shadow: 0 0 0 1px rgba(246, 173, 66, 0.25), 0 0 24px rgba(246, 173, 66, 0.16);
+}
+.kumbh-calendar-event:target > div::after,
+.kumbh-event-nav-card.is-selected::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 3;
+  border-radius: inherit;
+  padding: 3px;
+  pointer-events: none;
+  background: conic-gradient(
+    from var(--kumbh-border-angle),
+    transparent 0deg,
+    transparent 255deg,
+    rgba(246, 173, 66, 0.2) 282deg,
+    #ffd98c 309deg,
+    #fff4d3 322deg,
+    #ffc064 335deg,
+    transparent 355deg
+  );
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  mask-composite: exclude;
+  animation: kumbh-border-travel 3s linear infinite;
+}
+@keyframes kumbh-border-travel {
+  to { --kumbh-border-angle: 360deg; }
+}
+
+/* The compact event selector shares the exact same traveling border effect. */
+.kumbh-event-nav-card.is-selected {
+  box-shadow: 0 0 0 1px rgba(246, 173, 66, 0.25), 0 0 24px rgba(246, 173, 66, 0.16);
+}
+.kumbh-return-arrow {
+  animation: kumbh-return-pulse 2s ease-in-out infinite;
+}
+@keyframes kumbh-return-pulse {
+  0%, 100% {
+    transform: scale(1);
+    box-shadow: 0 0 7px rgba(255, 179, 72, 0.22);
+  }
+  50% {
+    transform: scale(1.09);
+    box-shadow: 0 0 20px rgba(255, 179, 72, 0.64), 0 0 34px rgba(255, 179, 72, 0.24);
+  }
+}
+@media (max-width: 767px) {
+  .kumbh-calendar-event {
+    padding-block: 2rem;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .kumbh-calendar-event > div { transition: none; animation: none; }
+  .kumbh-calendar-event:target > div::after,
+  .kumbh-event-nav-card.is-selected::after { animation: none; background: #f6ad42; }
+  .kumbh-return-arrow { animation: none; transform: none; }
+}

@@ -8,6 +8,7 @@ import { getDarshanLinks } from "@/lib/darshan.functions";
 import { type DarshanStatus } from "@/components/darshan-tile";
 import { useLanguage, type Lang } from "@/hooks/use-language";
 import { HeroAarti } from "@/components/HeroAarti";
+import { KumbhFeature } from "@/components/KumbhFeature";
 import { LiveDarshanSection } from "@/components/LiveDarshanSection";
 import { PilgrimageJourney } from "@/components/PilgrimageJourney";
 import heroImg from "@/assets/hero-aarti.jpg";
@@ -18,6 +19,7 @@ type UIStrings = {
   heroTitleHi: string;
   heroDesc: string;
   cta: string;
+  explore: string;
   liveTitle: string;
   liveDesc: string;
   sacredTitle: string;
@@ -33,6 +35,7 @@ const STRINGS: Record<Lang, UIStrings> = {
     heroDesc:
       "Embark on a sacred darshan of all twelve self-manifested abodes of Lord Shiva. Watch live aarti, gaze upon each temple, and share the feelings of your pilgrimage.",
     cta: "Begin the Darshan",
+    explore: "Explore all 12 temples",
     liveTitle: "All 12 Live Darshan",
     liveDesc: "Witness continuous live sanctum aarti and darshan directly from each holy shrine.",
     sacredTitle: "The Sacred Twelve",
@@ -46,6 +49,7 @@ const STRINGS: Record<Lang, UIStrings> = {
     heroDesc:
       "भगवान शिवांच्या बारा स्वयंभू ज्योतिर्लिंगांचे पवित्र दर्शन घ्या. थेट आरती पाहा, प्रत्येक मंदिराचे दर्शन घ्या आणि आपल्या तीर्थयात्रेच्या भावना सामायिक करा.",
     cta: "दर्शन सुरू करा",
+    explore: "सर्व १२ ज्योतिर्लिंगे पाहा",
     liveTitle: "बारा थेट दर्शन",
     liveDesc: "प्रत्येक ज्योतिर्लिंगाचे थेट प्रक्षेपण एकाच ठिकाणी.",
     sacredTitle: "पवित्र बारा ज्योतिर्लिंग",
@@ -60,6 +64,7 @@ const STRINGS: Record<Lang, UIStrings> = {
     heroDesc:
       "भगवान शिव के बारह स्वयंभू ज्योतिर्लिंगों के पवित्र दर्शन कीजिए। लाइव आरती देखें, हर मंदिर के दर्शन करें और अपनी तीर्थयात्रा की भावनाओं को साझा करें।",
     cta: "दर्शन आरंभ करें",
+    explore: "सभी १२ ज्योतिर्लिंग देखें",
     liveTitle: "सभी 12 लाइव दर्शन",
     liveDesc: "हर ज्योतिर्लिंग का लाइव प्रसारण एक ही जगह।",
     sacredTitle: "पवित्र बारह ज्योतिर्लिंग",
@@ -73,6 +78,7 @@ const STRINGS: Record<Lang, UIStrings> = {
     heroDesc:
       "ભગવાન શિવનાં બાર સ્વયંભૂ જ્યોતિર્લિંગોનાં પવિત્ર દર્શન કરો. જીવંત આરતી જુઓ, દરેક મંદિરનાં દર્શન કરો અને તમારી તીર્થયાત્રાની ભાવનાઓ વહેંચો.",
     cta: "દર્શન શરૂ કરો",
+    explore: "બારેય જ્યોતિર્લિંગ જુઓ",
     liveTitle: "બધાં 12 જીવંત દર્શન",
     liveDesc: "દરેક જ્યોતિર્લિંગનું જીવંત પ્રસારણ એક જ જગ્યાએ.",
     sacredTitle: "પવિત્ર બાર જ્યોતિર્લિંગ",
@@ -86,6 +92,7 @@ const STRINGS: Record<Lang, UIStrings> = {
     heroDesc:
       "శివుని పన్నెండు స్వయంభూ జ్యోతిర్లింగాల పవిత్ర దర్శనం పొందండి. ప్రత్యక్ష ఆరతిని తిలకించండి, ప్రతి ఆలయాన్ని దర్శించుకోండి, మీ తీర్థయాత్ర అనుభవాలను పంచుకోండి.",
     cta: "దర్శనం ప్రారంభించండి",
+    explore: "12 జ్యోతిర్లింగాలను చూడండి",
     liveTitle: "12 ప్రత్యక్ష దర్శనాలు",
     liveDesc: "ప్రతి జ్యోతిర్లింగ ప్రత్యక్ష ప్రసారం ఒకే చోట.",
     sacredTitle: "పవిత్ర పన్నెండు జ్యోతిర్లింగాలు",
@@ -100,6 +107,7 @@ const STRINGS: Record<Lang, UIStrings> = {
     heroDesc:
       "சிவபெருமானின் பன்னிரண்டு சுயம்பு ஜோதிர்லிங்கங்களின் புனித தரிசனத்தைப் பெறுங்கள். நேரடி ஆரத்தியைக் காணுங்கள், ஒவ்வொரு கோயிலையும் தரிசியுங்கள், உங்கள் யாத்திரை அனுபவங்களைப் பகிருங்கள்.",
     cta: "தரிசனத்தைத் தொடங்குங்கள்",
+    explore: "12 ஜோதிர்லிங்கங்களையும் காண்க",
     liveTitle: "12 நேரடி தரிசனங்கள்",
     liveDesc: "ஒவ்வொரு ஜோதிர்லிங்கத்தின் நேரடி ஒளிபரப்பும் ஒரே இடத்தில்.",
     sacredTitle: "புனித பன்னிரண்டு ஜோதிர்லிங்கங்கள்",
@@ -162,6 +170,9 @@ function Index() {
     <div className="relative w-full overflow-hidden bg-background">
       {/* 1. ARRIVAL: Hero Aarti Sacred Awakening */}
       <HeroAarti t={t} lang={lang} isEn={isEn} fontClass={fontClass} />
+
+      {/* Special pilgrimage feature: Simhastha Kumbh Mela 2027 */}
+      <KumbhFeature />
 
       {/* 2. DARSHAN: Living Sanctum Live Darshan & Editorial Bridge */}
       <LiveDarshanSection
