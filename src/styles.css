@@ -1,15 +1,140 @@
-@import url("https://fonts.googleapis.com/css2?family=Cinzel:wght@400;500;600;700&family=Yatra+One&family=Noto+Serif+Devanagari:wght@400;500;600;700&family=Mukta:wght@300;400;500;600;700;800&family=Tiro+Devanagari+Marathi&family=Hind+Vadodara:wght@300;400;500;600;700&family=Hind+Guntur:wght@300;400;500;600;700&family=Hind+Madurai:wght@300;400;500;600;700&family=Noto+Sans+Gujarati:wght@300;400;500;600;700&family=Noto+Sans+Telugu:wght@300;400;500;600;700&family=Noto+Sans+Tamil:wght@300;400;500;600;700&family=Inter:wght@300;400;500;600;700;800&display=swap");
+/* Google font stylesheet is loaded once from the root document head. */
 @import "tailwindcss" source(none);
 @import "tw-animate-css";
 @source "../src";
 
-/* Marathi-specific Yatra One font with corrected OpenType shaping. */
+/* ==========================================================================
+ * Canonical Yatra One Font Face (Local woff2 with CDN fallback)
+ * ========================================================================== */
+
+/* Patched Yatra One face with Marathi-specific OpenType shaping.
+ * Kept under a CSS alias so Hindi continues using the existing, verified font file.
+ */
 @font-face {
   font-family: "Yatra One Marathi";
   font-style: normal;
   font-weight: 400;
   font-display: swap;
   src: url("/fonts/yatra-one-marathi.ttf") format("truetype");
+}
+
+/* devanagari */
+@font-face {
+  font-family: "Yatra One";
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src:
+    url("/fonts/yatra-one-devanagari.woff2") format("woff2"),
+    url("https://fonts.gstatic.com/s/yatraone/v16/C8ch4copsHzj8p7NaF0BxVmAXRA.woff2")
+      format("woff2");
+  unicode-range:
+    U+0900-097F, U+1CD0-1CF9, U+200C-200D, U+20A8, U+20B9, U+20F0, U+25CC, U+A830-A839, U+A8E0-A8FF,
+    U+11B00-11B09;
+}
+
+/* devanagari bold weight mapping to ensure no synthetic distortion or serif fallback */
+@font-face {
+  font-family: "Yatra One";
+  font-style: normal;
+  font-weight: 500 900;
+  font-display: swap;
+  src:
+    url("/fonts/yatra-one-devanagari.woff2") format("woff2"),
+    url("https://fonts.gstatic.com/s/yatraone/v16/C8ch4copsHzj8p7NaF0BxVmAXRA.woff2")
+      format("woff2");
+  unicode-range:
+    U+0900-097F, U+1CD0-1CF9, U+200C-200D, U+20A8, U+20B9, U+20F0, U+25CC, U+A830-A839, U+A8E0-A8FF,
+    U+11B00-11B09;
+}
+
+/* latin */
+@font-face {
+  font-family: "Yatra One";
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src:
+    url("/fonts/yatra-one-latin.woff2") format("woff2"),
+    url("https://fonts.gstatic.com/s/yatraone/v16/C8ch4copsHzj8p7NaF0BxFmA.woff2") format("woff2");
+  unicode-range:
+    U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329,
+    U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+@font-face {
+  font-family: "Yatra One";
+  font-style: normal;
+  font-weight: 500 900;
+  font-display: swap;
+  src:
+    url("/fonts/yatra-one-latin.woff2") format("woff2"),
+    url("https://fonts.gstatic.com/s/yatraone/v16/C8ch4copsHzj8p7NaF0BxFmA.woff2") format("woff2");
+  unicode-range:
+    U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329,
+    U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+/* ==========================================================================
+ * Canonical Noto Serif Devanagari Font Face (Local woff2 with CDN fallback)
+ * ========================================================================== */
+
+/* devanagari */
+@font-face {
+  font-family: "Noto Serif Devanagari";
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src:
+    url("/fonts/noto-serif-devanagari.woff2") format("woff2"),
+    url("https://fonts.gstatic.com/s/notoserifdevanagari/v34/x3dNcl3IZKmUqiMk48ZHXJ5jwU-DZGRSaQ4Hh2dGyFzPLcQPVbnRH-xEMqTN.woff2")
+      format("woff2");
+  unicode-range:
+    U+0900-097F, U+1CD0-1CF9, U+200C-200D, U+20A8, U+20B9, U+20F0, U+25CC, U+A830-A839, U+A8E0-A8FF,
+    U+11B00-11B09;
+}
+
+@font-face {
+  font-family: "Noto Serif Devanagari";
+  font-style: normal;
+  font-weight: 500 900;
+  font-display: swap;
+  src:
+    url("/fonts/noto-serif-devanagari.woff2") format("woff2"),
+    url("https://fonts.gstatic.com/s/notoserifdevanagari/v34/x3dNcl3IZKmUqiMk48ZHXJ5jwU-DZGRSaQ4Hh2dGyFzPLcQPVbnRH-xEMqTN.woff2")
+      format("woff2");
+  unicode-range:
+    U+0900-097F, U+1CD0-1CF9, U+200C-200D, U+20A8, U+20B9, U+20F0, U+25CC, U+A830-A839, U+A8E0-A8FF,
+    U+11B00-11B09;
+}
+
+/* latin */
+@font-face {
+  font-family: "Noto Serif Devanagari";
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src:
+    url("/fonts/noto-serif-devanagari-latin.woff2") format("woff2"),
+    url("https://fonts.gstatic.com/s/notoserifdevanagari/v34/x3dNcl3IZKmUqiMk48ZHXJ5jwU-DZGRSaQ4Hh2dGyFzPLcQPVbnRH-1EMg.woff2")
+      format("woff2");
+  unicode-range:
+    U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329,
+    U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+@font-face {
+  font-family: "Noto Serif Devanagari";
+  font-style: normal;
+  font-weight: 500 900;
+  font-display: swap;
+  src:
+    url("/fonts/noto-serif-devanagari-latin.woff2") format("woff2"),
+    url("https://fonts.gstatic.com/s/notoserifdevanagari/v34/x3dNcl3IZKmUqiMk48ZHXJ5jwU-DZGRSaQ4Hh2dGyFzPLcQPVbnRH-1EMg.woff2")
+      format("woff2");
+  unicode-range:
+    U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329,
+    U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
 }
 
 @custom-variant dark (&:is(.dark *));
@@ -39,9 +164,9 @@
   --font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
 
   /* Explicit Script Fonts */
-  --font-en: "Inter", ui-sans-serif, system-ui, sans-serif;
-  --font-devanagari: "Yatra One", "Noto Serif Devanagari", "Mukta", serif;
-  --font-hindi: "Yatra One", "Noto Serif Devanagari", "Mukta", serif;
+  --font-en: "Yatra One", serif;
+  --font-devanagari: "Yatra One", serif;
+  --font-hindi: "Yatra One", serif;
   --font-marathi: "Yatra One Marathi", "Yatra One", serif;
   --font-gujarati: "Noto Sans Gujarati", sans-serif;
   --font-telugu: "Noto Sans Telugu", sans-serif;
@@ -266,6 +391,65 @@ html[lang="ta"] {
   --font-active-display: "Noto Sans Tamil", sans-serif;
 }
 
+/* Devanagari (Marathi & Hindi) typography rules */
+html[data-lang="mr"],
+html[lang="mr"],
+html[data-lang="hi"],
+html[lang="hi"] {
+  font-synthesis: none;
+  line-height: 1.35;
+  letter-spacing: normal;
+  word-spacing: normal;
+}
+
+html[data-lang="mr"] h1,
+html[data-lang="mr"] h2,
+html[data-lang="mr"] h3,
+html[data-lang="mr"] h4,
+html[data-lang="mr"] h5,
+html[data-lang="mr"] h6,
+html[data-lang="mr"] p,
+html[data-lang="mr"] span,
+html[data-lang="mr"] a,
+html[data-lang="mr"] button,
+html[data-lang="mr"] label,
+html[data-lang="hi"] h1,
+html[data-lang="hi"] h2,
+html[data-lang="hi"] h3,
+html[data-lang="hi"] h4,
+html[data-lang="hi"] h5,
+html[data-lang="hi"] h6,
+html[data-lang="hi"] p,
+html[data-lang="hi"] span,
+html[data-lang="hi"] a,
+html[data-lang="hi"] button,
+html[data-lang="hi"] label,
+html[lang="mr"] h1,
+html[lang="mr"] h2,
+html[lang="mr"] h3,
+html[lang="mr"] h4,
+html[lang="mr"] h5,
+html[lang="mr"] h6,
+html[lang="mr"] p,
+html[lang="mr"] span,
+html[lang="mr"] a,
+html[lang="mr"] button,
+html[lang="mr"] label,
+html[lang="hi"] h1,
+html[lang="hi"] h2,
+html[lang="hi"] h3,
+html[lang="hi"] h4,
+html[lang="hi"] h5,
+html[lang="hi"] h6,
+html[lang="hi"] p,
+html[lang="hi"] span,
+html[lang="hi"] a,
+html[lang="hi"] button,
+html[lang="hi"] label {
+  font-synthesis: none;
+  font-weight: 400;
+}
+
 @layer base {
   * {
     border-color: var(--color-border);
@@ -344,34 +528,28 @@ html[lang="ta"] {
   }
 
   .font-en {
-    font-family: var(--font-en) !important;
+    font-family: "Yatra One", serif !important;
+    font-weight: 400;
+    font-synthesis: none;
   }
   .font-devanagari,
   .font-hindi {
-    font-family: var(--font-devanagari);
+    font-family: "Yatra One", serif !important;
+    font-weight: 400;
+    font-synthesis: none;
   }
   .font-marathi {
-    font-family: var(--font-marathi);
+    font-family: "Yatra One Marathi", "Yatra One", serif !important;
+    font-weight: 400;
+    font-synthesis: none;
   }
-
-  /* Corrected local Devanagari font for Hindi, matching verified staging. */
+  /* Keep Hindi's font override in the same cascade layer as .font-hindi.
+   * Important declarations in layers outrank unlayered important rules. */
   html[data-lang="hi"] .font-hindi,
   html[lang="hi"] .font-hindi,
   html[data-lang="hi"] .font-devanagari,
   html[lang="hi"] .font-devanagari {
     font-family: "Yatra One Marathi", "Yatra One", serif !important;
-    font-weight: 400;
-    font-synthesis: none;
-  }
-
-  /* The shared heading class must resolve to the Marathi face only in Marathi UI. */
-  html[data-lang="mr"] .font-hindi,
-  html[lang="mr"] .font-hindi,
-  html[data-lang="mr"] .font-devanagari,
-  html[lang="mr"] .font-devanagari {
-    font-family: "Yatra One Marathi", "Yatra One", serif !important;
-    font-weight: 400;
-    font-synthesis: none;
   }
   .font-gujarati {
     font-family: "Noto Sans Gujarati", sans-serif !important;
