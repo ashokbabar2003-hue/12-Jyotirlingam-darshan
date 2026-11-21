@@ -51,6 +51,8 @@ export function MobileShrineHandoff({ transition, lang, isEn, className }: Props
   const arrivalRef = useRef<HTMLImageElement>(null);
   const departureRef = useRef<HTMLImageElement>(null);
   const omRef = useRef<HTMLDivElement>(null);
+  const veilRef = useRef<HTMLDivElement>(null);
+  const glowRef = useRef<HTMLDivElement>(null);
   const progressRef = useRef<HTMLDivElement>(null);
   const progressTextRef = useRef<HTMLSpanElement>(null);
   const lastPercent = useRef(-1);
@@ -70,11 +72,18 @@ export function MobileShrineHandoff({ transition, lang, isEn, className }: Props
       const end = viewport * 0.22;
       const distance = Math.max(1, rect.height + start - end);
       const progress = clamp((start - rect.top) / distance);
-      const arrival = reduceMotion ? (progress > 0.5 ? 1 : 0) : smooth(0.18, 0.88, progress);
-      const middle = reduceMotion ? 0 : smooth(0.15, 0.42, progress) * (1 - smooth(0.58, 0.85, progress));
-      if (departureRef.current) departureRef.current.style.opacity = String(1 - arrival);
+      // Three readable phases: departing shrine, sacred threshold, arriving shrine.
+      // The midpoint visibly darkens the photographs and illuminates the Om.
+      const arrival = reduceMotion ? (progress > 0.5 ? 1 : 0) : smooth(0.34, 0.86, progress);
+      const middle = reduceMotion ? 0 : smooth(0.16, 0.34, progress) * (1 - smooth(0.66, 0.86, progress));
+      if (departureRef.current) departureRef.current.style.opacity = "1";
       if (arrivalRef.current) arrivalRef.current.style.opacity = String(arrival);
-      if (omRef.current) omRef.current.style.opacity = String(middle);
+      if (veilRef.current) veilRef.current.style.opacity = String(reduceMotion ? 0.15 : 0.12 + middle * 0.68);
+      if (glowRef.current) glowRef.current.style.opacity = String(middle * 0.8);
+      if (omRef.current) {
+        omRef.current.style.opacity = String(middle);
+        omRef.current.style.transform = `translate3d(0,${(1 - middle) * 10}px,0) scale(${0.92 + middle * 0.08})`;
+      }
       if (progressRef.current) progressRef.current.style.transform = `scaleX(${progress})`;
       const pct = Math.round(progress * 100);
       if (pct !== lastPercent.current && progressTextRef.current) {
@@ -95,9 +104,11 @@ export function MobileShrineHandoff({ transition, lang, isEn, className }: Props
         <div className="relative mx-auto h-[min(58svh,540px)] min-h-[270px] w-full overflow-hidden rounded-2xl border border-primary/20 bg-[#07080b]">
           <img ref={departureRef} src={transition.fromImage} alt={transition.fromName} loading="lazy" decoding="async" className="pointer-events-none absolute inset-0 h-full w-full object-cover" style={{ opacity: 1 }} />
           <img ref={arrivalRef} src={transition.toImage} alt={transition.toName} loading="lazy" decoding="async" className="pointer-events-none absolute inset-0 h-full w-full object-cover" style={{ opacity: 0 }} />
-          <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-black/40" />
-          <div ref={omRef} className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center gap-3 px-5 text-center" style={{ opacity: 0 }}>
-            <span className="rounded-full border border-amber-400/50 bg-black/60 px-4 py-2 text-4xl text-amber-300">ॐ</span>
+          <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/75 via-black/15 to-black/35" />
+          <div ref={veilRef} className="pointer-events-none absolute inset-0 bg-[#07030f]" style={{ opacity: 0.12 }} />
+          <div ref={glowRef} className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_center,rgba(245,158,11,0.25),transparent_65%)]" style={{ opacity: 0 }} />
+          <div ref={omRef} className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center gap-3 px-5 text-center" style={{ opacity: 0, transform: "translate3d(0,10px,0) scale(0.92)" }}>
+            <span className="rounded-full border border-amber-300/70 bg-black/70 px-5 py-3 text-4xl text-amber-200 shadow-[0_0_28px_rgba(251,191,36,0.45)]">ॐ</span>
             <h3 className={cn("text-lg font-semibold text-amber-200", displayFontClassFor(lang))}>{transition.spiritualEssence}</h3>
           </div>
           <div className="pointer-events-none absolute inset-x-3 bottom-4 flex items-center justify-between gap-2 text-xs font-semibold text-white drop-shadow-lg">
