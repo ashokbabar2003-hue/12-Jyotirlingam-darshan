@@ -216,7 +216,7 @@ export function PooledTransitionCanvas({ activeBoundary, className }: PooledTran
       if (!container || !pinTarget) return;
 
       const isReduced = prefersReducedMotion();
-      const isWebGLType = activeBoundary.config.type === "webgl";
+      const isWebGLType = activeBoundary.config.type === "webgl" && window.innerWidth >= 600;
 
       if (isReduced || !webGlSupported || !canvas || !canvasContainer || !isWebGLType) {
         // Fallback CSS/GSAP crossfade mode
@@ -395,7 +395,7 @@ export function PooledTransitionCanvas({ activeBoundary, className }: PooledTran
 
   if (!activeBoundary) return null;
 
-  const isWebGL = activeBoundary.config.type === "webgl" && webGlSupported;
+  const isWebGL = activeBoundary.config.type === "webgl" && webGlSupported && isClient && typeof window !== "undefined" && window.innerWidth >= 600;
   const pathwayLabel = activeBoundary.config.pathwayLabel ?? "Sacred Pathway • तीर्थ संक्रमण";
   const pathwaySubtitle =
     activeBoundary.config.pathwaySubtitle ??
