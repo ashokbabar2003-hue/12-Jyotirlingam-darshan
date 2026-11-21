@@ -98,6 +98,82 @@ export function SacredJourneyTransition({
 
       const isMobile = window.innerWidth < 600;
 
+      // Mobile uses native scrolling and a lightweight, frame-coalesced crossfade.
+      // Avoid running a scrubbed GSAP timeline for every shrine transition.
+      if (isMobile) {
+        const clamp = (value: number) => Math.max(0, Math.min(1, value));
+        const setOpacity = (element: HTMLElement | null, value: number) => {
+          if (element) element.style.opacity = String(clamp(value));
+        };
+        const setScale = (element: HTMLElement | null, value: number) => {
+          if (element) element.style.transform = `scaleX(${clamp(value)})`;
+        };
+        let frame = 0;
+        let active = false;
+        let lastPercent = -1;
+        fromImg.style.filter = "none";
+        toImg.style.filter = "none";
+        fromImg.style.transform = "none";
+        toImg.style.transform = "none";
+        fromImg.style.willChange = "auto";
+        toImg.style.willChange = "auto";
+        if (stageRayHead) stageRayHead.style.transform = "translateY(-50%)";
+        const render = () => {
+          frame = 0;
+          const rect = container.getBoundingClientRect();
+          const viewport = window.innerHeight;
+          // Run the visual sequence as the compact section crosses the viewport.
+          const start = viewport * 0.75;
+          const end = viewport * 0.25;
+          const distance = Math.max(1, rect.height + start - end);
+          const progress = clamp((start - rect.top) / distance);
+          const arrival = clamp((progress - 0.4) / 0.5);
+          const departure = clamp((progress - 0.08) / 0.4);
+          const middleIn = clamp((progress - 0.22) / 0.2);
+          const middleOut = 1 - clamp((progress - 0.62) / 0.2);
+          const middle = middleIn * middleOut;
+          setOpacity(fromImg, 1 - departure);
+          setOpacity(toImg, arrival);
+          setOpacity(chapterBadge, clamp(progress * 6));
+          setOpacity(footerTracker, clamp(progress * 6));
+          setOpacity(departingBadge, 1 - departure);
+          setOpacity(approachingBadge, arrival);
+          setOpacity(centralThreshold, middle);
+          setOpacity(omIconWrapper, middle);
+          setOpacity(spiritualEssenceText, middle);
+          setOpacity(destinationPreview, middle);
+          setOpacity(atmosphericGlow, middle * 0.55);
+          setOpacity(veilOverlay, 0.3 + middle * 0.45);
+          setScale(progressLine, progress);
+          setScale(stageRayLine, progress);
+          if (stageRayHead) stageRayHead.style.left = `${progress * 100}%`;
+          const percent = Math.round(progress * 100);
+          if (percent !== lastPercent && progressTextRef.current) {
+            lastPercent = percent;
+            progressTextRef.current.textContent = `${toLocalDigits(percent, lang)}% ${words.traversed}`;
+          }
+        };
+        const schedule = () => {
+          if (active && !frame) frame = requestAnimationFrame(render);
+        };
+        const observer = new IntersectionObserver((entries) => {
+          active = entries[0]?.isIntersecting ?? false;
+          if (active) schedule();
+        }, { rootMargin: "25% 0px 25% 0px" });
+        observer.observe(container);
+        window.addEventListener("scroll", schedule, { passive: true });
+        window.addEventListener("resize", schedule, { passive: true });
+        // Render once even before the observer first fires.
+        active = true;
+        schedule();
+        return () => {
+          observer.disconnect();
+          window.removeEventListener("scroll", schedule);
+          window.removeEventListener("resize", schedule);
+          if (frame) cancelAnimationFrame(frame);
+        };
+      }
+
       // -------------------------------------------------------------
       // INITIAL VISUAL STATES (Carefully balanced depth and contrast)
       // -------------------------------------------------------------
