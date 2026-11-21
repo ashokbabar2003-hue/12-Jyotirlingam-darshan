@@ -146,12 +146,12 @@ export function SacredJourneyTransition({
       // - 0.52 -> 0.88: Approaching shrine silhouette to architectural detail
       // - 0.80 -> 1.00: Destination handoff & approaching badge lock-in
       // -------------------------------------------------------------
-      const scrubDistance = isMobile ? "bottom top" : "+=125%";
+      const scrubDistance = isMobile ? "bottom 25%" : "+=125%";
 
       const transitionTl = gsap.timeline({
         scrollTrigger: {
           trigger: container,
-          start: isMobile ? "top bottom" : "top 30%",
+          start: isMobile ? "top 75%" : "top 30%",
           end: scrubDistance,
           scrub: isMobile ? true : 0.65,
           invalidateOnRefresh: true,
@@ -349,7 +349,7 @@ export function SacredJourneyTransition({
             opacity: 1.0,
             scale: 1.0,
             yPercent: 0,
-            filter: "brightness(1.0) contrast(1.0)",
+            filter: isMobile ? "none" : "brightness(1.0) contrast(1.0)",
             ease: "power2.out",
             duration: 0.28,
           },
