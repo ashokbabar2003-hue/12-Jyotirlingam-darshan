@@ -105,7 +105,7 @@ export function SacredJourneyTransition({
         opacity: 1,
         scale: 1.0,
         yPercent: 0,
-        filter: "brightness(1.0) contrast(1.0)",
+        filter: isMobile ? "none" : "brightness(1.0) contrast(1.0)",
         transformOrigin: "center center",
       });
 
@@ -113,7 +113,7 @@ export function SacredJourneyTransition({
         opacity: 0,
         scale: isMobile ? 1.12 : 1.18,
         yPercent: isMobile ? 2 : 4,
-        filter: "brightness(0.2) contrast(1.2)",
+        filter: isMobile ? "none" : "brightness(0.2) contrast(1.2)",
         transformOrigin: "center center",
       });
 
@@ -153,7 +153,7 @@ export function SacredJourneyTransition({
           trigger: container,
           start: isMobile ? "top 80%" : "top 30%",
           end: scrubDistance,
-          scrub: isMobile ? 0.4 : 0.65,
+          scrub: isMobile ? true : 0.65,
           invalidateOnRefresh: true,
           onUpdate: (self) => {
             if (progressTextRef.current) {
@@ -190,7 +190,7 @@ export function SacredJourneyTransition({
           {
             scale: isMobile ? 1.06 : 1.12,
             yPercent: isMobile ? -2 : -4,
-            filter: "brightness(0.35) contrast(1.2)",
+            filter: isMobile ? "none" : "brightness(0.35) contrast(1.2)",
             ease: "power1.inOut",
             duration: 0.22,
           },
@@ -200,7 +200,7 @@ export function SacredJourneyTransition({
           fromImg,
           {
             opacity: 0,
-            filter: "brightness(0.08) contrast(1.4)",
+            filter: isMobile ? "none" : "brightness(0.08) contrast(1.4)",
             ease: "power2.in",
             duration: 0.18,
           },
@@ -336,7 +336,7 @@ export function SacredJourneyTransition({
             opacity: 0.55,
             scale: isMobile ? 1.08 : 1.1,
             yPercent: isMobile ? 1.5 : 2.5,
-            filter: "brightness(0.55) contrast(1.15)",
+            filter: isMobile ? "none" : "brightness(0.55) contrast(1.15)",
             ease: "power2.out",
             duration: 0.22,
           },
