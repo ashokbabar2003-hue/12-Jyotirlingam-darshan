@@ -98,11 +98,6 @@ export function SacredJourneyTransition({
 
       const isMobile = window.innerWidth < 600;
 
-      // Native compositor-driven scroll animation when supported, with JS fallback.
-      if (isMobile && typeof CSS !== "undefined" && CSS.supports("animation-timeline: view()")) {
-        return;
-      }
-
       // Mobile uses native scrolling and a lightweight, frame-coalesced crossfade.
       // Avoid running a scrubbed GSAP timeline for every shrine transition.
       if (isMobile) {
@@ -454,7 +449,7 @@ export function SacredJourneyTransition({
       ref={containerRef}
       id={`journey-transition-${transition.fromSlug}-to-${transition.toSlug}`}
       className={cn(
-        "sacred-mobile-journey relative w-full overflow-hidden bg-background/95 border-y border-border/30 py-5 sm:py-20 lg:py-24",
+        "relative w-full overflow-hidden bg-background/95 border-y border-border/30 py-5 sm:py-20 lg:py-24",
         className,
       )}
       aria-label={`Sacred Transition from ${transition.fromName} to ${transition.toName}`}
@@ -465,7 +460,7 @@ export function SacredJourneyTransition({
 
       <div className="relative mx-auto flex w-full max-w-5xl flex-col items-center px-4 sm:px-6 lg:px-8">
         {/* Chapter Milestone Header */}
-        <div ref={chapterBadgeRef} data-journey-layer="header" className="relative mb-3 sm:mb-8 text-center max-w-2xl mx-auto">
+        <div ref={chapterBadgeRef} className="relative mb-3 sm:mb-8 text-center max-w-2xl mx-auto">
           <div className="inline-flex items-center gap-2 rounded-full border border-primary/30 bg-card/70 px-3.5 py-1.5 backdrop-blur-md shadow-sm">
             <Sparkles className="size-3 text-primary diya-flicker" />
             <span
@@ -497,7 +492,7 @@ export function SacredJourneyTransition({
         >
           {/* Departing Image Layer */}
           <img
-            ref={fromImgRef} data-journey-layer="from"
+            ref={fromImgRef}
             src={transition.fromImage}
             alt={transition.fromName}
             className="absolute inset-0 size-full object-cover select-none pointer-events-none will-change-transform"
@@ -506,7 +501,7 @@ export function SacredJourneyTransition({
 
           {/* Approaching Image Layer */}
           <img
-            ref={toImgRef} data-journey-layer="to"
+            ref={toImgRef}
             src={transition.toImage}
             alt={transition.toName}
             className="absolute inset-0 size-full object-cover select-none pointer-events-none will-change-transform"
@@ -528,7 +523,7 @@ export function SacredJourneyTransition({
           {/* In-Canvas Journey Ray Track & Illuminated Meridian */}
           <div className="pointer-events-none absolute inset-x-4 sm:inset-x-8 top-1/2 -translate-y-1/2 h-px bg-white/10 z-10 overflow-hidden">
             <div
-              ref={stageRayLineRef} data-journey-layer="progress"
+              ref={stageRayLineRef}
               className={cn("absolute inset-y-0 left-0 w-full", ritual === "river" ? "bg-gradient-to-r from-sky-500/30 via-cyan-300 to-sky-200 shadow-[0_0_16px_rgba(125,211,252,0.8)]" : ritual === "flag" || ritual === "closing" ? "bg-gradient-to-r from-orange-500/20 via-amber-400 to-orange-300 shadow-[0_0_16px_rgba(251,191,36,0.7)]" : ritual === "procession" ? "bg-gradient-to-r from-rose-500/30 via-amber-300 to-rose-300" : "bg-gradient-to-r from-transparent via-primary to-accent")}
             />
           </div>
@@ -544,7 +539,7 @@ export function SacredJourneyTransition({
 
           {/* Central Sacred Threshold Core */}
           <div
-            ref={centralThresholdRef} data-journey-layer="threshold"
+            ref={centralThresholdRef}
             className="absolute inset-0 flex flex-col items-center justify-center p-6 text-center pointer-events-none z-20"
           >
             {/* Sacred Origin & Destination Context (Small Hierarchy) */}
@@ -609,7 +604,7 @@ export function SacredJourneyTransition({
           <div className="absolute inset-x-3 bottom-3 sm:inset-x-6 sm:bottom-6 flex items-end justify-between z-20">
             {/* Departing Shrine Badge (Left) */}
             <div
-              ref={departingBadgeRef} data-journey-layer="departing"
+              ref={departingBadgeRef}
               className="flex flex-col rounded-xl border border-white/10 bg-black/75 px-3 py-2 sm:px-4 sm:py-2.5 backdrop-blur-md shadow-lg max-w-[46%]"
             >
               <div className="flex items-center gap-1.5 text-[10px] font-mono font-semibold uppercase tracking-wider text-primary/90">
@@ -634,7 +629,7 @@ export function SacredJourneyTransition({
 
             {/* Approaching Shrine Badge (Right) */}
             <div
-              ref={approachingBadgeRef} data-journey-layer="approaching"
+              ref={approachingBadgeRef}
               className="flex flex-col items-end rounded-xl border border-accent/40 bg-black/75 px-3 py-2 sm:px-4 sm:py-2.5 backdrop-blur-md shadow-lg max-w-[46%] text-right"
             >
               <div className="flex items-center gap-1.5 text-[10px] font-mono font-semibold uppercase tracking-wider text-accent">
@@ -661,7 +656,7 @@ export function SacredJourneyTransition({
 
         {/* Continuous Journey Progress Tracker Bar */}
         <div
-          ref={footerTrackerRef} data-journey-layer="footer"
+          ref={footerTrackerRef}
           className="mt-3 sm:mt-8 flex w-full max-w-xl flex-col items-center"
         >
           <div className="flex w-full items-center justify-between px-1 text-[11px] sm:text-xs text-muted-foreground font-mono">
@@ -694,7 +689,7 @@ export function SacredJourneyTransition({
           {/* Thin Illuminated Journey Line with Glowing Position Head */}
           <div className="relative mt-2.5 h-1.5 w-full rounded-full bg-border/40 overflow-hidden">
             <div
-              ref={progressLineRef} data-journey-layer="progress"
+              ref={progressLineRef}
               className="absolute inset-y-0 left-0 w-full bg-gradient-to-r from-primary via-accent to-primary"
             />
           </div>
