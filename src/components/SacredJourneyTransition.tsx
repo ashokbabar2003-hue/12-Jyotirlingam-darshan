@@ -146,12 +146,12 @@ export function SacredJourneyTransition({
       // - 0.52 -> 0.88: Approaching shrine silhouette to architectural detail
       // - 0.80 -> 1.00: Destination handoff & approaching badge lock-in
       // -------------------------------------------------------------
-      const scrubDistance = isMobile ? "+=75%" : "+=125%";
+      const scrubDistance = isMobile ? "bottom top" : "+=125%";
 
       const transitionTl = gsap.timeline({
         scrollTrigger: {
           trigger: container,
-          start: isMobile ? "top 80%" : "top 30%",
+          start: isMobile ? "top bottom" : "top 30%",
           end: scrubDistance,
           scrub: isMobile ? true : 0.65,
           invalidateOnRefresh: true,
@@ -378,7 +378,7 @@ export function SacredJourneyTransition({
       ref={containerRef}
       id={`journey-transition-${transition.fromSlug}-to-${transition.toSlug}`}
       className={cn(
-        "relative w-full overflow-hidden bg-background/95 border-y border-border/30 py-12 sm:py-20 lg:py-24",
+        "relative w-full overflow-x-clip min-h-[155svh] bg-background/95 border-y border-border/30 py-0 sm:min-h-0 sm:overflow-hidden sm:py-20 lg:py-24",
         className,
       )}
       aria-label={`Sacred Transition from ${transition.fromName} to ${transition.toName}`}
@@ -387,9 +387,9 @@ export function SacredJourneyTransition({
       <div className="pointer-events-none absolute inset-0 bg-radial-gradient from-primary/8 via-transparent to-transparent opacity-70 select-none" />
       <div className="pointer-events-none absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 size-96 rounded-full bg-accent/5 blur-3xl select-none" />
 
-      <div className="relative mx-auto flex w-full max-w-5xl flex-col items-center px-4 sm:px-6 lg:px-8">
+      <div className="sticky top-[10svh] mx-auto flex h-[80svh] w-full max-w-5xl flex-col items-center justify-center px-4 sm:relative sm:top-auto sm:h-auto sm:px-6 lg:px-8">
         {/* Chapter Milestone Header */}
-        <div ref={chapterBadgeRef} className="relative mb-6 sm:mb-8 text-center max-w-2xl mx-auto">
+        <div ref={chapterBadgeRef} className="relative mb-3 sm:mb-8 text-center max-w-2xl mx-auto">
           <div className="inline-flex items-center gap-2 rounded-full border border-primary/30 bg-card/70 px-3.5 py-1.5 backdrop-blur-md shadow-sm">
             <Sparkles className="size-3 text-primary diya-flicker" />
             <span
@@ -406,7 +406,7 @@ export function SacredJourneyTransition({
 
           <p
             className={cn(
-              "mt-3 text-xs sm:text-sm text-muted-foreground leading-relaxed",
+              "mt-1.5 sm:mt-3 text-xs sm:text-sm text-muted-foreground leading-relaxed",
               fontClass,
             )}
           >
@@ -417,7 +417,7 @@ export function SacredJourneyTransition({
         {/* Central Cinematic Stage Canvas */}
         <div
           ref={stageRef}
-          className="relative aspect-[16/10] sm:aspect-[16/9] w-full max-w-4xl overflow-hidden rounded-2xl sm:rounded-3xl border border-border/50 bg-[#07080b] shadow-2xl"
+          className="relative h-[48svh] min-h-[240px] sm:h-auto sm:min-h-0 sm:aspect-[16/9] w-full max-w-4xl overflow-hidden rounded-2xl sm:rounded-3xl border border-border/50 bg-[#07080b] shadow-2xl"
         >
           {/* Departing Image Layer */}
           <img
@@ -586,7 +586,7 @@ export function SacredJourneyTransition({
         {/* Continuous Journey Progress Tracker Bar */}
         <div
           ref={footerTrackerRef}
-          className="mt-6 sm:mt-8 flex w-full max-w-xl flex-col items-center"
+          className="mt-3 sm:mt-8 flex w-full max-w-xl flex-col items-center"
         >
           <div className="flex w-full items-center justify-between px-1 text-[11px] sm:text-xs text-muted-foreground font-mono">
             <span
