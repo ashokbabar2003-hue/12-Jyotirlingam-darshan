@@ -109,7 +109,6 @@ export function SacredJourneyTransition({
           if (element) element.style.transform = `scaleX(${clamp(value)})`;
         };
         let frame = 0;
-        let active = false;
         let lastPercent = -1;
         fromImg.style.filter = "none";
         toImg.style.filter = "none";
@@ -153,23 +152,19 @@ export function SacredJourneyTransition({
             progressTextRef.current.textContent = `${toLocalDigits(percent, lang)}% ${words.traversed}`;
           }
         };
+        // Keep a single source of truth: the current document scroll position.
+        // No IntersectionObserver gating, independent animation, or tween lag.
         const schedule = () => {
-          if (active && !frame) frame = requestAnimationFrame(render);
+          if (!frame) frame = requestAnimationFrame(render);
         };
-        const observer = new IntersectionObserver((entries) => {
-          active = entries[0]?.isIntersecting ?? false;
-          if (active) schedule();
-        }, { rootMargin: "25% 0px 25% 0px" });
-        observer.observe(container);
         window.addEventListener("scroll", schedule, { passive: true });
         window.addEventListener("resize", schedule, { passive: true });
-        // Render once even before the observer first fires.
-        active = true;
+        window.addEventListener("orientationchange", schedule, { passive: true });
         schedule();
         return () => {
-          observer.disconnect();
           window.removeEventListener("scroll", schedule);
           window.removeEventListener("resize", schedule);
+          window.removeEventListener("orientationchange", schedule);
           if (frame) cancelAnimationFrame(frame);
         };
       }
