@@ -95,10 +95,16 @@ export function MobileShrineHandoff({ transition, lang, isEn, className }: Props
       if (rect.top > viewport + 150 || rect.bottom < -150) return;
       // Every pixel of scroll maps to exactly one progress position.
       // No easing of the progress itself; no post-scroll catch-up.
-      const start = viewport * 0.75;
-      // Finish before the sticky visual stage is released at the bottom.
-      const distance = Math.max(1, rect.height - viewport * 0.20);
-      const progress = clamp((start - rect.top) / distance);
+      // The animation must run ONLY while the visual stage is held in view.
+      // Before the sticky stage reaches its top offset: 0% (departure).
+      // At the exact point where the stage must leave: 100% (arrival).
+      // This prevents the old bug where most of the crossfade happened before
+      // the stage was centered, leaving a blank scroll tail after it.
+      const stage = root.firstElementChild as HTMLElement | null;
+      if (!stage) return;
+      const stickyTop = viewport * 0.08;
+      const stickyTravel = Math.max(1, rect.height - stage.getBoundingClientRect().height - stickyTop);
+      const progress = clamp((stickyTop - rect.top) / stickyTravel);
       // Three readable phases: departing shrine, sacred threshold, arriving shrine.
       // The midpoint visibly darkens the photographs and illuminates the Om.
       const arrival = reduceMotion ? (progress > 0.5 ? 1 : 0) : smooth(0.2, 0.8, progress);
