@@ -55,6 +55,7 @@ import {
 } from "@/lib/social.functions";
 import { getGeminiDebugStatus } from "@/lib/gemini-debug.functions";
 import { ShrineImageManager } from "@/components/admin/ShrineImageManager";
+import { PujaScheduleManager } from "@/components/admin/PujaScheduleManager";
 
 export const Route = createFileRoute("/_authenticated/admin")({
   head: () => ({ meta: [{ title: "Manage submissions — 12 Jyotirlinga Darshan" }] }),
@@ -313,6 +314,7 @@ function AdminPage() {
 
           <TabsContent value="live-darshan" className="mt-0 space-y-8">
             <ChannelAutoRefreshManager />
+            <PujaScheduleManager />
             <RefreshLogViewer />
           </TabsContent>
 
@@ -1038,8 +1040,7 @@ function ChannelAutoRefreshManager() {
       <p className="mt-1 text-sm text-muted-foreground">
         Paste each shrine's official YouTube channel URL (e.g.{" "}
         <code className="text-foreground/80">https://www.youtube.com/@channel</code> or{" "}
-        <code className="text-foreground/80">https://www.youtube.com/channel/UCxxxx/live</code>). A
-        background job runs every 10 minutes, finds the active live stream, and updates the Live
+        <code className="text-foreground/80">https://www.youtube.com/channel/UCxxxx/live</code>). The automatic schedule is not active yet. Manual refresh checks the channel and updates the Live
         link above. If the scan fails or no stream is on, the existing Live link is kept.
       </p>
 
