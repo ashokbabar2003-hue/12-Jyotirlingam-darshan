@@ -95,16 +95,12 @@ export function MobileShrineHandoff({ transition, lang, isEn, className }: Props
       if (rect.top > viewport + 150 || rect.bottom < -150) return;
       // Every pixel of scroll maps to exactly one progress position.
       // No easing of the progress itself; no post-scroll catch-up.
-      // The animation must run ONLY while the visual stage is held in view.
-      // Before the sticky stage reaches its top offset: 0% (departure).
-      // At the exact point where the stage must leave: 100% (arrival).
-      // This prevents the old bug where most of the crossfade happened before
-      // the stage was centered, leaving a blank scroll tail after it.
-      const stage = root.firstElementChild as HTMLElement | null;
-      if (!stage) return;
-      const stickyTop = viewport * 0.08;
-      const stickyTravel = Math.max(1, rect.height - stage.getBoundingClientRect().height - stickyTop);
-      const progress = clamp((stickyTop - rect.top) / stickyTravel);
+      // Compact normal-flow section: progress follows its visible travel,
+      // without relying on sticky positioning or an artificial scroll spacer.
+      const start = viewport * 0.72;
+      const finish = viewport * 0.18;
+      const distance = Math.max(1, rect.height + start - finish);
+      const progress = clamp((start - rect.top) / distance);
       // Three readable phases: departing shrine, sacred threshold, arriving shrine.
       // The midpoint visibly darkens the photographs and illuminates the Om.
       const arrival = reduceMotion ? (progress > 0.5 ? 1 : 0) : smooth(0.2, 0.8, progress);
@@ -133,8 +129,8 @@ export function MobileShrineHandoff({ transition, lang, isEn, className }: Props
   }, [transition.fromSlug, transition.toSlug, lang]);
 
   return (
-    <section ref={rootRef} className={cn("relative w-full min-h-[145svh] border-y border-border/30 bg-background/95 lg:hidden", className)} aria-label={transition.label}>
-      <div className="sticky top-[8svh] mx-auto flex h-[84svh] w-full max-w-3xl flex-col justify-center px-3 sm:px-6">
+    <section ref={rootRef} className={cn("relative w-full overflow-hidden border-y border-border/30 bg-background/95 py-5 lg:hidden", className)} aria-label={transition.label}>
+      <div className="relative mx-auto flex w-full max-w-3xl flex-col justify-center px-3 sm:px-6">
         <div className="mb-3 text-center">
           <p className={cn("text-xs font-semibold text-accent", isEn ? "font-display uppercase tracking-wider" : displayFontClassFor(lang))}>{transition.label}</p>
           <p className={cn("mt-1 text-xs text-muted-foreground", displayFontClassFor(lang))}>{transition.subtitle}</p>
