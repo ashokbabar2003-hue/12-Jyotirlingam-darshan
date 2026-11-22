@@ -115,7 +115,7 @@ export function TempleScene({
         return;
       }
 
-      const isCompactMobile = window.innerWidth < 600;
+      const isCompactMobile = window.innerWidth < 1024;
 
       // Initial visual states: restrained, understated offsets
       gsap.set(img, {
@@ -128,7 +128,7 @@ export function TempleScene({
       gsap.set(numberBadge, { opacity: 0, y: 8 });
       gsap.set([metaBadge, title, desc, significance, cta], { opacity: 0, y: 12 });
 
-      if (window.innerWidth >= 768) {
+      if (window.innerWidth >= 1024) {
         // Desktop Experience: Data-driven pinned narrative hold
         const masterTl = gsap.timeline({
           scrollTrigger: {
@@ -254,39 +254,15 @@ export function TempleScene({
         requestAnimationFrame(revealOnAnchor);
         // Font loading may refresh pinned offsets after the first navigation.
         if ("fonts" in document) document.fonts.ready.then(revealOnAnchor);
-        return () => window.removeEventListener("hashchange", revealOnAnchor);
-      } else {
-        // Mobile / Touch: Natural document flow with subtle opacity reveal
-        const mobileTl = gsap.timeline({
-          scrollTrigger: {
-            trigger: container,
-            start: "top 85%",
-            end: "bottom 30%",
-            scrub: 0.4,
-          },
+        return () => window.removeEventListener("hashchange", revealOnAnchor)      } else {
+        // Mobile/tablet: no GSAP pin or scrub to compete with native scrolling.
+        gsap.set(img, { scale: 1, yPercent: 0, opacity: 1, clearProps: "transform" });
+        gsap.set([numberBadge, metaBadge, title, desc, significance, cta], {
+          opacity: 1, y: 0, visibility: "visible", clearProps: "transform",
         });
-
-        mobileTl
-          .to(
-            img,
-            {
-              scale: 1.0,
-              opacity: 1,
-              ease: "none",
-            },
-            0,
-          )
-          .to(
-            [numberBadge, metaBadge, title, desc, significance, cta],
-            {
-              opacity: 1,
-              y: 0,
-              stagger: 0.05,
-              ease: "power2.out",
-            },
-            0,
-          );
       }
+
+
 
       // Refresh triggers after fonts are ready
       if (typeof document !== "undefined" && "fonts" in document) {
