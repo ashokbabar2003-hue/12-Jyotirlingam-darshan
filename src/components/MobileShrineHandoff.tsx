@@ -57,6 +57,7 @@ export function MobileShrineHandoff({ transition, lang, isEn, className }: Props
   const progressTextRef = useRef<HTMLSpanElement>(null);
   const lastPercent = useRef(-1);
   const imagesReadyRef = useRef(false);
+  const imageStatusRef = useRef<"pending" | "ready" | "failed">("pending");
 
   useEffect(() => {
     const root = rootRef.current;
@@ -65,6 +66,7 @@ export function MobileShrineHandoff({ transition, lang, isEn, className }: Props
     let disposed = false;
     let started = false;
     imagesReadyRef.current = false;
+    imageStatusRef.current = "pending";
     // Predecode images well before the transition reaches the viewport.
     const preload = () => {
       if (started) return;
@@ -72,12 +74,14 @@ export function MobileShrineHandoff({ transition, lang, isEn, className }: Props
       const prepare = (src: string) => {
         const image = new Image();
         image.decoding = "async";
+        image.referrerPolicy = "no-referrer";
         image.src = src;
-        return image.decode().catch(() => undefined);
+        return image.decode().then(() => true, () => false);
       };
-      void Promise.all([prepare(transition.fromImage), prepare(transition.toImage)]).then(() => {
+      void Promise.all([prepare(transition.fromImage), prepare(transition.toImage)]).then((results) => {
         if (disposed) return;
-        imagesReadyRef.current = true;
+        imagesReadyRef.current = results[1];
+        imageStatusRef.current = results[1] ? "ready" : "failed";
         requestTick();
       });
     };
@@ -97,16 +101,16 @@ export function MobileShrineHandoff({ transition, lang, isEn, className }: Props
       // No easing of the progress itself; no post-scroll catch-up.
       // Compact normal-flow section: progress follows its visible travel,
       // without relying on sticky positioning or an artificial scroll spacer.
-      const start = viewport * 0.72;
-      const finish = viewport * 0.18;
+      const start = viewport * 0.80;
+      const finish = viewport * 0.30;
       const distance = Math.max(1, rect.height + start - finish);
       const progress = clamp((start - rect.top) / distance);
       // Three readable phases: departing shrine, sacred threshold, arriving shrine.
       // The midpoint visibly darkens the photographs and illuminates the Om.
-      const arrival = reduceMotion ? (progress > 0.5 ? 1 : 0) : smooth(0.2, 0.8, progress);
-      const middle = reduceMotion ? 0 : smooth(0.16, 0.34, progress) * (1 - smooth(0.66, 0.86, progress));
+      const arrival = reduceMotion ? (progress > 0.5 ? 1 : 0) : smooth(0.10, 0.76, progress);
+      const middle = reduceMotion ? 0 : smooth(0.10, 0.28, progress) * (1 - smooth(0.70, 0.90, progress));
       if (departureRef.current) departureRef.current.style.opacity = "1";
-      if (arrivalRef.current) arrivalRef.current.style.opacity = String(imagesReadyRef.current ? arrival : 0);
+      if (arrivalRef.current) arrivalRef.current.style.opacity = String(imagesReadyRef.current || imageStatusRef.current === "failed" ? arrival : 0);
       if (veilRef.current) veilRef.current.style.opacity = String(reduceMotion ? 0.15 : 0.08 + middle * 0.5);
       if (glowRef.current) glowRef.current.style.opacity = String(middle * 0.8);
       if (omRef.current) {
@@ -136,8 +140,8 @@ export function MobileShrineHandoff({ transition, lang, isEn, className }: Props
           <p className={cn("mt-1 text-xs text-muted-foreground", displayFontClassFor(lang))}>{transition.subtitle}</p>
         </div>
         <div className="relative mx-auto h-[min(56svh,540px)] min-h-[250px] w-full overflow-hidden rounded-2xl border border-primary/20 bg-[#07080b]">
-          <img ref={departureRef} src={transition.fromImage} alt={transition.fromName} loading="lazy" decoding="async" className="pointer-events-none absolute inset-0 h-full w-full object-cover" style={{ opacity: 1 }} />
-          <img ref={arrivalRef} src={transition.toImage} alt={transition.toName} loading="lazy" decoding="async" className="pointer-events-none absolute inset-0 h-full w-full object-cover" style={{ opacity: 0 }} />
+          <img ref={departureRef} src={transition.fromImage} alt={transition.fromName} loading="lazy" decoding="async" referrerPolicy="no-referrer" className="pointer-events-none absolute inset-0 h-full w-full object-cover" style={{ opacity: 1 }} />
+          <img ref={arrivalRef} src={transition.toImage} alt={transition.toName} loading="lazy" decoding="async" referrerPolicy="no-referrer" className="pointer-events-none absolute inset-0 h-full w-full object-cover" style={{ opacity: 0 }} />
           <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/75 via-black/15 to-black/35" />
           <div ref={veilRef} className="pointer-events-none absolute inset-0 bg-[#07030f]" style={{ opacity: 0.12 }} />
           <div ref={glowRef} className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_center,rgba(245,158,11,0.25),transparent_65%)]" style={{ opacity: 0 }} />
