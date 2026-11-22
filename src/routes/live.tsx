@@ -60,9 +60,12 @@ function LivePage() {
 
   const getEffectiveStatus = useCallback(
     (slug: string): DarshanStatus => {
-      return statuses[slug] ?? resolvedStreams[slug]?.status ?? "none";
+      // A configured primary URL is not proof that its video is currently live.
+      // Only a recent matching channel scan may qualify it for the LIVE-only filter.
+      const status = statuses[slug] ?? resolvedStreams[slug]?.status ?? "none";
+      return status === "live" && verified.data?.[slug] !== true ? "unverified" : status;
     },
-    [statuses, resolvedStreams],
+    [statuses, resolvedStreams, verified.data],
   );
 
   const liveCount = useMemo(() => {
