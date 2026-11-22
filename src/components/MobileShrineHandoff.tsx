@@ -56,11 +56,38 @@ export function MobileShrineHandoff({ transition, lang, isEn, className }: Props
   const progressRef = useRef<HTMLDivElement>(null);
   const progressTextRef = useRef<HTMLSpanElement>(null);
   const lastPercent = useRef(-1);
+  const imagesReadyRef = useRef(false);
 
   useEffect(() => {
     const root = rootRef.current;
     if (!root) return;
     const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    let disposed = false;
+    let started = false;
+    imagesReadyRef.current = false;
+    // Predecode images well before the transition reaches the viewport.
+    const preload = () => {
+      if (started) return;
+      started = true;
+      const prepare = (src: string) => {
+        const image = new Image();
+        image.decoding = "async";
+        image.src = src;
+        return image.decode().catch(() => undefined);
+      };
+      void Promise.all([prepare(transition.fromImage), prepare(transition.toImage)]).then(() => {
+        if (disposed) return;
+        imagesReadyRef.current = true;
+        requestTick();
+      });
+    };
+    const preloadObserver = new IntersectionObserver((entries) => {
+      if (entries.some((entry) => entry.isIntersecting)) {
+        preload();
+        preloadObserver.disconnect();
+      }
+    }, { rootMargin: "1300px 0px" });
+    preloadObserver.observe(root);
     const update = () => {
       if (window.innerWidth >= 1024) return;
       const rect = root.getBoundingClientRect();
@@ -74,11 +101,11 @@ export function MobileShrineHandoff({ transition, lang, isEn, className }: Props
       const progress = clamp((start - rect.top) / distance);
       // Three readable phases: departing shrine, sacred threshold, arriving shrine.
       // The midpoint visibly darkens the photographs and illuminates the Om.
-      const arrival = reduceMotion ? (progress > 0.5 ? 1 : 0) : smooth(0.34, 0.86, progress);
+      const arrival = reduceMotion ? (progress > 0.5 ? 1 : 0) : smooth(0.2, 0.8, progress);
       const middle = reduceMotion ? 0 : smooth(0.16, 0.34, progress) * (1 - smooth(0.66, 0.86, progress));
       if (departureRef.current) departureRef.current.style.opacity = "1";
-      if (arrivalRef.current) arrivalRef.current.style.opacity = String(arrival);
-      if (veilRef.current) veilRef.current.style.opacity = String(reduceMotion ? 0.15 : 0.12 + middle * 0.68);
+      if (arrivalRef.current) arrivalRef.current.style.opacity = String(imagesReadyRef.current ? arrival : 0);
+      if (veilRef.current) veilRef.current.style.opacity = String(reduceMotion ? 0.15 : 0.08 + middle * 0.5);
       if (glowRef.current) glowRef.current.style.opacity = String(middle * 0.8);
       if (omRef.current) {
         omRef.current.style.opacity = String(middle);
@@ -91,7 +118,12 @@ export function MobileShrineHandoff({ transition, lang, isEn, className }: Props
         progressTextRef.current.textContent = `${toLocalDigits(pct, lang)}%`;
       }
     };
-    return subscribe(update);
+    const unsubscribe = subscribe(update);
+    return () => {
+      disposed = true;
+      preloadObserver.disconnect();
+      unsubscribe();
+    };
   }, [transition.fromSlug, transition.toSlug, lang]);
 
   return (
