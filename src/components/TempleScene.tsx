@@ -96,9 +96,12 @@ export function TempleScene({
     const observer = new IntersectionObserver((entries) => {
       if (entries.some((entry) => entry.isIntersecting)) {
         image.loading = "eager";
+        // Start fetching as soon as the next shrine approaches; the handoff
+        // should not reveal a scene that has yet to begin loading.
+        image.fetchPriority = "high";
         observer.disconnect();
       }
-    }, { rootMargin: "1600px 0px" });
+    }, { rootMargin: "2200px 0px" });
     observer.observe(section);
     return () => observer.disconnect();
   }, [shrine.slug]);
@@ -376,7 +379,7 @@ export function TempleScene({
                   }
                 }}
                 style={{ objectPosition: presentation.objectPosition || "center" }}
-                className="size-full object-cover select-none will-change-transform"
+                className="size-full object-cover select-none lg:will-change-transform"
               />
 
               {/* Atmospheric vignetting preserving architecture */}
