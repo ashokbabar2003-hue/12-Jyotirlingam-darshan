@@ -1,4 +1,4 @@
-import { useRef } from "react";
+import { useEffect, useRef } from "react";
 import { Link } from "@tanstack/react-router";
 import { MapPin, Compass, ArrowRight, ArrowUp, Quote } from "lucide-react";
 import { useGSAP, gsap, ScrollTrigger, prefersReducedMotion } from "@/hooks/use-gsap";
@@ -84,6 +84,24 @@ export function TempleScene({
   const displayNumber = toLocalDigits(shrine.number, lang);
   const totalDisplay = toLocalDigits(totalShrines, lang);
   const tss = TEMPLE_SCENE_STRINGS[lang] ?? TEMPLE_SCENE_STRINGS.en;
+
+  // Request the upcoming temple image before it enters the mobile viewport.
+  // The transition uses the same shrine imagery; this reduces the chance of
+  // an empty/loading frame when the next scene comes into view.
+  useEffect(() => {
+    if (window.innerWidth >= 1024) return;
+    const section = containerRef.current;
+    const image = imgRef.current;
+    if (!section || !image) return;
+    const observer = new IntersectionObserver((entries) => {
+      if (entries.some((entry) => entry.isIntersecting)) {
+        image.loading = "eager";
+        observer.disconnect();
+      }
+    }, { rootMargin: "1600px 0px" });
+    observer.observe(section);
+    return () => observer.disconnect();
+  }, [shrine.slug]);
 
   const isEven = index % 2 === 0;
   const presentation = shrine.presentation ?? {};
