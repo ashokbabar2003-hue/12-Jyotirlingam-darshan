@@ -1,0 +1,13 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "main": "src/server.ts",
+  "compatibility_date": "2026-11-14",
+  "compatibility_flags": [
+    "nodejs_compat"
+  ],
+  "observability": {
+    "enabled": true
+  },
+  "previews": {},
+  "name": "12-jyotirlingam-darshan"
+}
