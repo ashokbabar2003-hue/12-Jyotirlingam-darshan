@@ -4,7 +4,7 @@ import { useServerFn } from "@tanstack/react-start";
 import { useCallback, useState } from "react";
 
 import { jyotirlingas } from "@/data/jyotirlingas";
-import { getDarshanLinks } from "@/lib/darshan.functions";
+import { getDarshanLinks, getVerifiedLiveStreams } from "@/lib/darshan.functions";
 import { type DarshanStatus } from "@/components/darshan-tile";
 import { useLanguage, type Lang } from "@/hooks/use-language";
 import { HeroAarti } from "@/components/HeroAarti";
@@ -145,6 +145,8 @@ function Index() {
     staleTime: 60_000,
   });
 
+  const verifiedFn = useServerFn(getVerifiedLiveStreams);
+  const verified = useQuery({ queryKey: ["verified-live-streams"], queryFn: () => verifiedFn(), staleTime: 60_000, refetchInterval: 60_000 });
   const { lang, isEn, fontClass } = useLanguage();
   const t = STRINGS[lang];
   const navigate = useNavigate();
@@ -177,6 +179,7 @@ function Index() {
       {/* 2. DARSHAN: Living Sanctum Live Darshan & Editorial Bridge */}
       <LiveDarshanSection
         linksData={links.data}
+        verifiedLive={verified.data ?? {}}
         lang={lang}
         isEn={isEn}
         fontClass={fontClass}
