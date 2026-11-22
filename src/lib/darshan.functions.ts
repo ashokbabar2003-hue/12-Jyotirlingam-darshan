@@ -662,10 +662,14 @@ export const savePujaSchedule = createServerFn({ method: "POST" })
       updated_at: new Date().toISOString(),
       ...(id ? { id } : {}),
     };
-    const { error } = await supabaseAdmin.from("darshan_puja_schedules")
-      .upsert(payload, { onConflict: id ? "id" : "slug,name" });
-    if (error) throw new Error(error.message);
-    return { ok: true };
+    // Separate insert/update paths to avoid upsert conflict-target and identity issues.
+    const operation = id
+      ? supabaseAdmin.from("darshan_puja_schedules").update(payload).eq("id", id).select("id").single()
+      : supabaseAdmin.from("darshan_puja_schedules").insert(payload).select("id").single();
+    const { data: saved, error } = await operation;
+    if (error) throw new Error(`Unable to save puja: ${error.message}${error.code ? ` (${error.code})` : ""}`);
+    if (!saved?.id) throw new Error("Puja save was not confirmed by database.");
+    return { ok: true, id: saved.id };
   });
 
 export const deletePujaSchedule = createServerFn({ method: "POST" })
