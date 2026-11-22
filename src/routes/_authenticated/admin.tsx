@@ -462,7 +462,7 @@ function RefreshLogViewer() {
         </Button>
       </div>
       <p className="mt-1 text-sm text-muted-foreground">
-        Every cron run (every 10 minutes) and manual refresh is recorded with per-shrine status,
+        Scheduled refresh runs (when configured) and manual refreshes are recorded with per-shrine status,
         previous link, updated link, and timestamps.
       </p>
 
