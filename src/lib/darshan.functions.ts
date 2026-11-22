@@ -613,3 +613,70 @@ export const getRefreshLogs = createServerFn({ method: "GET" })
 
     return filtered.slice(0, 30);
   });
+
+
+export interface PujaScheduleRow {
+  id: string;
+  slug: string;
+  name: string;
+  time_ist: string;
+  source_url: string | null;
+  enabled: boolean;
+  verified: boolean;
+}
+const pujaSlugs = [
+  "somnath", "mallikarjuna", "mahakaleshwar", "omkareshwar", "kedarnath",
+  "bhimashankar", "kashi-vishwanath", "trimbakeshwar", "baidyanath",
+  "nageshwar", "rameshwaram", "grishneshwar",
+] as const;
+export const getPujaSchedules = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }): Promise<PujaScheduleRow[]> => {
+    await assertAdmin(context);
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { data, error } = await supabaseAdmin.from("darshan_puja_schedules")
+      .select("id, slug, name, time_ist, source_url, enabled, verified")
+      .order("slug").order("time_ist");
+    if (error) throw new Error(`Puja schedules unavailable: ${error.message}. Apply the migration first.`);
+    return (data ?? []) as PujaScheduleRow[];
+  });
+
+export const savePujaSchedule = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d) => z.object({
+    id: z.string().uuid().optional(),
+    slug: z.enum(pujaSlugs),
+    name: z.string().trim().min(1).max(120),
+    time_ist: z.string().regex(/^([01]\\d|2[0-3]):[0-5]\\d$/),
+    source_url: z.union([z.string().url().max(1000), z.literal("")]),
+    enabled: z.boolean(),
+    verified: z.boolean(),
+  }).parse(d))
+  .handler(async ({ context, data }) => {
+    await assertAdmin(context);
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { id, ...values } = data;
+    const payload = {
+      ...values, source_url: values.source_url || null,
+      time_ist: values.time_ist + ":00",
+      updated_at: new Date().toISOString(),
+      ...(id ? { id } : {}),
+    };
+    const { error } = await supabaseAdmin.from("darshan_puja_schedules")
+      .upsert(payload, { onConflict: id ? "id" : "slug,name" });
+    if (error) throw new Error(error.message);
+    return { ok: true };
+  });
+
+export const deletePujaSchedule = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d) => z.object({ id: z.string().uuid() }).parse(d))
+  .handler(async ({ context, data }) => {
+    await assertAdmin(context);
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { error } = await supabaseAdmin.from("darshan_puja_schedules")
+      .delete().eq("id", data.id);
+    if (error) throw new Error(error.message);
+    return { ok: true };
+  });
+
