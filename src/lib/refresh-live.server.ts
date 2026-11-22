@@ -1118,14 +1118,20 @@ async function executeRefreshRun(
         throw new Error("YouTube discovery request budget exhausted; previous link preserved");
       }
       discoveryRequests++;
-      return fetchHtml(url);
+      const first = await fetchHtmlWithMeta(url, CRAWLER_UA);
+      if (first.html && !first.isBotInterstitial) return first.html;
+      if (first.isBotInterstitial && discoveryRequests < MAX_DISCOVERY_REQUESTS) {
+        discoveryRequests++;
+        const second = await fetchHtmlWithMeta(url, BROWSER_UA);
+        if (second.html && !second.isBotInterstitial) return second.html;
+      }
+      return first.html;
     };
     const planned = await planRefresh(effectiveChannels, currentBySlug, hintsBySlug, budgetedFetch);
     console.log("[Darshan Refresh Request Budget]", { discoveryRequests, max: MAX_DISCOVERY_REQUESTS });
 
     for (const p of planned) {
       let outcome = p;
-      const ch = effectiveChannels.find((c) => c.slug === p.slug);
 
       try {
         if (p.status === "updated" && p.videoId) {
