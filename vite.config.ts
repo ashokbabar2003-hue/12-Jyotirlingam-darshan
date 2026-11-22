@@ -5,6 +5,8 @@ import tsconfigPaths from "vite-tsconfig-paths";
 import tailwindcss from "@tailwindcss/vite";
 import react from "@vitejs/plugin-react";
 
+const isProductionWorker = process.env.DEPLOY_TARGET === "production";
+
 export default defineConfig({
   server: {
     host: "0.0.0.0",
@@ -12,7 +14,9 @@ export default defineConfig({
   },
   plugins: [
     cloudflare({
-      configPath: "./wrangler.staging.jsonc",
+      configPath: isProductionWorker
+        ? "./wrangler.production.jsonc"
+        : "./wrangler.staging.jsonc",
       viteEnvironment: { name: "ssr" },
     }),
     tsconfigPaths(),
