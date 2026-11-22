@@ -531,6 +531,7 @@ export async function resolveLiveVideoIdDetails(
   fetcher: HtmlFetcher = fetchHtml,
   hints: string[] = [],
   shrineSlug: string = "",
+  maxProbePages: number = Number.POSITIVE_INFINITY,
 ): Promise<DetailedDiscoveryResult> {
   if (!channelUrl || !channelUrl.trim()) {
     return {
@@ -585,8 +586,11 @@ export async function resolveLiveVideoIdDetails(
   let totalLiveFound = 0;
   let hasBotInterstitial = false;
   let pageFetched = false;
+  let probedPages = 0;
 
   const probeUrl = async (url: string): Promise<string | null> => {
+    if (probedPages >= maxProbePages) return null;
+    probedPages++;
     const html = await fetcher(url);
     if (!html) return null;
 
@@ -709,7 +713,9 @@ export async function resolveLiveVideoIdDetails(
       candidateCount: 0,
       liveCandidateCount: 0,
       selectedVideo: null,
-      reason: "Channel is valid and resolved, but no active live broadcast currently exists",
+      reason: probedPages >= maxProbePages
+        ? "No live broadcast detected in the checked channel pages (limited probe)"
+        : "Channel is valid and resolved, but no active live broadcast currently exists",
     };
   }
 
@@ -806,9 +812,10 @@ export async function planRefresh(
   currentBySlug: Map<string, string | null>,
   hintsBySlug: Map<string, string[]>,
   fetcher: HtmlFetcher = fetchHtml,
+  claimedVideoIds: Set<string> = new Set<string>(),
+  maxProbePages: number = Number.POSITIVE_INFINITY,
 ): Promise<RefreshOutcome[]> {
   const outcomes: RefreshOutcome[] = [];
-  const claimedVideoIds = new Set<string>();
 
   for (const ch of channels) {
     const slug = ch.slug;
@@ -827,7 +834,7 @@ export async function planRefresh(
 
     try {
       const hints = hintsBySlug.get(slug) ?? DARSHAN_KEYWORDS;
-      const discovery = await resolveLiveVideoIdDetails(channelUrl, fetcher, hints, slug);
+      const discovery = await resolveLiveVideoIdDetails(channelUrl, fetcher, hints, slug, maxProbePages);
       const videoId = discovery.videoId;
 
       let resultStatus: TelemetryResultStatus = "no_live";
@@ -1108,26 +1115,27 @@ async function executeRefreshRun(
     const { jyotirlingas } = await import("@/data/jyotirlingas");
     const hintsBySlug = buildHintsFromCatalog(jyotirlingas);
 
-    // Execute planning & discovery
-    // Leave capacity for database persistence and final read-back under Workers' subrequest limits.
-    // A budget exhaustion is an error (never a false "no live" result); existing links are preserved.
+    // A fixed two-request allocation per shrine prevents later shrines being starved.
+    // Probe /live first, then /streams if needed; never spend extra requests on
+    // alternate user-agent retries. Preserve existing URLs when no live is found.
     let discoveryRequests = 0;
-    const MAX_DISCOVERY_REQUESTS = 28;
+    const MAX_DISCOVERY_REQUESTS = 24;
     const budgetedFetch: HtmlFetcher = async (url) => {
       if (discoveryRequests >= MAX_DISCOVERY_REQUESTS) {
         throw new Error("YouTube discovery request budget exhausted; previous link preserved");
       }
       discoveryRequests++;
-      const first = await fetchHtmlWithMeta(url, CRAWLER_UA);
-      if (first.html && !first.isBotInterstitial) return first.html;
-      if (first.isBotInterstitial && discoveryRequests < MAX_DISCOVERY_REQUESTS) {
-        discoveryRequests++;
-        const second = await fetchHtmlWithMeta(url, BROWSER_UA);
-        if (second.html && !second.isBotInterstitial) return second.html;
-      }
-      return first.html;
+      const response = await fetchHtmlWithMeta(url, CRAWLER_UA);
+      return response.html && !response.isBotInterstitial ? response.html : null;
     };
-    const planned = await planRefresh(effectiveChannels, currentBySlug, hintsBySlug, budgetedFetch);
+    const planned: RefreshOutcome[] = [];
+    const claimedVideoIds = new Set<string>();
+    for (const ch of effectiveChannels) {
+      const perShrine = await planRefresh(
+        [ch], currentBySlug, hintsBySlug, budgetedFetch, claimedVideoIds, 2,
+      );
+      planned.push(...perShrine);
+    }
     console.log("[Darshan Refresh Request Budget]", { discoveryRequests, max: MAX_DISCOVERY_REQUESTS });
 
     for (const p of planned) {
