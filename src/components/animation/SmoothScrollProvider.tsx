@@ -17,9 +17,13 @@ export function SmoothScrollProvider({ children }: SmoothScrollProviderProps) {
     if (typeof window === "undefined") return;
 
     const isReducedMotion = prefersReducedMotion();
+    // Touch devices should use the browser's native scrolling. Lenis touch
+    // interpolation can fight scroll-linked GSAP transitions on mobile and
+    // make long pilgrimage sections feel stuck or unresponsive.
+    const isTouchDevice = window.matchMedia("(pointer: coarse)").matches ||
+      navigator.maxTouchPoints > 0;
 
-    // If user prefers reduced motion, do not initialize inertial damping
-    if (isReducedMotion) {
+    if (isReducedMotion || isTouchDevice) {
       return;
     }
 

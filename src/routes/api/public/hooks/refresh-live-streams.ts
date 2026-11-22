@@ -4,11 +4,14 @@ export const Route = createFileRoute("/api/public/hooks/refresh-live-streams")({
   server: {
     handlers: {
       POST: async ({ request }) => {
-        // Verify caller using the Supabase publishable/anon key (provided by pg_cron).
-        const expected = process.env.SUPABASE_PUBLISHABLE_KEY;
-        const provided =
-          request.headers.get("apikey") ??
-          request.headers.get("authorization")?.replace(/^Bearer\s+/i, "");
+        // Prefer a dedicated server-only secret. Keep the legacy cron key
+        // temporarily until the scheduler has been migrated to the new secret.
+        const dedicatedSecret = process.env.REFRESH_LIVE_STREAMS_SECRET;
+        const expected = dedicatedSecret || process.env.SUPABASE_PUBLISHABLE_KEY;
+        const provided = dedicatedSecret
+          ? request.headers.get("authorization")?.replace(/^Bearer\s+/i, "")
+          : request.headers.get("apikey") ??
+            request.headers.get("authorization")?.replace(/^Bearer\s+/i, "");
         if (!expected || !provided || provided !== expected) {
           return new Response(JSON.stringify({ error: "Unauthorized" }), {
             status: 401,

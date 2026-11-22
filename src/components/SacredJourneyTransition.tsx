@@ -1,4 +1,5 @@
 import { useRef } from "react";
+import { MobileShrineHandoff } from "@/components/MobileShrineHandoff";
 import { Sparkles, Compass, MapPin } from "lucide-react";
 import { useGSAP, gsap, prefersReducedMotion } from "@/hooks/use-gsap";
 import { toLocalDigits, displayFontClassFor, type Lang } from "@/hooks/use-language";
@@ -79,6 +80,8 @@ export function SacredJourneyTransition({
       const footerTracker = footerTrackerRef.current;
 
       if (!container || !stage || !fromImg || !toImg) return;
+      // Desktop/laptop only. Mobile and tablet use the separate lightweight handoff.
+      if (window.innerWidth < 1024) return;
 
       if (prefersReducedMotion()) {
         gsap.set([fromImg, toImg], { clearProps: "all" });
@@ -105,7 +108,7 @@ export function SacredJourneyTransition({
         opacity: 1,
         scale: 1.0,
         yPercent: 0,
-        filter: "brightness(1.0) contrast(1.0)",
+        filter: isMobile ? "none" : "brightness(1.0) contrast(1.0)",
         transformOrigin: "center center",
       });
 
@@ -113,7 +116,7 @@ export function SacredJourneyTransition({
         opacity: 0,
         scale: isMobile ? 1.12 : 1.18,
         yPercent: isMobile ? 2 : 4,
-        filter: "brightness(0.2) contrast(1.2)",
+        filter: isMobile ? "none" : "brightness(0.2) contrast(1.2)",
         transformOrigin: "center center",
       });
 
@@ -146,14 +149,14 @@ export function SacredJourneyTransition({
       // - 0.52 -> 0.88: Approaching shrine silhouette to architectural detail
       // - 0.80 -> 1.00: Destination handoff & approaching badge lock-in
       // -------------------------------------------------------------
-      const scrubDistance = isMobile ? "+=75%" : "+=125%";
+      const scrubDistance = isMobile ? "bottom 25%" : "+=125%";
 
       const transitionTl = gsap.timeline({
         scrollTrigger: {
           trigger: container,
-          start: isMobile ? "top 80%" : "top 30%",
+          start: isMobile ? "top 75%" : "top 30%",
           end: scrubDistance,
-          scrub: isMobile ? 0.4 : 0.65,
+          scrub: isMobile ? true : 0.65,
           invalidateOnRefresh: true,
           onUpdate: (self) => {
             if (progressTextRef.current) {
@@ -190,7 +193,7 @@ export function SacredJourneyTransition({
           {
             scale: isMobile ? 1.06 : 1.12,
             yPercent: isMobile ? -2 : -4,
-            filter: "brightness(0.35) contrast(1.2)",
+            filter: isMobile ? "none" : "brightness(0.35) contrast(1.2)",
             ease: "power1.inOut",
             duration: 0.22,
           },
@@ -200,7 +203,7 @@ export function SacredJourneyTransition({
           fromImg,
           {
             opacity: 0,
-            filter: "brightness(0.08) contrast(1.4)",
+            filter: isMobile ? "none" : "brightness(0.08) contrast(1.4)",
             ease: "power2.in",
             duration: 0.18,
           },
@@ -336,7 +339,7 @@ export function SacredJourneyTransition({
             opacity: 0.55,
             scale: isMobile ? 1.08 : 1.1,
             yPercent: isMobile ? 1.5 : 2.5,
-            filter: "brightness(0.55) contrast(1.15)",
+            filter: isMobile ? "none" : "brightness(0.55) contrast(1.15)",
             ease: "power2.out",
             duration: 0.22,
           },
@@ -349,7 +352,7 @@ export function SacredJourneyTransition({
             opacity: 1.0,
             scale: 1.0,
             yPercent: 0,
-            filter: "brightness(1.0) contrast(1.0)",
+            filter: isMobile ? "none" : "brightness(1.0) contrast(1.0)",
             ease: "power2.out",
             duration: 0.28,
           },
@@ -374,11 +377,13 @@ export function SacredJourneyTransition({
   );
 
   return (
+    <>
+      <MobileShrineHandoff transition={transition} lang={lang} isEn={isEn} className={className} />
     <section
       ref={containerRef}
       id={`journey-transition-${transition.fromSlug}-to-${transition.toSlug}`}
       className={cn(
-        "relative w-full overflow-hidden bg-background/95 border-y border-border/30 py-12 sm:py-20 lg:py-24",
+        "hidden lg:block relative w-full overflow-hidden bg-background/95 border-y border-border/30 py-5 sm:py-20 lg:py-24",
         className,
       )}
       aria-label={`Sacred Transition from ${transition.fromName} to ${transition.toName}`}
@@ -389,7 +394,7 @@ export function SacredJourneyTransition({
 
       <div className="relative mx-auto flex w-full max-w-5xl flex-col items-center px-4 sm:px-6 lg:px-8">
         {/* Chapter Milestone Header */}
-        <div ref={chapterBadgeRef} className="relative mb-6 sm:mb-8 text-center max-w-2xl mx-auto">
+        <div ref={chapterBadgeRef} className="relative mb-3 sm:mb-8 text-center max-w-2xl mx-auto">
           <div className="inline-flex items-center gap-2 rounded-full border border-primary/30 bg-card/70 px-3.5 py-1.5 backdrop-blur-md shadow-sm">
             <Sparkles className="size-3 text-primary diya-flicker" />
             <span
@@ -406,7 +411,7 @@ export function SacredJourneyTransition({
 
           <p
             className={cn(
-              "mt-3 text-xs sm:text-sm text-muted-foreground leading-relaxed",
+              "mt-1.5 sm:mt-3 text-xs sm:text-sm text-muted-foreground leading-relaxed",
               fontClass,
             )}
           >
@@ -417,7 +422,7 @@ export function SacredJourneyTransition({
         {/* Central Cinematic Stage Canvas */}
         <div
           ref={stageRef}
-          className="relative aspect-[16/10] sm:aspect-[16/9] w-full max-w-4xl overflow-hidden rounded-2xl sm:rounded-3xl border border-border/50 bg-[#07080b] shadow-2xl"
+          className="relative aspect-[4/5] max-h-[68svh] sm:max-h-none sm:aspect-[16/9] w-full max-w-4xl overflow-hidden rounded-2xl sm:rounded-3xl border border-border/50 bg-[#07080b] shadow-2xl"
         >
           {/* Departing Image Layer */}
           <img
@@ -586,7 +591,7 @@ export function SacredJourneyTransition({
         {/* Continuous Journey Progress Tracker Bar */}
         <div
           ref={footerTrackerRef}
-          className="mt-6 sm:mt-8 flex w-full max-w-xl flex-col items-center"
+          className="mt-3 sm:mt-8 flex w-full max-w-xl flex-col items-center"
         >
           <div className="flex w-full items-center justify-between px-1 text-[11px] sm:text-xs text-muted-foreground font-mono">
             <span
@@ -625,5 +630,6 @@ export function SacredJourneyTransition({
         </div>
       </div>
     </section>
+    </>
   );
 }
