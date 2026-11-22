@@ -5,7 +5,7 @@ import { MapPin, ArrowLeft, Radio } from "lucide-react";
 import { useCallback, useState, useMemo } from "react";
 import { z } from "zod";
 import { jyotirlingas, getLocalized } from "@/data/jyotirlingas";
-import { getDarshanLinks } from "@/lib/darshan.functions";
+import { getDarshanLinks, getVerifiedLiveStreams } from "@/lib/darshan.functions";
 import { resolveAllShrineStreams } from "@/lib/darshan-precedence";
 import { DarshanTile, type DarshanStatus } from "@/components/darshan-tile";
 import { useLanguage, toLocalDigits } from "@/hooks/use-language";
@@ -39,6 +39,8 @@ function LivePage() {
     staleTime: 60_000,
   });
 
+  const verifiedFn = useServerFn(getVerifiedLiveStreams);
+  const verified = useQuery({ queryKey: ["verified-live-streams"], queryFn: () => verifiedFn(), staleTime: 60_000, refetchInterval: 60_000 });
   const [statuses, setStatuses] = useState<Record<string, DarshanStatus>>({});
   const [liveOnly, setLiveOnly] = useState(false);
   const setStatus = useCallback((slug: string, s: DarshanStatus) => {
@@ -131,6 +133,7 @@ function LivePage() {
               <DarshanTile
                 title={`${j.name} live darshan`}
                 liveUrl={resolved.liveUrl}
+                verifiedLive={verified.data?.[j.slug] === true}
                 defaultUrl={resolved.defaultUrl}
                 fallbackImage={j.image}
                 shrineName={loc.name}

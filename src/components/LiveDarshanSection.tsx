@@ -12,6 +12,7 @@ import { toLocalDigits, displayFontClassFor, type Lang } from "@/hooks/use-langu
 
 interface LiveDarshanSectionProps {
   linksData: Record<string, string> | undefined;
+  verifiedLive: Record<string, boolean>;
   lang: Lang;
   isEn: boolean;
   fontClass: string;
@@ -173,6 +174,7 @@ function defaultKey(slug: string) {
 
 export function LiveDarshanSection({
   linksData,
+  verifiedLive,
   lang,
   isEn,
   fontClass,
@@ -224,9 +226,9 @@ export function LiveDarshanSection({
 
   const getEffectiveStatus = useCallback(
     (slug: string): DarshanStatus => {
-      return statuses[slug] ?? shrineUrls[slug]?.status ?? "none";
+      return statuses[slug] ?? (shrineUrls[slug]?.liveUrl ? (verifiedLive[slug] ? "live" : "unverified") : shrineUrls[slug]?.status) ?? "none";
     },
-    [statuses, shrineUrls],
+    [statuses, shrineUrls, verifiedLive],
   );
 
   const liveCount = useMemo(() => {
@@ -481,6 +483,7 @@ export function LiveDarshanSection({
                   key={activeShrine.slug}
                   title={`${activeShrine.name} live darshan`}
                   liveUrl={activeUrls.liveUrl}
+                   verifiedLive={verifiedLive[activeShrine.slug] === true}
                   defaultUrl={activeUrls.defaultUrl}
                   fallbackImage={activeShrine.image}
                   shrineName={activeLoc.name}
@@ -684,6 +687,7 @@ export function LiveDarshanSection({
                   <DarshanTile
                     title={`${j.name} live darshan`}
                     liveUrl={urls.liveUrl}
+                     verifiedLive={verifiedLive[j.slug] === true}
                     defaultUrl={urls.defaultUrl}
                     fallbackImage={j.image}
                     shrineName={loc.name}

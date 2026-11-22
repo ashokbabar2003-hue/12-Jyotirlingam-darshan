@@ -9,7 +9,7 @@ import { Flame, Play, Radio } from "lucide-react";
  * `liveUrl` and `defaultUrl` should already be embed URLs (e.g. from
  * `validateYoutubeUrl(..., { autoplay: true, mute: true, loop: true })`).
  */
-export type DarshanStatus = "live" | "recorded" | "none";
+export type DarshanStatus = "live" | "unverified" | "recorded" | "none";
 
 export function DarshanTile({
   title,
@@ -19,6 +19,7 @@ export function DarshanTile({
   shrineName,
   className,
   priority = false,
+  verifiedLive = false,
   onStatusChange,
 }: {
   title: string;
@@ -28,6 +29,7 @@ export function DarshanTile({
   shrineName?: string;
   className?: string;
   priority?: boolean;
+  verifiedLive?: boolean;
   onStatusChange?: (status: DarshanStatus) => void;
 }) {
   const iframeRef = useRef<HTMLIFrameElement | null>(null);
@@ -47,7 +49,7 @@ export function DarshanTile({
         ? "recorded"
         : "none"
       : liveUrl
-        ? "live"
+        ? verifiedLive ? "live" : "unverified"
         : defaultUrl
           ? "recorded"
           : "none";
@@ -73,7 +75,7 @@ export function DarshanTile({
   function post(func: string, args: unknown[] = []) {
     iframeRef.current?.contentWindow?.postMessage(
       JSON.stringify({ event: "command", func, args }),
-      "*",
+      "https://www.youtube.com",
     );
   }
 
@@ -82,7 +84,7 @@ export function DarshanTile({
     if (!iframe) return;
 
     function addListener() {
-      iframe?.contentWindow?.postMessage(JSON.stringify({ event: "listening", id: title }), "*");
+      iframe?.contentWindow?.postMessage(JSON.stringify({ event: "listening", id: title }), "https://www.youtube.com");
     }
 
     const onLoad = () => {
@@ -93,7 +95,7 @@ export function DarshanTile({
     iframe.addEventListener("load", onLoad);
 
     function handler(ev: MessageEvent) {
-      if (ev.source !== iframe?.contentWindow) return;
+      if (ev.source !== iframe?.contentWindow || ev.origin !== "https://www.youtube.com") return;
       if (typeof ev.data !== "string") return;
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       let data: any;
@@ -182,6 +184,8 @@ export function DarshanTile({
               <span className="size-1.5 rounded-full bg-white animate-pulse" />
               Live
             </span>
+          ) : status === "unverified" ? (
+            <span className="pointer-events-none absolute left-2.5 top-2.5 z-10 inline-flex items-center rounded bg-black/75 px-2 py-0.5 text-[10px] font-semibold text-white shadow-sm">Stream · Unverified</span>
           ) : status === "recorded" ? (
             <span className="pointer-events-none absolute left-2.5 top-2.5 z-10 inline-flex items-center gap-1 rounded bg-black/75 px-2 py-0.5 text-[10px] font-semibold text-white/90 backdrop-blur-xs border border-white/10">
               Recorded Darshan

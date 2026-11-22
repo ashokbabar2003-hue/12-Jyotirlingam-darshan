@@ -363,6 +363,44 @@ export const getDarshanLinks = createServerFn({ method: "GET" }).handler(async (
   return map;
 });
 
+/**
+ * Only mark a shrine as verified LIVE when a recent successful channel scan
+ * identified the same video currently configured as the primary darshan link.
+ * Never infer live status merely from a valid YouTube URL.
+ */
+export const getVerifiedLiveStreams = createServerFn({ method: "GET" }).handler(async (): Promise<Record<string, boolean>> => {
+  ensureServerEnv();
+  const verified: Record<string, boolean> = {};
+  if (!process.env.SUPABASE_URL && !process.env.VITE_SUPABASE_URL) return verified;
+  try {
+    const sb = publicClient();
+    const [channels, links] = await Promise.all([
+      sb.from("darshan_channels").select("slug, last_checked, last_status, last_video_id"),
+      sb.from("darshan_links").select("slug, youtube_url"),
+    ]);
+    if (channels.error || links.error || !channels.data || !links.data) return verified;
+    const primary = new Map(links.data.filter((r) => !r.slug.endsWith("__default")).map((r) => [r.slug, r.youtube_url]));
+    const now = Date.now();
+    for (const ch of channels.data) {
+      if (!ch.last_checked || !ch.last_video_id || !ch.last_status) continue;
+      const age = now - Date.parse(ch.last_checked);
+      if (!Number.isFinite(age) || age < 0 || age > 15 * 60_000) continue;
+      if (!/^(updated|unchanged)(:|$)/.test(ch.last_status)) continue;
+      const url = primary.get(ch.slug);
+      if (!url) continue;
+      try {
+        const parsed = new URL(url);
+        if (!["youtube.com", "www.youtube.com", "m.youtube.com", "youtu.be"].includes(parsed.hostname)) continue;
+        const id = parsed.hostname === "youtu.be" ? parsed.pathname.slice(1).split("/")[0] : parsed.searchParams.get("v") ?? parsed.pathname.match(/^\/(?:live|embed)\/([A-Za-z0-9_-]{11})/)?.[1];
+        if (id === ch.last_video_id) verified[ch.slug] = true;
+      } catch { /* invalid URL is not verified */ }
+    }
+  } catch (error) {
+    console.warn("[Darshan verification] Unable to read recent scan state", error);
+  }
+  return verified;
+});
+
 export const setDarshanLink = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d) =>

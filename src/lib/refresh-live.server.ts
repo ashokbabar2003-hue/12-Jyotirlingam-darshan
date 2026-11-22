@@ -1170,10 +1170,20 @@ async function executeRefreshRun(
             }
           }
         } else if (p.status === "unchanged") {
-          console.log("[Darshan Link Unchanged]", {
-            shrine: p.slug,
-            result: "unchanged",
-          });
+          // A previously known video must still be embeddable before a
+          // successful scan can be treated as evidence of verified LIVE.
+          if (!p.videoId || !(await isEmbeddableLive(p.videoId))) {
+            outcome = {
+              ...p,
+              status: "error",
+              message: "Previously configured live video is no longer embeddable; link preserved.",
+            };
+          } else {
+            console.log("[Darshan Link Unchanged]", {
+              shrine: p.slug,
+              result: "unchanged",
+            });
+          }
         } else {
           console.log("[Darshan Link Preserved]", {
             shrine: p.slug,
