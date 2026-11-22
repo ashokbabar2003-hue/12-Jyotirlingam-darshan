@@ -95,9 +95,9 @@ export function MobileShrineHandoff({ transition, lang, isEn, className }: Props
       if (rect.top > viewport + 150 || rect.bottom < -150) return;
       // Every pixel of scroll maps to exactly one progress position.
       // No easing of the progress itself; no post-scroll catch-up.
-      const start = viewport * 0.78;
-      const end = viewport * 0.22;
-      const distance = Math.max(1, rect.height + start - end);
+      const start = viewport * 0.75;
+      // Finish before the sticky visual stage is released at the bottom.
+      const distance = Math.max(1, rect.height - viewport * 0.20);
       const progress = clamp((start - rect.top) / distance);
       // Three readable phases: departing shrine, sacred threshold, arriving shrine.
       // The midpoint visibly darkens the photographs and illuminates the Om.
@@ -127,13 +127,13 @@ export function MobileShrineHandoff({ transition, lang, isEn, className }: Props
   }, [transition.fromSlug, transition.toSlug, lang]);
 
   return (
-    <section ref={rootRef} className={cn("relative w-full overflow-hidden border-y border-border/30 bg-background/95 py-5 lg:hidden", className)} aria-label={transition.label}>
-      <div className="mx-auto w-full max-w-3xl px-3 sm:px-6">
+    <section ref={rootRef} className={cn("relative w-full min-h-[145svh] border-y border-border/30 bg-background/95 lg:hidden", className)} aria-label={transition.label}>
+      <div className="sticky top-[8svh] mx-auto flex h-[84svh] w-full max-w-3xl flex-col justify-center px-3 sm:px-6">
         <div className="mb-3 text-center">
           <p className={cn("text-xs font-semibold text-accent", isEn ? "font-display uppercase tracking-wider" : displayFontClassFor(lang))}>{transition.label}</p>
           <p className={cn("mt-1 text-xs text-muted-foreground", displayFontClassFor(lang))}>{transition.subtitle}</p>
         </div>
-        <div className="relative mx-auto h-[min(58svh,540px)] min-h-[270px] w-full overflow-hidden rounded-2xl border border-primary/20 bg-[#07080b]">
+        <div className="relative mx-auto h-[min(56svh,540px)] min-h-[250px] w-full overflow-hidden rounded-2xl border border-primary/20 bg-[#07080b]">
           <img ref={departureRef} src={transition.fromImage} alt={transition.fromName} loading="lazy" decoding="async" className="pointer-events-none absolute inset-0 h-full w-full object-cover" style={{ opacity: 1 }} />
           <img ref={arrivalRef} src={transition.toImage} alt={transition.toName} loading="lazy" decoding="async" className="pointer-events-none absolute inset-0 h-full w-full object-cover" style={{ opacity: 0 }} />
           <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/75 via-black/15 to-black/35" />
