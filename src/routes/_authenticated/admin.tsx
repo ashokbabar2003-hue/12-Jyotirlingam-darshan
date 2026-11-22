@@ -221,6 +221,12 @@ function AdminPage() {
             Live Darshan
           </TabsTrigger>
           <TabsTrigger
+            value="puja-schedules"
+            className="justify-start data-[state=active]:bg-primary/10 w-full px-4 py-2"
+          >
+            Puja Schedules
+          </TabsTrigger>
+          <TabsTrigger
             value="darshan-links"
             className="justify-start data-[state=active]:bg-primary/10 w-full px-4 py-2"
           >
@@ -314,8 +320,11 @@ function AdminPage() {
 
           <TabsContent value="live-darshan" className="mt-0 space-y-8">
             <ChannelAutoRefreshManager />
-            <PujaScheduleManager />
             <RefreshLogViewer />
+          </TabsContent>
+
+          <TabsContent value="puja-schedules" className="mt-0">
+            <PujaScheduleManager />
           </TabsContent>
 
           <TabsContent value="darshan-links" className="mt-0">
