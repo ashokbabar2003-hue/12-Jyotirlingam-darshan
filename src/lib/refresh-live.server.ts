@@ -1109,7 +1109,19 @@ async function executeRefreshRun(
     const hintsBySlug = buildHintsFromCatalog(jyotirlingas);
 
     // Execute planning & discovery
-    const planned = await planRefresh(effectiveChannels, currentBySlug, hintsBySlug, fetchHtml);
+    // Leave capacity for database persistence and final read-back under Workers' subrequest limits.
+    // A budget exhaustion is an error (never a false "no live" result); existing links are preserved.
+    let discoveryRequests = 0;
+    const MAX_DISCOVERY_REQUESTS = 28;
+    const budgetedFetch: HtmlFetcher = async (url) => {
+      if (discoveryRequests >= MAX_DISCOVERY_REQUESTS) {
+        throw new Error("YouTube discovery request budget exhausted; previous link preserved");
+      }
+      discoveryRequests++;
+      return fetchHtml(url);
+    };
+    const planned = await planRefresh(effectiveChannels, currentBySlug, hintsBySlug, budgetedFetch);
+    console.log("[Darshan Refresh Request Budget]", { discoveryRequests, max: MAX_DISCOVERY_REQUESTS });
 
     for (const p of planned) {
       let outcome = p;
@@ -1206,37 +1218,36 @@ async function executeRefreshRun(
         };
       }
 
-      // Update channel metadata
-      try {
-        const { error: chanErr } = await sb.from("darshan_channels").upsert(
-          {
-            slug: p.slug,
-            channel_url: p.channelUrl,
-            last_checked: new Date().toISOString(),
-            last_status: outcome.status + (outcome.message ? `: ${outcome.message}` : ""),
-            last_video_id: outcome.videoId ?? ch?.last_video_id ?? null,
-            updated_at: new Date().toISOString(),
-          },
-          { onConflict: "slug" },
-        );
-        if (chanErr && sb !== supabaseAdmin) {
-          await supabaseAdmin.from("darshan_channels").upsert(
-            {
-              slug: p.slug,
-              channel_url: p.channelUrl,
-              last_checked: new Date().toISOString(),
-              last_status: outcome.status + (outcome.message ? `: ${outcome.message}` : ""),
-              last_video_id: outcome.videoId ?? ch?.last_video_id ?? null,
-              updated_at: new Date().toISOString(),
-            },
-            { onConflict: "slug" },
-          );
-        }
-      } catch {
-        /* ignore channel metadata write failure */
-      }
-
       outcomeBySlug.set(outcome.slug, outcome);
+    }
+
+    // One metadata upsert instead of 12 individual subrequests.
+    const channelMetadata = planned.map((p) => {
+      const outcome = outcomeBySlug.get(p.slug)!;
+      const ch = effectiveChannels.find((c) => c.slug === p.slug);
+      const timestamp = new Date().toISOString();
+      return {
+        slug: p.slug,
+        channel_url: p.channelUrl,
+        last_checked: timestamp,
+        last_status: outcome.status + (outcome.message ? `: ${outcome.message}` : ""),
+        last_video_id: outcome.videoId ?? ch?.last_video_id ?? null,
+        updated_at: timestamp,
+      };
+    });
+    try {
+      const { error: metadataError } = await sb.from("darshan_channels")
+        .upsert(channelMetadata, { onConflict: "slug" });
+      if (metadataError) {
+        console.error("[Darshan Channel Metadata Error]", { error: metadataError.message });
+        if (sb !== supabaseAdmin) {
+          const { error: adminMetadataError } = await supabaseAdmin.from("darshan_channels")
+            .upsert(channelMetadata, { onConflict: "slug" });
+          if (adminMetadataError) console.error("[Darshan Channel Metadata Admin Error]", { error: adminMetadataError.message });
+        }
+      }
+    } catch (metadataException) {
+      console.error("[Darshan Channel Metadata Exception]", { error: String(metadataException) });
     }
   } catch (fatalErr) {
     executionFatalError = fatalErr instanceof Error ? fatalErr.message : String(fatalErr);
@@ -1361,6 +1372,12 @@ async function executeRefreshRun(
     if (!updateSucceeded && updateAttempts < maxAttempts) {
       await new Promise((resolve) => setTimeout(resolve, 150));
     }
+  }
+
+  if (!updateSucceeded) {
+    console.error("[Darshan Refresh Persistence Failed]", {
+      id: logId, attempts: updateAttempts, error: logError,
+    });
   }
 
   // 5. DATABASE READ-BACK VERIFICATION
