@@ -647,7 +647,7 @@ export const savePujaSchedule = createServerFn({ method: "POST" })
     id: z.string().uuid().optional(),
     slug: z.enum(pujaSlugs),
     name: z.string().trim().min(1).max(120),
-    time_ist: z.string().regex(/^([01]\\d|2[0-3]):[0-5]\\d$/),
+    time_ist: z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/),
     source_url: z.union([z.string().url().max(1000), z.literal("")]),
     enabled: z.boolean(),
     verified: z.boolean(),
