@@ -11,7 +11,10 @@ export default defineConfig({
     port: 3000,
   },
   plugins: [
-    cloudflare({ viteEnvironment: { name: "ssr" } }),
+    cloudflare({
+      configPath: "./wrangler.staging.jsonc",
+      viteEnvironment: { name: "ssr" },
+    }),
     tsconfigPaths(),
     tailwindcss(),
     tanstackStart({
