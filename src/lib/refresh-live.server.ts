@@ -1210,6 +1210,41 @@ async function executeRefreshRun(
               result: "unchanged",
             });
           }
+        } else if (p.status === "no_live") {
+          // A completed discovery that found no suitable broadcast must not
+          // leave a stale primary link that could be mistaken for LIVE.
+          // Recorded darshan is stored separately under slug__default.
+          let { data: cleared, error: clearError } = await sb
+            .from("darshan_links")
+            .upsert(
+              { slug: p.slug, youtube_url: null, updated_at: new Date().toISOString() },
+              { onConflict: "slug" },
+            )
+            .select("slug, youtube_url");
+          if (clearError && sb !== supabaseAdmin) {
+            const adminClear = await supabaseAdmin.from("darshan_links")
+              .upsert(
+                { slug: p.slug, youtube_url: null, updated_at: new Date().toISOString() },
+                { onConflict: "slug" },
+              ).select("slug, youtube_url");
+            cleared = adminClear.data;
+            clearError = adminClear.error;
+          }
+          if (clearError || !cleared?.some((row) => row.slug === p.slug && row.youtube_url === null)) {
+            outcome = {
+              ...p,
+              status: "error",
+              newUrl: p.previousUrl,
+              message: `Unable to clear inactive live link: ${clearError?.message ?? "database read-back failed"}`,
+            };
+          } else {
+            outcome = {
+              ...p,
+              newUrl: null,
+              message: `${p.message ?? "No matching live broadcast found."} Live link cleared; recorded fallback preserved.`,
+            };
+            console.log("[Darshan Live Link Cleared]", { shrine: p.slug });
+          }
         } else {
           console.log("[Darshan Link Preserved]", {
             shrine: p.slug,
@@ -1245,7 +1280,7 @@ async function executeRefreshRun(
         channel_url: p.channelUrl,
         last_checked: timestamp,
         last_status: outcome.status + (outcome.message ? `: ${outcome.message}` : ""),
-        last_video_id: outcome.videoId ?? ch?.last_video_id ?? null,
+        last_video_id: outcome.status === "no_live" ? null : (outcome.videoId ?? ch?.last_video_id ?? null),
         updated_at: timestamp,
       };
     });
