@@ -384,7 +384,7 @@ export const getVerifiedLiveStreams = createServerFn({ method: "GET" }).handler(
     for (const ch of channels.data) {
       if (!ch.last_checked || !ch.last_video_id || !ch.last_status) continue;
       const age = now - Date.parse(ch.last_checked);
-      if (!Number.isFinite(age) || age < 0 || age > 15 * 60_000) continue;
+      if (!Number.isFinite(age) || age < 0 || age > 45 * 60_000) continue;
       if (!/^(updated|unchanged)(:|$)/.test(ch.last_status)) continue;
       const url = primary.get(ch.slug);
       if (!url) continue;
