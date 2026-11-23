@@ -684,3 +684,22 @@ export const deletePujaSchedule = createServerFn({ method: "POST" })
     return { ok: true };
   });
 
+
+
+/** Public shrine information. Only enabled, verified puja entries are exposed. */
+export const getPublicPujaSchedules = createServerFn({ method: "GET" })
+  .inputValidator((d) => z.object({ slug: z.enum(pujaSlugs) }).parse(d))
+  .handler(async ({ data }) => {
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { data: rows, error } = await supabaseAdmin.from("darshan_puja_schedules")
+      .select("id, name, time_ist, source_url")
+      .eq("slug", data.slug)
+      .eq("enabled", true)
+      .eq("verified", true)
+      .order("time_ist");
+    if (error) {
+      console.error("[Public Puja Schedule Read Error]", error.message);
+      return [] as { id: string; name: string; time_ist: string; source_url: string | null }[];
+    }
+    return (rows ?? []) as { id: string; name: string; time_ist: string; source_url: string | null }[];
+  });
