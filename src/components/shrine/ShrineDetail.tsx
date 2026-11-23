@@ -4,7 +4,7 @@ import { useState } from "react";
 import { Link } from "@tanstack/react-router";
 import { ArrowLeft, MapPin, Play, Images, BookHeart } from "lucide-react";
 import { type Jyotirlinga, getLocalized } from "@/data/jyotirlingas";
-import { getApprovedGallery, getApprovedStories, getDarshanLinks } from "@/lib/darshan.functions";
+import { getApprovedGallery, getApprovedStories, getDarshanLinks, getPublicPujaSchedules } from "@/lib/darshan.functions";
 import { resolveShrineStreams } from "@/lib/darshan-precedence";
 import { DarshanTile } from "@/components/darshan-tile";
 import { StotramCompanion } from "@/components/stotram-companion";
@@ -74,6 +74,7 @@ export function ShrineDetail({ jl }: { jl: Jyotirlinga }) {
   const galleryFn = useServerFn(getApprovedGallery);
   const storiesFn = useServerFn(getApprovedStories);
   const linksFn = useServerFn(getDarshanLinks);
+  const pujaFn = useServerFn(getPublicPujaSchedules);
   const [openPhoto, setOpenPhoto] = useState<null | {
     url: string;
     caption: string | null;
@@ -93,6 +94,12 @@ export function ShrineDetail({ jl }: { jl: Jyotirlinga }) {
     queryKey: ["darshan-links"],
     queryFn: () => linksFn(),
     staleTime: 60_000,
+  });
+
+  const pujas = useQuery({
+    queryKey: ["public-puja-schedules", jl.slug],
+    queryFn: () => pujaFn({ data: { slug: jl.slug as Parameters<typeof pujaFn>[0]["data"]["slug"] } }),
+    staleTime: 5 * 60_000,
   });
 
   const resolved = resolveShrineStreams(jl, links.data);
@@ -210,6 +217,26 @@ export function ShrineDetail({ jl }: { jl: Jyotirlinga }) {
           <p className={cn("mt-4 border-l-2 border-primary pl-4 text-foreground/90 italic", fontClass)}>
             {significance}
           </p>
+        </section>
+
+        <section className="rounded-xl border border-border/60 bg-card p-5">
+          <h2 className="font-display text-2xl text-foreground">Puja &amp; Aarti Timings</h2>
+          <p className="mt-1 text-sm text-muted-foreground">Temple-local schedule (IST). Times may change on festivals and special occasions.</p>
+          {pujas.isLoading ? (
+            <p className="mt-4 text-sm text-muted-foreground">Loading puja timings…</p>
+          ) : pujas.data?.length ? (
+            <div className="mt-4 grid gap-3 sm:grid-cols-2">
+              {pujas.data.map((puja) => (
+                <div key={puja.id} className="rounded-lg border border-border/50 p-3">
+                  <p className="font-medium text-foreground">{puja.name}</p>
+                  <p className="mt-1 text-sm text-accent">{puja.time_ist.slice(0,5)} IST</p>
+                  {puja.source_url && <a className="mt-2 inline-block text-xs text-muted-foreground underline" href={puja.source_url} target="_blank" rel="noopener noreferrer">Official timing source</a>}
+                </div>
+              ))}
+            </div>
+          ) : (
+            <p className="mt-4 text-sm text-muted-foreground">Verified puja timings are not available yet.</p>
+          )}
         </section>
 
         <section>
