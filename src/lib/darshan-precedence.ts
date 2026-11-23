@@ -51,7 +51,7 @@ export function resolveShrineStreams(
   const dbFallback = linksData?.[defaultKey(slug)]?.trim();
   const rawFallback = hasDbFallback
     ? dbFallback || null
-    : shrine?.defaultYoutubeUrl?.trim() || shrine?.youtubeUrl?.trim() || null;
+    : shrine?.defaultYoutubeUrl?.trim() || (hasDbPrimary ? null : shrine?.youtubeUrl?.trim() || null);
 
   const liveCheck = rawPrimary ? validateYoutubeUrl(rawPrimary, opts) : null;
   const liveUrl = liveCheck?.ok ? liveCheck.embedUrl : null;
