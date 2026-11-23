@@ -330,16 +330,16 @@ export const getDarshanLinks = createServerFn({ method: "GET" }).handler(async (
         .select("slug, youtube_url");
       if (!adminErr && adminData) {
         for (const row of adminData) {
-          if (row.slug && row.youtube_url) {
-            map[row.slug.trim()] = row.youtube_url.trim();
+          if (row.slug) {
+            map[row.slug.trim()] = row.youtube_url?.trim() ?? "";
           }
         }
       }
       return map;
     }
     for (const row of data) {
-      if (row.slug && row.youtube_url) {
-        map[row.slug.trim()] = row.youtube_url.trim();
+      if (row.slug) {
+        map[row.slug.trim()] = row.youtube_url?.trim() ?? "";
       }
     }
   } catch (err) {
@@ -351,8 +351,8 @@ export const getDarshanLinks = createServerFn({ method: "GET" }).handler(async (
         .select("slug, youtube_url");
       if (adminData) {
         for (const row of adminData) {
-          if (row.slug && row.youtube_url) {
-            map[row.slug.trim()] = row.youtube_url.trim();
+          if (row.slug) {
+            map[row.slug.trim()] = row.youtube_url?.trim() ?? "";
           }
         }
       }
