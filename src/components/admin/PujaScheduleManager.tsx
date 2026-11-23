@@ -26,7 +26,7 @@ export function PujaScheduleManager() {
       setMessage(null);
       const result = await saveFn({ data: draft });
       if (!result?.ok || !result.id) throw new Error("Database did not confirm the saved entry.");
-      toast.success("Puja timing saved (scheduler remains inactive).");
+      toast.success("Puja timing saved. Verified and visible entries appear on the shrine page.");
       setDraft({ ...initial, slug: selectedShrine });
       await qc.invalidateQueries({ queryKey: ["puja-schedules"] });
       await qc.refetchQueries({ queryKey: ["puja-schedules"] });
@@ -47,7 +47,7 @@ export function PujaScheduleManager() {
   return <section className="rounded-xl border border-border/60 bg-card p-4 sm:p-6 space-y-5">
     <div>
       <h3 className="font-display text-2xl text-foreground">Puja schedule management</h3>
-      <p className="text-sm text-muted-foreground">Times are IST (24-hour). Verify each time with an official source. Editing does not activate automatic refresh.</p>
+      <p className="text-sm text-muted-foreground">Times are IST (24-hour). Verified and visible pujas appear on the corresponding shrine page. These timings do not control the hourly live refresh.</p>
     </div>
     {error && <p role="alert" className="text-sm text-destructive">Schedule storage unavailable: {String(error.message)}. Check the production database migration and service-role configuration.</p>}
     {message && <p role="alert" className="rounded-md border border-destructive p-3 text-sm text-destructive">{message}</p>}
@@ -65,7 +65,7 @@ export function PujaScheduleManager() {
     </div>
     <div className="flex flex-wrap gap-5 text-sm">
       <label className="flex items-center gap-2"><input type="checkbox" checked={draft.verified} onChange={e=>update({verified:e.target.checked})}/> Official timing verified</label>
-      <label className="flex items-center gap-2"><input type="checkbox" checked={draft.enabled} onChange={e=>update({enabled:e.target.checked})}/> Eligible when scheduler is activated</label>
+      <label className="flex items-center gap-2"><input type="checkbox" checked={draft.enabled} onChange={e=>update({enabled:e.target.checked})}/> Show on shrine page</label>
     </div>
     <div className="flex gap-2">
       <Button disabled={busy || !draft.name.trim() || (draft.verified && !draft.source_url) || !!error} onClick={save}>{draft.id ? "Update timing" : "Save timing"}</Button>
@@ -78,7 +78,7 @@ export function PujaScheduleManager() {
       {isLoading && <p className="text-sm text-muted-foreground">Loading schedules…</p>}
       {shrineEntries.map(row=><div key={row.id} className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-border/50 p-3">
         <div className="text-sm"><strong>{jyotirlingas.find(j=>j.slug===row.slug)?.name ?? row.slug}</strong> · {row.name} · {row.time_ist.slice(0,5)} IST
-          <p className="text-xs text-muted-foreground">{row.verified ? "Verified" : "Unverified"} · {row.enabled ? "Enabled for future scheduler" : "Disabled"} {row.source_url && <>· <a href={row.source_url} target="_blank" rel="noreferrer" className="underline">Source</a></>}</p>
+          <p className="text-xs text-muted-foreground">{row.verified ? "Verified" : "Unverified"} · {row.enabled ? "Visible on shrine page" : "Hidden"} {row.source_url && <>· <a href={row.source_url} target="_blank" rel="noreferrer" className="underline">Source</a></>}</p>
         </div>
         <div className="flex gap-2">
           <Button size="sm" variant="outline" onClick={()=>{setDraft({id:row.id,slug:row.slug,name:row.name,time_ist:row.time_ist.slice(0,5),source_url:row.source_url??"",enabled:row.enabled,verified:row.verified});window.scrollTo({top:0,behavior:"smooth"});}}>Edit</Button>
