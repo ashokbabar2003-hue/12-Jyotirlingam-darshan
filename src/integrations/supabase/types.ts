@@ -43,19 +43,19 @@ export type Database = {
           slug: string;
           updated_at: string;
           updated_by: string | null;
-          youtube_url: string;
+          youtube_url: string | null;
         };
         Insert: {
           slug: string;
           updated_at?: string;
           updated_by?: string | null;
-          youtube_url: string;
+          youtube_url: string | null;
         };
         Update: {
           slug?: string;
           updated_at?: string;
           updated_by?: string | null;
-          youtube_url?: string;
+          youtube_url?: string | null;
         };
         Relationships: [];
       };
