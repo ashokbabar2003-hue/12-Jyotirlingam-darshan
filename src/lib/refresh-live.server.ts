@@ -29,7 +29,10 @@ export interface DiscoveryTelemetry {
   reason: string;
 }
 
+export type DiscoveryState = "confirmed_live" | "confirmed_no_live" | "verification_error";
+
 export interface DetailedDiscoveryResult {
+  discoveryState?: DiscoveryState;
   videoId: string | null;
   channelResolved: string | null;
   candidateCount: number;
@@ -586,6 +589,7 @@ export async function resolveLiveVideoIdDetails(
   let totalLiveFound = 0;
   let hasBotInterstitial = false;
   let pageFetched = false;
+  let successfulProbePages = 0;
   let probedPages = 0;
 
   const probeUrl = async (url: string): Promise<string | null> => {
@@ -607,6 +611,7 @@ export async function resolveLiveVideoIdDetails(
     }
 
     pageFetched = true;
+    successfulProbePages++;
     return html;
   };
 
@@ -693,6 +698,7 @@ export async function resolveLiveVideoIdDetails(
         liveCandidateCount: 0,
         selectedVideo: null,
         reason: "YouTube returned bot detection / LOGIN_REQUIRED interstitial shell",
+        discoveryState: "verification_error",
       };
     }
 
@@ -704,18 +710,21 @@ export async function resolveLiveVideoIdDetails(
         liveCandidateCount: 0,
         selectedVideo: null,
         reason: "Channel returned 404 or is unreachable",
+        discoveryState: "verification_error",
       };
     }
 
+    const complete = successfulProbePages >= 2;
     return {
       videoId: null,
       channelResolved: channelId,
       candidateCount: 0,
       liveCandidateCount: 0,
       selectedVideo: null,
-      reason: probedPages >= maxProbePages
-        ? "No live broadcast detected in the checked channel pages (limited probe)"
-        : "Channel is valid and resolved, but no active live broadcast currently exists",
+      discoveryState: complete ? "confirmed_no_live" : "verification_error",
+      reason: complete
+        ? "No active live broadcast detected on both checked channel pages"
+        : "Incomplete YouTube discovery: fewer than two channel pages returned usable HTML",
     };
   }
 
@@ -761,6 +770,7 @@ export async function resolveLiveVideoIdDetails(
         selectedVideo: null,
         reason:
           "Active live streams found on channel, but none matched the shrine's devotional hints",
+        discoveryState: successfulProbePages >= 2 ? "confirmed_no_live" : "verification_error",
       };
     }
   }
@@ -840,11 +850,15 @@ export async function planRefresh(
       let resultStatus: TelemetryResultStatus = "no_live";
 
       if (!videoId) {
-        const isError =
-          discovery.reason.includes("404") ||
-          discovery.reason.includes("unreachable") ||
-          discovery.reason.includes("bot detection") ||
-          discovery.reason.includes("Invalid");
+        const isError = discovery.discoveryState === "verification_error" ||
+          (discovery.discoveryState !== "confirmed_no_live" && (
+            discovery.reason.includes("404") ||
+            discovery.reason.includes("unreachable") ||
+            discovery.reason.includes("bot detection") ||
+            discovery.reason.includes("Invalid") ||
+            discovery.reason.includes("No channel URL configured") ||
+            discovery.reason.includes("No official YouTube channel")
+          ));
 
         resultStatus = isError
           ? discovery.reason.includes("bot detection")
@@ -858,7 +872,9 @@ export async function planRefresh(
           ...outcome,
           status: isError ? "error" : "no_live",
           newUrl: previousUrl,
-          message: `${discovery.reason}. Previous link preserved.`,
+          message: isError
+            ? `${discovery.reason}. Verification incomplete; previous link preserved.`
+            : `${discovery.reason}. No matching live stream confirmed.`,
         };
       } else if (claimedVideoIds.has(videoId)) {
         resultStatus = "no_live";
