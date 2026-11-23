@@ -98,7 +98,7 @@ export function ShrineDetail({ jl }: { jl: Jyotirlinga }) {
 
   const pujas = useQuery({
     queryKey: ["public-puja-schedules", jl.slug],
-    queryFn: () => pujaFn({ data: { slug: jl.slug as Parameters<typeof pujaFn>[0]["data"]["slug"] } }),
+    queryFn: () => pujaFn({ data: { slug: jl.slug as "somnath" } }),
     staleTime: 5 * 60_000,
   });
 
