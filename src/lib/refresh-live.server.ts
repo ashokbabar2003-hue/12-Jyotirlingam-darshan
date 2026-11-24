@@ -242,41 +242,43 @@ export interface LiveCandidate {
   channelId?: string | null;
 }
 
-export function findLiveCandidatesInHtml(html: string): LiveCandidate[] {
-  const idRe = /"videoId":"([A-Za-z0-9_-]{11})"/g;
-  const seen = new Set<string>();
-  const out: LiveCandidate[] = [];
-  const liveSignals = [
-    /"style":"LIVE"/,
-    /"label":"LIVE"/,
-    /BADGE_STYLE_TYPE_LIVE_NOW/,
-    /"isLive":true/,
-    /"isLiveNow":true/,
-    /"text":"LIVE"/,
-    /watching now/i,
-  ];
-
-  let match: RegExpExecArray | null;
-  while ((match = idRe.exec(html)) !== null) {
-    const id = match[1];
-    if (seen.has(id)) continue;
-    const signalWindow = html.slice(match.index, match.index + 4000);
-    if (!liveSignals.some((re) => re.test(signalWindow))) continue;
-
-    const sliceStart = Math.max(0, match.index - 1500);
-    const detailWindow = html.slice(sliceStart, Math.min(html.length, match.index + 2000));
-    const videoIdOffset = match.index - sliceStart;
-
-    const title = extractTitleFromWindow(detailWindow, videoIdOffset) || extractTitleFromHtml(html);
-
-    seen.add(id);
-    out.push({
-      id,
-      title,
-      channelId: extractCandidateChannelId(detailWindow),
-    });
+// Parse a bounded JSON object rather than borrowing live badges from adjacent videos.
+function readJsonObject(html: string, start: number): Record<string, any> | null {
+  if (html[start] !== "{") return null;
+  let depth = 0, quoted = false, escaped = false;
+  for (let i = start; i < Math.min(html.length, start + 250000); i++) {
+    const c = html[i];
+    if (quoted) {
+      if (escaped) escaped = false;
+      else if (c === "\\") escaped = true;
+      else if (c === '"') quoted = false;
+    } else if (c === '"') quoted = true;
+    else if (c === "{") depth++;
+    else if (c === "}" && --depth === 0) {
+      try { return JSON.parse(html.slice(start, i + 1)); } catch { return null; }
+    }
   }
-  return out;
+  return null;
+}
+
+export function findLiveCandidatesInHtml(html: string): LiveCandidate[] {
+  const out = new Map<string, LiveCandidate>();
+  const re = /"(?:videoRenderer|gridVideoRenderer|compactVideoRenderer|playlistVideoRenderer)"\s*:\s*\{/g;
+  for (const match of html.matchAll(re)) {
+    const obj = readJsonObject(html, match.index! + match[0].length - 1);
+    if (!obj || !VIDEO_ID_RE.test(obj.videoId ?? "") || obj.upcomingEventData || obj.isUpcoming === true) continue;
+    const badges = Array.isArray(obj.badges) ? obj.badges : [];
+    const overlays = Array.isArray(obj.thumbnailOverlays) ? obj.thumbnailOverlays : [];
+    const active = obj.isLiveNow === true || obj.isLive === true ||
+      badges.some((b: any) => b.metadataBadgeRenderer?.style === "BADGE_STYLE_TYPE_LIVE_NOW") ||
+      overlays.some((o: any) => o.thumbnailOverlayTimeStatusRenderer?.style === "LIVE");
+    if (!active) continue;
+    const title = obj.title?.simpleText ?? obj.title?.runs?.map((r: any) => r.text ?? "").join("") ?? "";
+    const channelId = obj.ownerText?.runs?.[0]?.navigationEndpoint?.browseEndpoint?.browseId ??
+      obj.shortBylineText?.runs?.[0]?.navigationEndpoint?.browseEndpoint?.browseId ?? null;
+    out.set(obj.videoId, { id: obj.videoId, title, channelId });
+  }
+  return [...out.values()];
 }
 
 export function findLiveVideoIdInHtml(html: string): string | null {
@@ -298,48 +300,17 @@ function extractCandidateChannelId(window: string): string | null {
 }
 
 function extractPrimaryLiveCandidate(html: string): LiveCandidate | null {
-  const start = html.indexOf('"videoDetails":{');
-  if (start >= 0) {
-    const detailWindow = html.slice(start, start + 20000);
-    const id = detailWindow.slice(0, 200).match(/"videoId":"([A-Za-z0-9_-]{11})"/)?.[1] ?? null;
-    const channelId = extractCandidateChannelId(detailWindow);
-    const isLive = /"isLive":true/.test(detailWindow) || /"isLiveContent":true/.test(detailWindow);
-    if (id && VIDEO_ID_RE.test(id) && isLive) {
-      const windowTitle = extractTitleFromWindow(detailWindow);
-      const pageTitle = extractTitleFromHtml(html);
-      return {
-        id,
-        title: windowTitle || pageTitle,
-        channelId,
-      };
-    }
-  }
-
-  if (pageLooksLive(html)) {
-    const canon = extractCanonicalVideoId(html);
-    if (canon) {
-      const match = findLiveCandidatesInHtml(html).find((c) => c.id === canon);
-      const htmlTitle = extractTitleFromHtml(html);
-      const title =
-        match?.title && match.title.length > 0
-          ? match.title
-          : htmlTitle || extractTitleFromWindow(html.slice(0, 12000));
-      return {
-        id: canon,
-        title,
-        channelId: match?.channelId ?? extractCandidateChannelId(html) ?? extractChannelId(html),
-      };
-    }
-
-    const pageChannelId = extractChannelId(html);
-    const candidates = findLiveCandidatesInHtml(html);
-    for (const c of candidates) {
-      if (pageChannelId && c.channelId && c.channelId !== pageChannelId) continue;
-      return c;
-    }
-  }
-
-  return null;
+  const match = /"videoDetails"\s*:\s*\{/.exec(html);
+  if (!match) return null;
+  const details = readJsonObject(html, match.index + match[0].length - 1);
+  if (!details || !VIDEO_ID_RE.test(details.videoId ?? "")) return null;
+  const canonical = extractCanonicalVideoId(html);
+  if (canonical && canonical !== details.videoId) return null;
+  const broadcastMatch = /"liveBroadcastDetails"\s*:\s*\{/.exec(html);
+  const broadcast = broadcastMatch ? readJsonObject(html, broadcastMatch.index + broadcastMatch[0].length - 1) : null;
+  if (details.isUpcoming === true || broadcast?.endTimestamp || broadcast?.isLiveNow === false) return null;
+  if (details.isLive !== true && broadcast?.isLiveNow !== true) return null;
+  return { id: details.videoId, title: details.title ?? "", channelId: details.channelId ?? null };
 }
 
 function extractTitleFromWindow(window: string, videoIdOffset: number = -1): string {
@@ -413,7 +384,7 @@ const DARSHAN_KEYWORDS = [
   "abhishek",
   "live",
 ];
-const WEAK_HINT_SET = new Set(DARSHAN_KEYWORDS.map((k) => k.toLowerCase()));
+const WEAK_HINT_SET = new Set([...DARSHAN_KEYWORDS, "temple", "mandir", "jyotirlinga", "jyotirlingam", "shiva", "mahadev", "shri", "sri", "shree", "lord", "official"].map((k) => k.toLowerCase()));
 
 function isSpecificHint(hint: string): boolean {
   const hl = hint.trim().toLowerCase();
@@ -554,13 +525,17 @@ export async function resolveLiveVideoIdDetails(
   let channelId = initialChannelId;
 
   if (directVideoId) {
+    const html = maxProbePages > 0 ? await fetcher(`https://www.youtube.com/watch?v=${directVideoId}`) : null;
+    const candidate = html ? extractPrimaryLiveCandidate(html) : null;
+    const accepted = candidate?.id === directVideoId && (hints.length === 0 || hasSpecificHintMatch(candidate.title, hints));
     return {
-      videoId: directVideoId,
-      channelResolved: channelId,
-      candidateCount: 1,
-      liveCandidateCount: 1,
-      selectedVideo: directVideoId,
-      reason: "Direct watch or embed video URL provided",
+      videoId: accepted ? directVideoId : null,
+      channelResolved: accepted ? candidate.channelId ?? null : null,
+      candidateCount: candidate ? 1 : 0,
+      liveCandidateCount: candidate ? 1 : 0,
+      selectedVideo: accepted ? directVideoId : null,
+      discoveryState: accepted ? "confirmed_live" : "verification_error",
+      reason: accepted ? "Direct video verified as active and shrine-matched" : "Direct video could not be verified as active and shrine-matched",
     };
   }
 
@@ -632,7 +607,7 @@ export async function resolveLiveVideoIdDetails(
 
       if (hints.length > 0) {
         const score = scoreLiveCandidate(primary.title, hints);
-        if (score > 0 && hasSpecificHintMatch(primary.title, hints)) {
+        if (allCandidates.some((c) => c.id === primary.id) && score > 0 && hasSpecificHintMatch(primary.title, hints)) {
           return {
             videoId: primary.id,
             channelResolved: channelId,
@@ -746,7 +721,7 @@ export async function resolveLiveVideoIdDetails(
     let bestCandidate: { id: string; title: string; score: number } | null = null;
     for (const c of allCandidates) {
       const s = scoreLiveCandidate(c.title, hints);
-      if (s > 0 && (!bestCandidate || s > bestCandidate.score)) {
+      if (s > 0 && hasSpecificHintMatch(c.title, hints) && (!bestCandidate || s > bestCandidate.score)) {
         bestCandidate = { id: c.id, title: c.title, score: s };
       }
     }
@@ -761,7 +736,7 @@ export async function resolveLiveVideoIdDetails(
       };
     }
 
-    if (!channelHandleMatchesHints(channelUrl, hints)) {
+    {
       return {
         videoId: null,
         channelResolved: channelId,
@@ -877,10 +852,10 @@ export async function planRefresh(
             : `${discovery.reason}. No matching live stream confirmed.`,
         };
       } else if (claimedVideoIds.has(videoId)) {
-        resultStatus = "no_live";
+        resultStatus = "error";
         outcome = {
           ...outcome,
-          status: "no_live",
+          status: "error",
           newUrl: previousUrl,
           message: `Video ${videoId} already assigned to another shrine this run; previous link preserved.`,
           videoId,
