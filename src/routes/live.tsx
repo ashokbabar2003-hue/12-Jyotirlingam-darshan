@@ -5,10 +5,11 @@ import { MapPin, ArrowLeft, Radio } from "lucide-react";
 import { useCallback, useState, useMemo } from "react";
 import { z } from "zod";
 import { jyotirlingas, getLocalized } from "@/data/jyotirlingas";
-import { getDarshanLinks, getVerifiedLiveStreams } from "@/lib/darshan.functions";
+import { getDarshanLinks, getVerifiedLiveVideoIds } from "@/lib/darshan.functions";
 import { resolveAllShrineStreams } from "@/lib/darshan-precedence";
 import { DarshanTile, type DarshanStatus } from "@/components/darshan-tile";
 import { useLanguage, toLocalDigits } from "@/hooks/use-language";
+import { matchesVerifiedVideo, effectiveStreamStatus } from "@/lib/darshan-sync";
 import { cn } from "@/lib/utils";
 
 const searchSchema = z.object({
@@ -37,14 +38,15 @@ function LivePage() {
     queryKey: ["darshan-links"],
     queryFn: () => linksFn(),
     staleTime: 60_000,
+    refetchInterval: 60_000,
   });
 
-  const verifiedFn = useServerFn(getVerifiedLiveStreams);
-  const verified = useQuery({ queryKey: ["verified-live-streams"], queryFn: () => verifiedFn(), staleTime: 60_000, refetchInterval: 60_000 });
-  const [statuses, setStatuses] = useState<Record<string, DarshanStatus>>({});
+  const verifiedFn = useServerFn(getVerifiedLiveVideoIds);
+  const verified = useQuery({ queryKey: ["verified-live-video-ids"], queryFn: () => verifiedFn(), staleTime: 60_000, refetchInterval: 60_000 });
+  const [statuses, setStatuses] = useState<Record<string, { liveUrl: string | null; defaultUrl: string | null; status: DarshanStatus }>>({});
   const [liveOnly, setLiveOnly] = useState(false);
-  const setStatus = useCallback((slug: string, s: DarshanStatus) => {
-    setStatuses((prev) => (prev[slug] === s ? prev : { ...prev, [slug]: s }));
+  const setStatus = useCallback((slug: string, s: DarshanStatus, liveUrl: string | null, defaultUrl: string | null) => {
+    setStatuses((prev) => (prev[slug]?.status === s && prev[slug]?.liveUrl === liveUrl && prev[slug]?.defaultUrl === defaultUrl ? prev : { ...prev, [slug]: { status: s, liveUrl, defaultUrl } }));
   }, []);
 
   const selectedSlugs: string[] = (slugs ?? "")
@@ -62,8 +64,8 @@ function LivePage() {
     (slug: string): DarshanStatus => {
       // A configured primary URL is not proof that its video is currently live.
       // Only a recent matching channel scan may qualify it for the LIVE-only filter.
-      const status = statuses[slug] ?? resolvedStreams[slug]?.status ?? "none";
-      return status === "live" && verified.data?.[slug] !== true ? "unverified" : status;
+      const stream = resolvedStreams[slug];
+      return effectiveStreamStatus(stream?.liveUrl ?? null, stream?.defaultUrl ?? null, matchesVerifiedVideo(stream?.liveUrl, verified.data?.[slug]), statuses[slug]);
     },
     [statuses, resolvedStreams, verified.data],
   );
@@ -136,11 +138,11 @@ function LivePage() {
               <DarshanTile
                 title={`${j.name} live darshan`}
                 liveUrl={resolved.liveUrl}
-                verifiedLive={verified.data?.[j.slug] === true}
+                verifiedLive={matchesVerifiedVideo(resolved.liveUrl, verified.data?.[j.slug])}
                 defaultUrl={resolved.defaultUrl}
                 fallbackImage={j.image}
                 shrineName={loc.name}
-                onStatusChange={(s) => setStatus(j.slug, s)}
+                onStatusChange={(s) => setStatus(j.slug, s, resolved.liveUrl, resolved.defaultUrl)}
               />
 
               <div className="flex items-center justify-between gap-2 p-3">
