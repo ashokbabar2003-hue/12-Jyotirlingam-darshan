@@ -33,15 +33,14 @@ export function DarshanTile({
   onStatusChange?: (status: DarshanStatus) => void;
 }) {
   const iframeRef = useRef<HTMLIFrameElement | null>(null);
-  const [usingFallback, setUsingFallback] = useState(false);
-  const [streamError, setStreamError] = useState(false);
+  const [failedPrimary, setFailedPrimary] = useState<string | null>(null);
+  const [failedEmbed, setFailedEmbed] = useState<string | null>(null);
+  useEffect(() => { setFailedPrimary(null); setFailedEmbed(null); }, [liveUrl]);
+  const primary = liveUrl ?? defaultUrl;
+  const usingFallback = !!liveUrl && !!defaultUrl && failedPrimary === liveUrl;
+  const activeEmbedUrl = usingFallback ? defaultUrl : primary;
+  const streamError = !!activeEmbedUrl && failedEmbed === activeEmbedUrl;
 
-  useEffect(() => {
-    setUsingFallback(false);
-    setStreamError(false);
-  }, [liveUrl, defaultUrl]);
-
-  const initialSrc = liveUrl ?? defaultUrl;
   const status: DarshanStatus = streamError
     ? "none"
     : usingFallback
@@ -116,9 +115,9 @@ export function DarshanTile({
               : Number(data?.info);
         if ([2, 5, 100, 101, 150].includes(rawCode)) {
           if (!usingFallback && liveUrl && defaultUrl) {
-            setUsingFallback(true);
+            setFailedPrimary(liveUrl);
           } else {
-            setStreamError(true);
+            setFailedEmbed(activeEmbedUrl);
           }
         }
       }
@@ -138,14 +137,13 @@ export function DarshanTile({
       iframe.removeEventListener("load", onLoad);
       window.removeEventListener("message", handler);
       try {
-        post("stopVideo");
+        iframe.contentWindow?.postMessage(JSON.stringify({ event: "command", func: "stopVideo", args: [] }), "https://www.youtube.com");
       } catch {
         /* ignore */
       }
     };
-  }, [liveUrl, defaultUrl, usingFallback, title]);
+  }, [activeEmbedUrl, liveUrl, defaultUrl, usingFallback, title]);
 
-  const activeEmbedUrl = usingFallback ? defaultUrl : initialSrc;
   const src = streamError ? null : withJsApi(activeEmbedUrl);
 
   return (
